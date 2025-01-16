@@ -1,0 +1,98 @@
+\chapter{Zusammenfassung und Ausblick}
+\label{ch:07_zusammenfassung_ausblick}
+
+% Einleitung.
+Im Folgenden werden die in der vorliegenden Ausarbeitung gewonnenen Erkenntnisse in einem abschließenden Fazit unter
+Rückbesinnung auf die Kern-Forschungsfragen zusammengefasst.
+Es erfolgt die Ableitung eines Resümees bezüglich der Leistungsfähigkeit der untersuchten Rendering-Paradigmen im
+Kontext der selektiven Stilisierung.
+Auf dieser Grundlage werden konkrete Anforderungen für zukünftige Forschungs- und Entwicklungsarbeiten abgeleitet,
+insbesondere in Bezug auf das entwickelte Softwareartefakt (\ac{HyDra}-Framework).
+
+
+\section{Fazit der Arbeit}
+\label{sec:0701_conclusion}
+
+% Prämisse.
+In der vorliegenden Untersuchung wurde der fundamentale, architektonische Konflikt zwischen der Skalierbarkeit komplexer
+Echtzeit-Rendering-Szenen unter hoher Stil-Entropie für selektives Non-Photorealistic Rendering (\ac{NPR}) adressiert.
+Das eigens entwickelte Evaluationsframework (\ac{HyDra}) wurde als isolierte Testumgebung zur Analyse der
+untersuchten Basis-Rendering-Paradigmen verwendet.
+Die Zusammenfassungen orientieren sich an den in Kapitel ~\ref{ch:06_diskussion} dargelegten Ergebnissen.
+
+% Vorgehen.
+Das methodische Vorgehen basierte auf der Durchführung systematischer, empirischer Tests der Rendering-Paradigmen unter
+kontrollierten Bedingungen.
+Im Rahmen der Untersuchung wurden die geometrische Dichte, die Beleuchtungskomplexität, Auflösungen, Bandbreiten und
+die räumliche Stil-Entropie quantifiziert.
+
+% Messergebnisse.
+Die empirischen Messungen identifizierten spezifische Hardware-Bottlenecks für jede der untersuchten
+Rendering-Pipelines.
+Die Single-Pass-Forward-Pipeline wies vor allem bei ansteigender Lichtkomplexität, durch \ac{ALU}-Last bedingt,
+Schwächen auf.
+Die Single-Pass-Forward-Pipeline wies vor allem bei ansteigender Lichtkomplexität aufgrund hoher \ac{ALU}-Last
+deutliche Schwächen auf.
+Die Single-Pass-Deferred-Uber-Pipeline zeigte bei hoher räumlicher Stil-Durchmischung signifikante Leistungseinbrüche,
+die durch Warp-Divergenz und Registerdruck verursacht wurden.
+Die Deferred-Volume-Pipeline unterlag bei stark überlappenden Lichtquellen einer Bandbreitenlimitierung durch erhöhte
+\ac{RMW}-Zyklen.
+
+% Architekturergebnisse.
+Auf architektonischer Ebene zeigte die Single-Pass-Forward-Pipeline zudem die signifikante Einschränkung,
+Bildraumeffekte nicht selektiv darstellen zu können.
+Die Single-Pass-Deferred-Uber-Pipeline wies zudem Schwächen in der Lichtberechnung auf, was zu Pre-Light Zwängen in
+der Verarbeitung bestimmter Kernel-basierter \ac{NPR}-Effekte geführt hat.
+Insgesamt erwiesen sich Single-Pass Architekturen als unzureichend, um extrem hohe Lichtmengen darzustellen.
+
+% Beantwortung der Forschungsfrage.
+Die Synthese dieser Ergebnisse lässt die zentrale Forschungsfrage dahingehend beantworten, dass im Kontext der
+selektiven Stilisierung keine universell überlegene Basis-Rendering-Architektur existiert.
+Die Leistungsfähigkeiten wurde dynamisch und ausschließlich anhand der dominierenden Szenenlast determiniert.
+Den zentralen praktischen Beitrag dieser Arbeit bildet das entwickelte \ac{HyDra}-Framework, welches Entwicklern eine
+gekapselte, von proprietärem Engine-Overhead freie Testumgebung zur empirischen Evaluation von Rendering-Architekturen
+bereitstellt.
+Als abgeleitetes Resultat dieser Testumgebung wurde in Kapitel~\ref{sec:0602_heuristic_model} ein heuristisches
+Entscheidungsmodell formuliert, das anhand deterministischer \textit{Hard-Limits} und empirischer \textit{Soft-Limits}
+als konkretes Werkzeug zur frühzeitigen Architekturbewertung dient.
+
+
+\section{Ausblick und zukünftige Arbeiten}
+\label{sec:0702_future_work}
+
+% Profiler.
+Die nachfolgenden Ansätze bauen größtenteils auf den in Kapitel~\ref{sec:0603_reflektion_and_limits} identifizierten
+Limitationen auf.
+Aus den methodischen Schwächen der reinen Zeitmessung folgt beispielsweise für Folgestudien die Notwendigkeit einer
+erweiterten Telemetrie-Erfassung.
+Sollen die genauen Auswirkungen von Hardware-Phänomenen wie Registerdruck, Cache-Misses oder Speichersättigung
+evaluiert werden, ist die Integration systemnaher Hardware-Profiler wie \textit{NVIDIA Nsight} oder der \textit{Radeon
+Developer Tool Suite (RDTS)} erforderlich.
+
+% Pipeline-Erweiterung.
+Im Rahmen der architektonischen Weiterentwicklung des \ac{HyDra}-Frameworks sind Ergänzungen weiterer
+Rendering-Pipelines von zentralem Interesse.
+Neben einer simplen Multi-Pass-Forward-Pipeline sind hier etwa
+Forward+~\parencite[vgl.][]{haradaForwardBringingDeferred2012},
+Clustered-Forward/Deferred~\parencite[vgl.][]{olssonClusteredDeferredForward2012},
+Tiled~Forward/Deferred~\parencite[vgl.][]{olssonTiledClusteredForward2012} oder Deferred-Pipelines mit
+Visibility-Buffern~\parencite[vgl.][]{burnsVisibilityBufferCacheFriendly2013} mögliche relevante weitere Pipelines.
+
+% Vektor-Erweiterung.
+In diesem Kontext sind insbesondere die Implementierung unterschiedlicher Lichtquellen (Richtungs- und Flächenlichter)
+und das damit einhergehende Shadow-Mapping sowie erweiterte Materialeigenschaften (Spiegelungen und Transluzenzen) von
+primärer Relevanz.
+
+% Effekt-Untersuchungen.
+Zudem lassen sich neben der stilistischen Entropie durch komplexere Materialeigenschaften auch die Einflüsse von
+Anti-Aliasing-Verfahren im Kontext der untersuchten Rendering-Paradigmen analysieren.
+Dies betrifft insbesondere die selektive Stilisierung, da die verursachten Artefakte wie harte Materialkanten das
+Erscheinungsbild maßgeblich beeinflussen.
+Anti-Aliasing kann somit als weitere semantische Evaluationsgrundlage der Rendering-Pipelines herangezogen werden.
+
+% Hardware.
+Abschließend ist auch eine Portierung der Evaluationssoftware auf unterschiedliche Systeme und Hardwarebedingungen von
+Interesse, da der Kern der Evaluationen in Form von Hardwarekipppunkten unter anderen Hardwarearchitekturen grundlegend
+anders ausfallen kann.
+Dadurch wird es möglich, spezifische Hardware-Phänomene präziser zu isolieren und zu untersuchen.
+

@@ -1,0 +1,308 @@
+\documentclass[
+    12pt,
+    ngerman,
+    a4paper,
+    twoside,
+    open=right,
+    cleardoublepage=empty,
+    titlepage,
+    parskip=half,
+    headings=normal,
+    bibliography=totoc,
+    listof=totoc,
+    numbers=noenddot,
+    captions=tableabove
+]{scrreprt}
+
+% --- System & Sprache ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{babel}
+\usepackage{csquotes}
+
+% --- Typografie & Layout ---
+\usepackage{newpxtext,newpxmath}
+\linespread{1.05}
+\usepackage{microtype}
+\usepackage[
+    inner=3cm,
+    outer=2.5cm,
+    top=2.5cm,
+    bottom=2.5cm,
+    includehead
+]{geometry}
+\usepackage{setspace}
+\setstretch{1.15}
+\usepackage[default]{sourcesanspro}
+\usepackage{siunitx}
+\usepackage{longtable}
+
+% --- Grafiken & Tabellen ---
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{caption}
+\captionsetup{
+    font=small,
+    labelfont=bf
+}
+\usepackage{float}
+\usepackage[listings=false]{scrhack}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{placeins}
+\usepackage{etoolbox}
+\usepackage{tikz}
+\usetikzlibrary{
+    shapes.geometric,
+    arrows.meta,
+    positioning,
+    calc,
+    chains
+}
+\pretocmd{\section}{\FloatBarrier}{}{}
+\pretocmd{\subsection}{\FloatBarrier}{}{}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.75}
+\setcounter{topnumber}{4}
+\setcounter{bottomnumber}{4}
+\setcounter{totalnumber}{6}
+\KOMAoptions{listof=nochaptergap}
+\renewcommand*{\chapterheadstartvskip}{\vspace*{-\topskip}}
+\usepackage{flafter}
+
+% --- Kopfzeile ---
+\usepackage[automark, headsepline=0.4pt]{scrlayer-scrpage}
+\clearpairofpagestyles
+\automark[chapter]{chapter}
+\ohead{\headmark}
+\cfoot[\pagemark]{\pagemark}
+\setkomafont{pageheadfoot}{\normalfont\sffamily\small}
+\setkomafont{pagehead}{\normalfont\sffamily\small}
+\setkomafont{pagenumber}{\normalfont\sffamily\small}
+
+% --- Externe PDFs einbinden ---
+\usepackage{pdfpages}
+
+% --- Digitaler Anhang ---
+\usepackage{dirtree}
+
+% --- Abkürzungsverzeichnis ---
+\usepackage[printonlyused,withpage]{acronym}
+
+% --- Code Listings ---
+\usepackage{xcolor}
+\usepackage[outputdir=build]{minted}
+\renewcommand{\listingscaption}{Quellcode}
+\renewcommand{\listoflistingscaption}{Quellcodeverzeichnis}
+\usepackage[most]{tcolorbox}
+\usemintedstyle{manni}
+\definecolor{academicBg}{rgb}{0.98, 0.98, 0.98}
+\definecolor{academicBorder}{rgb}{0.85, 0.85, 0.85}
+\setminted{
+    linenos=true,
+    numbersep=12pt,
+    fontfamily=tt,
+    fontsize=\footnotesize,
+    baselinestretch=1.1,
+    breaklines=true,
+    breakindent=15pt
+}
+\renewcommand{\theFancyVerbLine}{\ttfamily\tiny\color{gray!50}\arabic{FancyVerbLine}}
+\newtcolorbox{codeframe}{
+    enhanced,
+    width=0.95\textwidth,
+    center,
+    boxrule=0.5pt,
+    colframe=academicBorder,
+    colback=academicBg,
+    arc=2mm,
+    top=3mm,
+    bottom=3mm,
+    left=8mm,
+    right=4mm,
+    before skip=4pt,
+    after skip=4pt
+}
+
+% --- Literaturverzeichnis (IEEE) ---
+%\usepackage[
+%    backend=biber,
+%    style=ieee,
+%    maxcitenames=1,
+%    mincitenames=1,
+%    doi=true,
+%    isbn=true,
+%    url=true
+%]{biblatex}
+%\AtEveryBibitem{
+%    \iffieldundef{doi}
+%    {}
+%    {
+%        \clearfield{url}
+%        \clearfield{isbn}
+%    }
+%}
+%\DefineBibliographyStrings{ngerman}{
+%    presentedat = {präsentiert auf der\addspace},
+%    andothers   = {et\addabbrvspace al\adddot}
+%}
+%\DeclareSourcemap{
+%    \maps[datatype=bibtex]{
+%        \map{
+%            \step[fieldsource=doi,final]
+%            \step[fieldset=url,null]
+%            \step[fieldset=urldate,null]
+%        }
+%        \map{
+%            \step[fieldset=pagetotal,null]
+%        }
+%    }
+%}
+%\AtEveryBibitem{
+%    \iffieldundef{url}{
+%        \clearfield{urlyear}
+%        \clearfield{urlmonth}
+%        \clearfield{urlday}
+%    }{}
+%}
+%\addbibresource{verzeichnisse/literatur.bib}
+
+% --- Literaturverzeichnis (Harvard / Authoryear) ---
+\usepackage[
+    backend=biber,
+    style=authoryear,
+    sorting=nyt,
+    maxcitenames=2,
+    mincitenames=1,
+    maxbibnames=10,
+    doi=true,
+    isbn=false,
+    url=true
+]{biblatex}
+\DefineBibliographyStrings{ngerman}{
+    andothers   = {et\addabbrvspace al\adddot}
+}
+\DeclareSourcemap{
+    \maps[datatype=bibtex]{
+        \map{
+            \step[fieldsource=doi,final]
+            \step[fieldset=url,null]
+            \step[fieldset=urldate,null]
+        }
+        \map{
+            \step[fieldset=pagetotal,null]
+        }
+    }
+}
+\AtEveryBibitem{
+    \iffieldundef{doi}
+    {}
+    {
+        \clearfield{url}
+        \clearfield{isbn}
+    }
+    \iffieldundef{url}{
+        \clearfield{urlyear}
+        \clearfield{urlmonth}
+        \clearfield{urlday}
+    }{}
+}
+\addbibresource{verzeichnisse/literatur.bib}
+
+% Eckige Klammern
+\DeclareCiteCommand{\parencite}[\mkbibbrackets]
+{\usebibmacro{prenote}}
+{\usebibmacro{citeindex}%
+\usebibmacro{cite}}
+{\multicitedelim}
+{\usebibmacro{postnote}}
+\DeclareMultiCiteCommand{\parencites}[\mkbibbrackets]{\parencite}{\multicitedelim}
+
+% Abstände zwischen den Einträgen im Literaturverzeichnis erhöhen
+\setlength{\bibitemsep}{1.2em}
+\setlength{\bibnamesep}{0.5em}
+
+
+% --- Hyperlinks ---
+\usepackage[hidelinks]{hyperref}
+
+
+% =====================================================================================================================
+
+
+\begin{document}
+
+    % --- Zone 1: Keine Seitenzahlen ---
+    \pagenumbering{gobble}
+
+    % Erste Seite (Deckblatt)
+    \includepdf[pages={1}]{sonstiges/Bachelor-Deckblatt-Abschlussarbeit.pdf}
+
+    \cleardoublepage
+
+    % Zweite Seite (Eidesstattliche Erklärung)
+    \includepdf[pages={2}]{sonstiges/Bachelor-Deckblatt-Abschlussarbeit.pdf}
+
+    \cleardoublepage
+
+    % --- Zone 2: Große römische Zahlen (I, II, III...) ---
+    \pagenumbering{Roman}
+    \pagestyle{plain}
+
+    % abstract
+    \input{sonstiges/abstract}
+    \cleardoublepage
+
+    % --- verzeichnisse ---
+    \tableofcontents
+    \cleardoublepage
+    \listoffigures
+    \cleardoublepage
+    \listoftables
+    \cleardoublepage
+    \listoflistings
+    \cleardoublepage
+    \input{verzeichnisse/abkuerzungen}
+    \cleardoublepage
+
+    % --- Zone 3: Arabische Zahlen (1, 2, 3...) ---
+    \pagenumbering{arabic}
+    \pagestyle{scrheadings}
+
+    % 3-5 Seiten (Final 4)
+    \input{kapitel/01_Einführung}
+
+    % 6-9 Seiten (Final 7)
+    \input{kapitel/02_Grundlagen}
+
+    % 5-8 Seiten (Final 6)
+    \input{kapitel/03_Stand_der_Technik}
+
+    % 15-20 Seiten (Final 18)
+    \input{kapitel/04_Konzeption_Realisierung}
+
+    % 12-15 Seiten (Final 24)
+    \input{kapitel/05_Evaluation}
+
+    % 6-9 Seiten (Final 8)
+    \input{kapitel/06_Diskussion}
+
+    % 2-3 Seiten (Final 3)
+    \input{kapitel/07_Fazit_Ausblick}
+
+    \cleardoublepage
+
+    % --- Zone 4: Kleine römische Zahlen (i, ii, iii...) ---
+    \setcounter{page}{1}
+    \pagenumbering{roman}
+
+    % Literatur & Anhang
+    \printbibliography
+    \cleardoublepage
+
+    \appendix
+    \input{sonstiges/anhang}
+
+\end{document}

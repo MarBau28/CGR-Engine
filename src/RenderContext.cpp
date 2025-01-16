@@ -1,0 +1,544 @@
+#include "../include/RenderContext.h"
+#include <array>
+#include <rlgl.h>
+#include <string>
+
+void RenderContext::Initialize(const EngineState &engineState, const SceneManager &sceneManager,
+                               const int renderWidth, const int renderHeight) {
+    // SHADER LOADING
+    // ---------------------------------------------------------------------------------------------
+
+    // Helper lambda for string concatenation
+    auto load = [](const std::string_view vert, const std::string_view frag) {
+        const std::string vPath =
+            vert.empty() ? "" : std::string(Config::Paths::Shaders) + std::string(vert);
+        const std::string fPath =
+            frag.empty() ? "" : std::string(Config::Paths::Shaders) + std::string(frag);
+
+        return LoadShader(vPath.empty() ? nullptr : vPath.c_str(),
+                          fPath.empty() ? nullptr : fPath.c_str());
+    };
+
+    // Deferred Pipeline
+    geometryPassShader = load(Config::Shaders::GBufferVert, Config::Shaders::GBufferFrag);
+    instancedShader =
+        load(Config::Shaders::GBufferInstancedVert, Config::Shaders::GBufferInstancedFrag);
+    lightingPassShader = load({}, Config::Shaders::DeferredUberFrag);
+    postShader         = load({}, Config::Shaders::PostProcessFrag);
+    lightVolumeShader =
+        load(Config::Shaders::DeferredVolumeVert, Config::Shaders::DeferredVolumeFrag);
+    nprResolveShader = load({}, Config::Shaders::DeferredResolveFrag);
+
+    // Forward Pipeline
+    forwardBlinnShader =
+        load(Config::Shaders::ForwardInstancedVert, Config::Shaders::ForwardBlinnFrag);
+    forwardGoochShader =
+        load(Config::Shaders::ForwardInstancedVert, Config::Shaders::ForwardGoochFrag);
+    forwardToonShader =
+        load(Config::Shaders::ForwardInstancedVert, Config::Shaders::ForwardToonFrag);
+    forwardOutlineShader =
+        load(Config::Shaders::ForwardOutlineVert, Config::Shaders::ForwardOutlineFrag);
+    forwardUnlitShader =
+        load(Config::Shaders::ForwardInstancedVert, Config::Shaders::ForwardUnlitFrag);
+
+    // Bind instanceTransform attribute for all hardware-instanced vertex shaders
+    forwardBlinnShader.locs[SHADER_LOC_MATRIX_MODEL] =
+        GetShaderLocationAttrib(forwardBlinnShader, "instanceTransform");
+    forwardGoochShader.locs[SHADER_LOC_MATRIX_MODEL] =
+        GetShaderLocationAttrib(forwardGoochShader, "instanceTransform");
+    forwardToonShader.locs[SHADER_LOC_MATRIX_MODEL] =
+        GetShaderLocationAttrib(forwardToonShader, "instanceTransform");
+    forwardOutlineShader.locs[SHADER_LOC_MATRIX_MODEL] =
+        GetShaderLocationAttrib(forwardOutlineShader, "instanceTransform");
+    forwardUnlitShader.locs[SHADER_LOC_MATRIX_MODEL] =
+        GetShaderLocationAttrib(forwardUnlitShader, "instanceTransform");
+
+    // GEOMETRY & ASSET GENERATION
+    // ---------------------------------------------------------------------------------------------
+
+    // Generate base LOD meshes (Cube + varying resolution Spheres)
+    lodMeshes.push_back(GenMeshCube(0.75f, 0.75f, 0.75f));
+    lodMeshes.push_back(GenMeshSphere(0.75f, 8, 8));
+    lodMeshes.push_back(GenMeshSphere(0.75f, 16, 16));
+    lodMeshes.push_back(GenMeshSphere(0.75f, 32, 32));
+    lodMeshes.push_back(GenMeshSphere(0.75f, 64, 64));
+
+    for (auto &mesh : lodMeshes)
+        GenMeshTangents(&mesh);
+
+    const std::string texPath =
+        std::string(Config::Paths::Textures) + std::string(Config::Assets::ObstacleTexture);
+    obstacleTexture = LoadTexture(texPath.c_str());
+
+    // generate mip-maps for obstacle textures
+    GenTextureMipmaps(&obstacleTexture);
+    SetTextureFilter(obstacleTexture, TEXTURE_FILTER_TRILINEAR);
+
+    // Generate floor plane and tile texture coordinates for the NPR Room
+    floorMesh  = GenMeshPlane(1000.0f, 1000.0f, 1, 1);
+    floorModel = LoadModelFromMesh(floorMesh);
+    const std::string woodTexPath =
+        std::string(Config::Paths::Textures) + std::string(Config::Assets::WoodTexture);
+    floorTexture = LoadTexture(woodTexPath.c_str());
+
+    // generate mip-maps for floor texture
+    GenTextureMipmaps(&floorTexture);
+    SetTextureFilter(floorTexture, TEXTURE_FILTER_TRILINEAR);
+    SetTextureWrap(floorTexture, TEXTURE_WRAP_REPEAT);
+
+    for (int i = 0; i < floorMesh.vertexCount; i++) {
+        floorMesh.texcoords[i * 2] *= 100.0f;
+        floorMesh.texcoords[i * 2 + 1] *= 100.0f;
+    }
+    UpdateMeshBuffer(floorMesh, 1, floorMesh.texcoords,
+                     floorMesh.vertexCount * static_cast<int>(2 * sizeof(float)), 0);
+
+    for (int i = 0; i < floorModel.materialCount; i++) {
+        floorModel.materials[i].shader                            = geometryPassShader;
+        floorModel.materials[i].maps[MATERIAL_MAP_ALBEDO].texture = floorTexture;
+        floorModel.materials[i].maps[MATERIAL_MAP_ALBEDO].color   = WHITE;
+    }
+
+    // Proxy geometry for light volumes
+    lightningSphereMesh                      = GenMeshSphere(0.5f, 16, 16);
+    lightningSourceModel                     = LoadModelFromMesh(lightningSphereMesh);
+    lightningSourceModel.materials[0].shader = geometryPassShader;
+
+    // INSTANCING: VAO & VBO SETUP
+    // ---------------------------------------------------------------------------------------------
+
+    instancedShader.locs[SHADER_LOC_MATRIX_MODEL] =
+        GetShaderLocationAttrib(instancedShader, "instanceTransform");
+    // Load dynamic VBO for style IDs (Obstacles)
+    styleIdVboId = rlLoadVertexBuffer(sceneManager.GetMasterStyleIds().data(),
+                                      Config::EngineSettings::MAX_OBSTACLES * sizeof(float), true);
+
+    // Bind the styleId VBO to attribute location 10 with a divisor of 1 (per instance) for all LODs
+    for (const auto &mesh : lodMeshes) {
+        rlEnableVertexArray(mesh.vaoId);
+        rlEnableVertexBuffer(styleIdVboId);
+        rlSetVertexAttribute(10, 1, RL_FLOAT, false, 0, 0);
+        rlEnableVertexAttribute(10);
+        rlSetVertexAttributeDivisor(10, 1);
+        rlDisableVertexBuffer();
+        rlDisableVertexArray();
+    }
+
+    instancedMaterial                                   = LoadMaterialDefault();
+    instancedMaterial.shader                            = instancedShader;
+    instancedMaterial.maps[MATERIAL_MAP_ALBEDO].texture = obstacleTexture;
+
+    // Load dynamic VBO for style IDs (Lights)
+    constexpr std::array<float, Config::EngineSettings::MAX_LIGHTS> instancedLightStyleIds{};
+    lightStyleIdVboId = rlLoadVertexBuffer(
+        instancedLightStyleIds.data(), Config::EngineSettings::MAX_LIGHTS * sizeof(float), false);
+
+    rlEnableVertexArray(lightningSphereMesh.vaoId);
+    rlEnableVertexBuffer(lightStyleIdVboId);
+    rlSetVertexAttribute(10, 1, RL_FLOAT, false, 0, 0);
+    rlEnableVertexAttribute(10);
+    rlSetVertexAttributeDivisor(10, 1);
+    rlDisableVertexBuffer();
+    rlDisableVertexArray();
+
+    instancedLightMaterial        = LoadMaterialDefault();
+    instancedLightMaterial.shader = instancedShader;
+
+    // G-BUFFER INITIALIZATION
+    // ---------------------------------------------------------------------------------------------
+
+    FboId = rlLoadFramebuffer();
+    if (FboId == 0)
+        TraceLog(LOG_ERROR, "Failed to create G-Buffer FBO");
+
+    // Layout: Color0 = Albedo, Color1 = Normals, Depth = Hardware Depth
+    albedoTexId =
+        rlLoadTexture(nullptr, renderWidth, renderHeight, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, 1);
+    normalTexId =
+        rlLoadTexture(nullptr, renderWidth, renderHeight, PIXELFORMAT_UNCOMPRESSED_R16G16B16A16, 1);
+    depthTexId = rlLoadTextureDepth(renderWidth, renderHeight, false);
+
+    rlEnableFramebuffer(FboId);
+    rlFramebufferAttach(FboId, albedoTexId, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D,
+                        0);
+    rlFramebufferAttach(FboId, normalTexId, RL_ATTACHMENT_COLOR_CHANNEL1, RL_ATTACHMENT_TEXTURE2D,
+                        0);
+    rlFramebufferAttach(FboId, depthTexId, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_TEXTURE2D, 0);
+    if (!rlFramebufferComplete(FboId))
+        TraceLog(LOG_ERROR, "G-Buffer FBO is incomplete.");
+    rlDisableFramebuffer();
+
+    // Wrap raw GL IDs into Raylib Textures
+    gAlbedo = {albedoTexId, renderWidth, renderHeight, 1, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8};
+    gNormal = {normalTexId, renderWidth, renderHeight, 1, PIXELFORMAT_UNCOMPRESSED_R16G16B16A16};
+    gDepth  = {depthTexId, renderWidth, renderHeight, 1, PIXELFORMAT_UNCOMPRESSED_GRAYSCALE};
+
+    // Point filtering is crucial for G-Buffer sampling to avoid interpolating across object edges
+    SetTextureFilter(gAlbedo, TEXTURE_FILTER_POINT);
+    SetTextureFilter(gNormal, TEXTURE_FILTER_POINT);
+    SetTextureFilter(gDepth, TEXTURE_FILTER_POINT);
+
+    // RENDER TARGETS & HDR
+    // ---------------------------------------------------------------------------------------------
+
+    // Initialize lighting accumulation targets
+    litSceneTarget.id = 0;
+    resolveTarget.id  = 0;
+    RebuildHDRTargets(engineState.use16BitHDR, renderWidth, renderHeight);
+
+    // Bind G-Buffer outputs as inputs for the Light Volume shader
+    lightVolumeMaterial                                      = LoadMaterialDefault();
+    lightVolumeMaterial.shader                               = lightVolumeShader;
+    lightVolumeMaterial.maps[MATERIAL_MAP_ALBEDO].texture    = gAlbedo;
+    lightVolumeMaterial.maps[MATERIAL_MAP_NORMAL].texture    = gNormal;
+    lightVolumeMaterial.maps[MATERIAL_MAP_ROUGHNESS].texture = gDepth;
+
+    lightVolumeShader.locs[SHADER_LOC_MAP_ALBEDO] =
+        GetShaderLocation(lightVolumeShader, "texture0");
+    lightVolumeShader.locs[SHADER_LOC_MAP_NORMAL] =
+        GetShaderLocation(lightVolumeShader, "gNormalTex");
+    lightVolumeShader.locs[SHADER_LOC_MAP_ROUGHNESS] =
+        GetShaderLocation(lightVolumeShader, "gDepthTex");
+
+    // SHADER LOCATIONS & STATIC UNIFORMS
+    // ---------------------------------------------------------------------------------------------
+
+    // Geometry Pass
+    modelMatLoc         = GetShaderLocation(geometryPassShader, "modelMat");
+    normalMatLoc        = GetShaderLocation(geometryPassShader, "normalMat");
+    styleIdLoc          = GetShaderLocation(geometryPassShader, "styleId");
+    isLightLocInstanced = GetShaderLocation(instancedShader, "isLightSource");
+
+    // Uber Shader
+    lightPosArrayLoc                 = GetShaderLocation(lightingPassShader, "lightPositions");
+    lightColorLoc                    = GetShaderLocation(lightingPassShader, "lightColor");
+    LightingResolutionLoc            = GetShaderLocation(lightingPassShader, "resolution");
+    normalTexLoc                     = GetShaderLocation(lightingPassShader, "gNormalTex");
+    depthTexLoc                      = GetShaderLocation(lightingPassShader, "gDepthTex");
+    invViewProjLoc                   = GetShaderLocation(lightingPassShader, "invViewProj");
+    postViewPosLoc                   = GetShaderLocation(lightingPassShader, "viewPos");
+    const int postBackgroundColorLoc = GetShaderLocation(lightingPassShader, "backgroundColor");
+    intensityLoc                     = GetShaderLocation(lightingPassShader, "lightIntensity");
+    ambientLoc               = GetShaderLocation(lightingPassShader, "ambientLightStrength");
+    activeLightsLoc          = GetShaderLocation(lightingPassShader, "activeLights");
+    maxLightRadiusLoc        = GetShaderLocation(lightingPassShader, "maxLightRadius");
+    attenuationConstantLoc   = GetShaderLocation(lightingPassShader, "attenuationConstant");
+    attenuationLinearLoc     = GetShaderLocation(lightingPassShader, "attenuationLinear");
+    attenuationQuadraticLoc  = GetShaderLocation(lightingPassShader, "attenuationQuadratic");
+    uberEnableOutlinesLoc    = GetShaderLocation(lightingPassShader, "enableOutlines");
+    uberEnableKuwaharaLoc    = GetShaderLocation(lightingPassShader, "enableKuwahara");
+    uberEnableGoochLoc       = GetShaderLocation(lightingPassShader, "enableGooch");
+    uberEnableToonLoc        = GetShaderLocation(lightingPassShader, "enableToon");
+    uberKuwaharaRadiusLoc    = GetShaderLocation(lightingPassShader, "kuwaharaRadius");
+    uberKuwaharaIntensityLoc = GetShaderLocation(lightingPassShader, "kuwaharaIntensity");
+
+    constexpr Vector3 BgColor = {Config::EngineSettings::BackgroundColor.x / 255.0f,
+                                 Config::EngineSettings::BackgroundColor.y / 255.0f,
+                                 Config::EngineSettings::BackgroundColor.z / 255.0f};
+
+    SetShaderValue(lightingPassShader, postBackgroundColorLoc, &BgColor, SHADER_UNIFORM_VEC3);
+    SetShaderValue(lightingPassShader, attenuationConstantLoc,
+                   &Config::EngineSettings::AttenuationConstant, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(lightingPassShader, attenuationLinearLoc,
+                   &Config::EngineSettings::AttenuationLinear, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(lightingPassShader, attenuationQuadraticLoc,
+                   &Config::EngineSettings::AttenuationQuadratic, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(lightingPassShader, intensityLoc, &engineState.lightIntensity,
+                   SHADER_UNIFORM_FLOAT);
+    SetShaderValue(lightingPassShader, ambientLoc, &engineState.ambientLightStrength,
+                   SHADER_UNIFORM_FLOAT);
+
+    // Light Volume Pass
+    lvResolutionLoc        = GetShaderLocation(lightVolumeShader, "resolution");
+    lvViewPosLoc           = GetShaderLocation(lightVolumeShader, "viewPos");
+    lvLightColorLoc        = GetShaderLocation(lightVolumeShader, "lightColor");
+    lvIntensityLoc         = GetShaderLocation(lightVolumeShader, "lightIntensity");
+    lvMaxRadiusLoc         = GetShaderLocation(lightVolumeShader, "maxLightRadius");
+    lvAttenuationConstLoc  = GetShaderLocation(lightVolumeShader, "attenuationConstant");
+    lvAttenuationLinearLoc = GetShaderLocation(lightVolumeShader, "attenuationLinear");
+    lvAttenuationQuadLoc   = GetShaderLocation(lightVolumeShader, "attenuationQuadratic");
+    lvInvViewProjLoc       = GetShaderLocation(lightVolumeShader, "invViewProj");
+    lvAlbedoTexLoc         = GetShaderLocation(lightVolumeShader, "texture0");
+    lvNormalTexLoc         = GetShaderLocation(lightVolumeShader, "gNormalTex");
+    lvDepthTexLoc          = GetShaderLocation(lightVolumeShader, "gDepthTex");
+    lvEnableGoochLoc       = GetShaderLocation(lightVolumeShader, "enableGooch");
+    lvEnableToonLoc        = GetShaderLocation(lightVolumeShader, "enableToon");
+
+    SetShaderValue(lightVolumeShader, lvAttenuationConstLoc,
+                   &Config::EngineSettings::AttenuationConstant, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(lightVolumeShader, lvAttenuationLinearLoc,
+                   &Config::EngineSettings::AttenuationLinear, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(lightVolumeShader, lvAttenuationQuadLoc,
+                   &Config::EngineSettings::AttenuationQuadratic, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(lightVolumeShader, lvIntensityLoc, &engineState.lightIntensity,
+                   SHADER_UNIFORM_FLOAT);
+    lightVolumeShader.locs[SHADER_LOC_MATRIX_MODEL] =
+        GetShaderLocationAttrib(lightVolumeShader, "instanceTransform");
+
+    // NPR Resolve Pass
+    nprResolutionLoc        = GetShaderLocation(nprResolveShader, "resolution");
+    nprViewPosLoc           = GetShaderLocation(nprResolveShader, "viewPos");
+    const int nprBgColorLoc = GetShaderLocation(nprResolveShader, "backgroundColor");
+    nprAmbientLoc           = GetShaderLocation(nprResolveShader, "ambientLightStrength");
+    nprInvViewProjLoc       = GetShaderLocation(nprResolveShader, "invViewProj");
+    nprLitSceneTexLoc       = GetShaderLocation(nprResolveShader, "litSceneTex");
+    nprAlbedoTexLoc         = GetShaderLocation(nprResolveShader, "texture0");
+    nprNormalTexLoc         = GetShaderLocation(nprResolveShader, "gNormalTex");
+    nprDepthTexLoc          = GetShaderLocation(nprResolveShader, "gDepthTex");
+    resEnableOutlinesLoc    = GetShaderLocation(nprResolveShader, "enableOutlines");
+    resEnableKuwaharaLoc    = GetShaderLocation(nprResolveShader, "enableKuwahara");
+    resEnableGoochLoc       = GetShaderLocation(nprResolveShader, "enableGooch");
+    resEnableToonLoc        = GetShaderLocation(nprResolveShader, "enableToon");
+    resKuwaharaRadiusLoc    = GetShaderLocation(nprResolveShader, "kuwaharaRadius");
+    resKuwaharaIntensityLoc = GetShaderLocation(nprResolveShader, "kuwaharaIntensity");
+
+    SetShaderValue(nprResolveShader, nprBgColorLoc, &BgColor, SHADER_UNIFORM_VEC3);
+    SetShaderValue(nprResolveShader, nprAmbientLoc, &engineState.ambientLightStrength,
+                   SHADER_UNIFORM_FLOAT);
+
+    // Post-Process Pass
+    postResolutionLoc = GetShaderLocation(postShader, "resolution");
+
+    // forward Blinn Pass
+    fwdBlinnViewPosLoc     = GetShaderLocation(forwardBlinnShader, "viewPos");
+    fwdBlinnIntensityLoc   = GetShaderLocation(forwardBlinnShader, "lightIntensity");
+    fwdBlinnAmbientLoc     = GetShaderLocation(forwardBlinnShader, "ambientLightStrength");
+    fwdBlinnActiveLightLoc = GetShaderLocation(forwardBlinnShader, "activeLights");
+    fwdBlinnMaxRadiusLoc   = GetShaderLocation(forwardBlinnShader, "maxLightRadius");
+    fwdBlinnAttConstLoc    = GetShaderLocation(forwardBlinnShader, "attenuationConstant");
+    fwdBlinnAttLinLoc      = GetShaderLocation(forwardBlinnShader, "attenuationLinear");
+    fwdBlinnAttQuadLoc     = GetShaderLocation(forwardBlinnShader, "attenuationQuadratic");
+    fwdBlinnLightPosLoc    = GetShaderLocation(forwardBlinnShader, "lightPositions");
+    fwdBlinnLightColorLoc  = GetShaderLocation(forwardBlinnShader, "lightColor");
+
+    SetShaderValue(forwardBlinnShader, fwdBlinnAttConstLoc,
+                   &Config::EngineSettings::AttenuationConstant, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(forwardBlinnShader, fwdBlinnAttLinLoc,
+                   &Config::EngineSettings::AttenuationLinear, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(forwardBlinnShader, fwdBlinnAttQuadLoc,
+                   &Config::EngineSettings::AttenuationQuadratic, SHADER_UNIFORM_FLOAT);
+
+    // forward Gooch Pass
+    fwdGoochViewPosLoc     = GetShaderLocation(forwardGoochShader, "viewPos");
+    fwdGoochIntensityLoc   = GetShaderLocation(forwardGoochShader, "lightIntensity");
+    fwdGoochAmbientLoc     = GetShaderLocation(forwardGoochShader, "ambientLightStrength");
+    fwdGoochActiveLightLoc = GetShaderLocation(forwardGoochShader, "activeLights");
+    fwdGoochMaxRadiusLoc   = GetShaderLocation(forwardGoochShader, "maxLightRadius");
+    fwdGoochAttConstLoc    = GetShaderLocation(forwardGoochShader, "attenuationConstant");
+    fwdGoochAttLinLoc      = GetShaderLocation(forwardGoochShader, "attenuationLinear");
+    fwdGoochAttQuadLoc     = GetShaderLocation(forwardGoochShader, "attenuationQuadratic");
+    fwdGoochLightPosLoc    = GetShaderLocation(forwardGoochShader, "lightPositions");
+
+    SetShaderValue(forwardGoochShader, fwdGoochAttConstLoc,
+                   &Config::EngineSettings::AttenuationConstant, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(forwardGoochShader, fwdGoochAttLinLoc,
+                   &Config::EngineSettings::AttenuationLinear, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(forwardGoochShader, fwdGoochAttQuadLoc,
+                   &Config::EngineSettings::AttenuationQuadratic, SHADER_UNIFORM_FLOAT);
+
+    // forward Toon Pass
+    fwdToonViewPosLoc     = GetShaderLocation(forwardToonShader, "viewPos");
+    fwdToonIntensityLoc   = GetShaderLocation(forwardToonShader, "lightIntensity");
+    fwdToonAmbientLoc     = GetShaderLocation(forwardToonShader, "ambientLightStrength");
+    fwdToonActiveLightLoc = GetShaderLocation(forwardToonShader, "activeLights");
+    fwdToonMaxRadiusLoc   = GetShaderLocation(forwardToonShader, "maxLightRadius");
+    fwdToonAttConstLoc    = GetShaderLocation(forwardToonShader, "attenuationConstant");
+    fwdToonAttLinLoc      = GetShaderLocation(forwardToonShader, "attenuationLinear");
+    fwdToonAttQuadLoc     = GetShaderLocation(forwardToonShader, "attenuationQuadratic");
+    fwdToonLightPosLoc    = GetShaderLocation(forwardToonShader, "lightPositions");
+    fwdToonLightColorLoc  = GetShaderLocation(forwardToonShader, "lightColor");
+
+    SetShaderValue(forwardToonShader, fwdToonAttConstLoc,
+                   &Config::EngineSettings::AttenuationConstant, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(forwardToonShader, fwdToonAttLinLoc, &Config::EngineSettings::AttenuationLinear,
+                   SHADER_UNIFORM_FLOAT);
+    SetShaderValue(forwardToonShader, fwdToonAttQuadLoc,
+                   &Config::EngineSettings::AttenuationQuadratic, SHADER_UNIFORM_FLOAT);
+
+    fwdOutlineViewPosLoc = GetShaderLocation(forwardOutlineShader, "viewPos");
+
+    // forward Materials Setup
+    fwdBlinnMaterial                                   = LoadMaterialDefault();
+    fwdBlinnMaterial.shader                            = forwardBlinnShader;
+    fwdBlinnMaterial.maps[MATERIAL_MAP_ALBEDO].texture = obstacleTexture;
+
+    fwdGoochMaterial                                   = LoadMaterialDefault();
+    fwdGoochMaterial.shader                            = forwardGoochShader;
+    fwdGoochMaterial.maps[MATERIAL_MAP_ALBEDO].texture = obstacleTexture;
+
+    fwdToonMaterial                                   = LoadMaterialDefault();
+    fwdToonMaterial.shader                            = forwardToonShader;
+    fwdToonMaterial.maps[MATERIAL_MAP_ALBEDO].texture = obstacleTexture;
+
+    fwdOutlineMaterial        = LoadMaterialDefault();
+    fwdOutlineMaterial.shader = forwardOutlineShader;
+
+    fwdFloorMaterial                                   = LoadMaterialDefault();
+    fwdFloorMaterial.shader                            = forwardBlinnShader;
+    fwdFloorMaterial.maps[MATERIAL_MAP_ALBEDO].texture = floorTexture;
+
+    fwdLightProxyMaterial        = LoadMaterialDefault();
+    fwdLightProxyMaterial.shader = forwardUnlitShader;
+}
+
+// Dynamically rebuilds internal accumulation buffers of 16-bit float vs 8-bit clamped rendering.
+void RenderContext::RebuildHDRTargets(const bool use16BitHDR, const int renderWidth,
+                                      const int renderHeight) {
+    // Fully destroy old FBOs
+    if (litSceneTarget.id != 0)
+        UnloadRenderTexture(litSceneTarget);
+    if (resolveTarget.id != 0)
+        UnloadRenderTexture(resolveTarget);
+
+    // Scaffold new render targets at dynamic resolution.
+    litSceneTarget = LoadRenderTexture(renderWidth, renderHeight);
+    resolveTarget  = LoadRenderTexture(renderWidth, renderHeight);
+
+    // HDR Switch management
+    if (use16BitHDR) {
+        constexpr int targetFormat = PIXELFORMAT_UNCOMPRESSED_R16G16B16A16;
+
+        // Lit Scene target Update
+        rlUnloadTexture(litSceneTarget.texture.id);
+        litSceneTarget.texture.id =
+            rlLoadTexture(nullptr, renderWidth, renderHeight, targetFormat, 1);
+        litSceneTarget.texture.format = targetFormat;
+
+        rlEnableFramebuffer(litSceneTarget.id);
+        rlFramebufferAttach(litSceneTarget.id, litSceneTarget.texture.id,
+                            RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
+        rlDisableFramebuffer();
+
+        // Resolve target Update
+        rlUnloadTexture(resolveTarget.texture.id);
+        resolveTarget.texture.id =
+            rlLoadTexture(nullptr, renderWidth, renderHeight, targetFormat, 1);
+        resolveTarget.texture.format = targetFormat;
+
+        rlEnableFramebuffer(resolveTarget.id);
+        rlFramebufferAttach(resolveTarget.id, resolveTarget.texture.id,
+                            RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
+        rlDisableFramebuffer();
+    }
+}
+
+// RESIZE FUNCTION
+// -------------------------------------------------------------------------------------------------
+
+void RenderContext::ResizeTargets(const int newWidth, const int newHeight, const bool use16BitHDR) {
+    // Unload existing G-Buffer FBO and Textures
+    rlUnloadFramebuffer(FboId);
+    rlUnloadTexture(albedoTexId);
+    rlUnloadTexture(normalTexId);
+    rlUnloadTexture(depthTexId);
+
+    // Re-allocate G-Buffer Textures at new resolution
+    FboId       = rlLoadFramebuffer();
+    albedoTexId = rlLoadTexture(nullptr, newWidth, newHeight, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, 1);
+    normalTexId =
+        rlLoadTexture(nullptr, newWidth, newHeight, PIXELFORMAT_UNCOMPRESSED_R16G16B16A16, 1);
+    depthTexId = rlLoadTextureDepth(newWidth, newHeight, false);
+
+    rlEnableFramebuffer(FboId);
+    rlFramebufferAttach(FboId, albedoTexId, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D,
+                        0);
+    rlFramebufferAttach(FboId, normalTexId, RL_ATTACHMENT_COLOR_CHANNEL1, RL_ATTACHMENT_TEXTURE2D,
+                        0);
+    rlFramebufferAttach(FboId, depthTexId, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_TEXTURE2D, 0);
+    rlDisableFramebuffer();
+
+    // Update Raylib Texture Wrappers
+    gAlbedo = {albedoTexId, newWidth, newHeight, 1, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8};
+    gNormal = {normalTexId, newWidth, newHeight, 1, PIXELFORMAT_UNCOMPRESSED_R16G16B16A16};
+    gDepth  = {depthTexId, newWidth, newHeight, 1, PIXELFORMAT_UNCOMPRESSED_GRAYSCALE};
+
+    SetTextureFilter(gAlbedo, TEXTURE_FILTER_POINT);
+    SetTextureFilter(gNormal, TEXTURE_FILTER_POINT);
+    SetTextureFilter(gDepth, TEXTURE_FILTER_POINT);
+
+    // Re-bind to materials
+    lightVolumeMaterial.maps[MATERIAL_MAP_ALBEDO].texture    = gAlbedo;
+    lightVolumeMaterial.maps[MATERIAL_MAP_NORMAL].texture    = gNormal;
+    lightVolumeMaterial.maps[MATERIAL_MAP_ROUGHNESS].texture = gDepth;
+
+    // Rebuild downstream HDR calculation targets
+    RebuildHDRTargets(use16BitHDR, newWidth, newHeight);
+}
+
+// CLEANUP FUNCTION
+// -------------------------------------------------------------------------------------------------
+
+void RenderContext::Destroy() const {
+    // Helper for instanced Material unloading
+    auto safeUnloadMaterial = [](const Material &mat) {
+        Material copy = mat;
+        copy.shader.id = 0;
+        copy.shader.locs = nullptr;
+        if (copy.maps) {
+            for (int i = 0; i < 12; i++) {
+                copy.maps[i].texture.id = 0;
+            }
+        }
+        UnloadMaterial(copy);
+    };
+    // Helper for instanced Model unloading
+    auto safeUnloadModel = [](const Model &mdl) {
+        const Model copy = mdl;
+        if (copy.materials) {
+            for (int i = 0; i < copy.materialCount; i++) {
+                copy.materials[i].shader.id = 0;
+                copy.materials[i].shader.locs = nullptr;
+                if (copy.materials[i].maps) {
+                    for (int j = 0; j < 12; j++) {
+                        copy.materials[i].maps[j].texture.id = 0;
+                    }
+                }
+            }
+        }
+        UnloadModel(copy);
+    };
+
+    // Unload Materials safely without double-freeing shared shaders/textures
+    safeUnloadMaterial(instancedMaterial);
+    safeUnloadMaterial(instancedLightMaterial);
+    safeUnloadMaterial(lightVolumeMaterial);
+    safeUnloadMaterial(fwdBlinnMaterial);
+    safeUnloadMaterial(fwdGoochMaterial);
+    safeUnloadMaterial(fwdToonMaterial);
+    safeUnloadMaterial(fwdOutlineMaterial);
+    safeUnloadMaterial(fwdFloorMaterial);
+    safeUnloadMaterial(fwdLightProxyMaterial);
+
+    // Unload Custom VBOs
+    rlUnloadVertexBuffer(styleIdVboId);
+    rlUnloadVertexBuffer(lightStyleIdVboId);
+
+    // Unload FBOs and Textures
+    rlUnloadFramebuffer(FboId);
+    rlUnloadTexture(albedoTexId);
+    rlUnloadTexture(normalTexId);
+    rlUnloadTexture(depthTexId);
+    UnloadRenderTexture(litSceneTarget);
+    UnloadRenderTexture(resolveTarget);
+
+    // Unload Shaders
+    UnloadShader(geometryPassShader);
+    UnloadShader(instancedShader);
+    UnloadShader(lightingPassShader);
+    UnloadShader(lightVolumeShader);
+    UnloadShader(nprResolveShader);
+    UnloadShader(forwardBlinnShader);
+    UnloadShader(forwardGoochShader);
+    UnloadShader(forwardToonShader);
+    UnloadShader(forwardOutlineShader);
+    UnloadShader(forwardUnlitShader);
+    UnloadShader(postShader);
+
+    // Standard unloads
+    for (auto &mesh : lodMeshes)
+        UnloadMesh(mesh);
+    UnloadTexture(obstacleTexture);
+    UnloadTexture(floorTexture);
+    safeUnloadModel(lightningSourceModel);
+    safeUnloadModel(floorModel);
+}

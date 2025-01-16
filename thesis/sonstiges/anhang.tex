@@ -1,0 +1,232 @@
+\chapter{Systemkonfiguration und Variablen-Mapping}
+\label{ch:AA_configuration_and_variable_mapping}
+
+% Hardware-Tabelle
+\begin{table}[htbp]
+    \centering
+    \caption{Spezifikation der primären Test-Hardware.}
+    \label{tab:hardware_specs}
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabularx}{\textwidth}{@{} l X @{}}
+        \toprule
+        \textbf{Hardware-Komponente}      & \textbf{Spezifikation / Wert}                      \\
+        \midrule
+        Prozessor (\ac{CPU})                   & Intel Core i5-6600K @ $4\times~3.50$\,GHz          \\
+        Hauptspeicher (RAM)               & 16\,GB DDR4 (Dual-Channel) @ 3000\,MT/s            \\
+        Grafikkarte (\ac{GPU})                 & NVIDIA GeForce GTX 1660                            \\
+        \ac{GPU}-Architektur                   & Turing (TU116)                                     \\
+        \ac{VRAM}-Kapazität                    & 6\,GB GDDR5                                        \\
+        Theoretische \ac{VRAM}-Bandbreite      & 192,1\,GB/s                                        \\
+        Raster Operation Pipelines (ROPs)             & 48                                                 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+% Software-Tabelle
+\begin{table}[htbp]
+    \centering
+    \caption{Spezifikation der Software-Umgebung und API-Schnittstellen.}
+    \label{tab:software_specs}
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabularx}{\textwidth}{@{} l X @{}}
+        \toprule
+        \textbf{Software / \ac{API}} & \textbf{Version}               \\
+        \midrule
+        Betriebssystem          & Linux Mint 22.3 (Kernel 6.8.0) \\
+        Grafiktreiber           & NVIDIA 595.71.05               \\
+        C++ Compiler            & GCC 13.3.0                     \\
+        Anwendungs-Framework    & raylib 5.5                     \\
+        Grafik-\ac{API}             & OpenGL 3.3.0 Core Profile      \\
+        Shading Language        & GLSL 3.30                      \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\clearpage
+
+% Tabelle der unabhängigen Variablen
+\renewcommand{\arraystretch}{1.3}
+\begin{longtable}{@{} >{\raggedright\arraybackslash}p{0.28\textwidth} p{0.18\textwidth} p{0.08\textwidth} >{\raggedright\arraybackslash}p{0.40\textwidth} @{}}
+    \caption{Spezifikation der unabhängigen Variablen, deren formale Definition und Zuweisung zu den Test-Suites.}
+    \label{tab:independent_vars} \\
+    \toprule
+    \textbf{Variable (Symbol \& CSV-Mapping)} & \textbf{Wertebereich} & \textbf{Kapitel} & \textbf{Beschreibung} \\
+    \midrule
+    \endfirsthead
+
+    \multicolumn{4}{c}{{\tablename\ \thetable{} -- Fortsetzung von der vorherigen Seite}} \\
+    \toprule
+    \textbf{Variable (Symbol \& CSV-Mapping)} & \textbf{Wertebereich} & \textbf{Kapitel} & \textbf{Beschreibung} \\
+    \midrule
+    \endhead
+
+    \midrule
+    \multicolumn{4}{r}{{Weiter auf der nächsten Seite...}} \\
+    \endfoot
+
+    \bottomrule
+    \endlastfoot
+
+    Render-Architektur ($A$) \newline \scriptsize{\texttt{activeRenderPath}} & \textit{Enum} & Alle & Die primäre
+    architektonische Variable. Rotiert durch Forward, Deferred-Uber und Deferred-Volume. \\
+
+    Geometrischer Detailgrad ($LOD$) \newline \scriptsize{\texttt{currentLodIndex}} & $12$ bis $8.192$ Dreiecke & 5.2.1
+    & Skaliert die Dreiecksanzahl pro zu renderndem Objekt. \\
+
+    Instanzen-Anzahl ($N_{\text{Inst}}$) \newline \scriptsize{\texttt{activeObstacleCount}} & 1.000 bis 50.000 & 5.2.2,
+    5.2.3 & Anzahl der gerenderten Geometrie-Instanzen. \\
+
+    Framebuffer-Auflösung ($R$) \newline \scriptsize{\texttt{renderResolution}} & 480p bis 4K & 5.3.1 & Absolute
+    Render-Auflösung. \\
+
+    Screen-Space-Abdeckung ($C_{\text{Floor}}$) \newline \scriptsize{\texttt{renderFloor}} & \textit{Boolean} & 5.3.2
+    & Erzeugt eine Bildfüllende Geometrie. \\
+
+    Lichtquellen-Anzahl ($N_{\text{Light}}$) \newline \scriptsize{\texttt{activeLightCount}} & 10 bis 5.000 & 5.4.1,
+    5.4.2 & Anzahl der aktiven dynamischen Punktlichter im View-Frustum. \\
+
+    Beleuchtungs-Radius ($r_{\text{Light}}$) \newline \scriptsize{\texttt{lightIntensity}} & 0,5 bis 20,0 & 5.4.2 &
+    Skaliert das Proxy-Volumen der Lichter. \\
+
+    Räumliche Entropie ($E_{\text{Spatial}}$) \newline \scriptsize{\texttt{useClusteredStyles}} & \textit{Boolean} &
+    5.5.1 & Steuert die Verteilung der Stile (geklustert vs. gestreut). \\
+
+    Stil-Kombinatorik ($S_{\text{Count}}$) \newline \scriptsize{\texttt{enableGooch/Toon}} & 1 bis 3 Stile & 5.5.2 &
+    Skaliert die Anzahl der aktiv evaluierten Shading-Modelle. \\
+
+    Filter-Radius ($r_{\text{Kuwahara}}$) \newline \scriptsize{\texttt{kuwaharaRadius}} & 2 bis 16 & 5.5.3 & Ausdehnung
+    des Post-Processing-Kernels. \\
+
+    Makro-Pass ($P_{\text{Macro}}$) \newline \scriptsize{\texttt{Feature Accumulation}} & Pass 1 bis 4 & 5.6 &
+    Kumulative Aktivierung von Geometrie, Shading und Stil-Entropie über einen fixierten Kamerapfad. \\
+\end{longtable}
+
+% Tabelle der abhängigen Variablen
+\renewcommand{\arraystretch}{1.3}
+\begin{longtable}{@{} >{\raggedright\arraybackslash}p{0.32\textwidth} p{0.10\textwidth}
+        >{\raggedright\arraybackslash}p{0.52\textwidth} @{}}
+    \caption{Spezifikation der abhängigen Variablen (Metriken), deren formale Definition und CSV-Mapping.}
+    \label{tab:dependent_vars} \\
+    \toprule
+    \textbf{Metrik (Symbol \& CSV-Mapping)} & \textbf{Kategorie} & \textbf{Beschreibung} \\
+    \midrule
+    \endfirsthead
+
+    \multicolumn{3}{c}{{\tablename\ \thetable{} -- Fortsetzung von der vorherigen Seite}} \\
+    \toprule
+    \textbf{Metrik (Symbol \& CSV-Mapping)} & \textbf{Kategorie} & \textbf{Beschreibung} \\
+    \midrule
+    \endhead
+
+    \midrule
+    \multicolumn{3}{r}{{Weiter auf der nächsten Seite...}} \\
+    \endfoot
+
+    \bottomrule
+    \endlastfoot
+
+    Logik-Laufzeit ($t_{\text{Logic}}$) \newline \scriptsize{\texttt{cpuLogicMs}} & \ac{CPU} & Dauer des logischen
+    Szenen-Passes (Frustum Culling, Sichtbarkeitsprüfung und Matrix-Updates). \\
+
+    Dispatch-Laufzeit ($t_{\text{Dispatch}}$) \newline \scriptsize{\texttt{cpuRenderMs}} & \ac{CPU} & Dauer der
+    \ac{API}-Befehlsübermittlung an den Grafiktreiber (\textit{Draw-Call Submission}). \\
+
+    Geometrie-Laufzeit ($t_{\text{Geom}}$) \newline \scriptsize{\texttt{geomMs}} & \ac{GPU} & Dauer des asynchronen
+    Hardware-Queries für den Geometrie-Pass (G-Buffer-Generierung, entfällt bei Forward). \\
+
+    Beleuchtungs-Laufzeit ($t_{\text{Light}}$) \newline \scriptsize{\texttt{lightMs}} & \ac{GPU} & Dauer des asynchronen
+    Hardware-Queries für Beleuchtung und \ac{NPR}-Berechnung (bei Forward inkludiert dies zwangsläufig die Geometrielast). \\
+
+    \ac{GPU}-Gesamtlaufzeit ($t_{\text{GPU}}$) \newline \scriptsize{\texttt{totalGpuMs}} & \ac{GPU} & Aggregierte
+    \ac{GPU}-Ausführungszeit des gesamten Frames, gemessen über Hardware-Timer-Queries. \\
+
+    System-Frame-Time ($t_{\text{Frame}}$) \newline \scriptsize{\texttt{totalFrameTimeMs}} & System & Absolute
+    Frame-Latenz (Delta Time), gemessen über \ac{CPU}-Timer. \\
+
+    Sichtbare Instanzen ($N_{\text{Vis}}$) \newline \scriptsize{\texttt{activeInstances}} & Szene & Anzahl der
+    verarbeiteten Objekt-Instanzen nach dem Frustum Culling. \\
+
+    Gerenderte Dreiecke ($N_{\text{Tris}}$) \newline \scriptsize{\texttt{activeTris}} & Szene & Berechnete Summe der an
+    die \ac{GPU} übermittelten Dreiecke ($N_{\text{Vis}} \times \text{Dreiecke des aktiven LODs}$). \\
+
+    Overdraw-Faktor ($O_{\text{Draw}}$) \newline \scriptsize{\texttt{currentOverdraw}} & Szene & Theoretischer
+    Überzeichnungsfaktor, basierend auf Frustum-Tiefe und räumlicher Instanzdichte. \\
+\end{longtable}
+
+% Tabelle der Kontrollvariablen
+\renewcommand{\arraystretch}{1.3}
+\begin{longtable}{@{} p{0.20\textwidth} >{\raggedright\arraybackslash}p{0.35\textwidth}
+        >{\raggedright\arraybackslash}p{0.39\textwidth} @{}}
+    \caption{Spezifikation der Kontrollvariablen und der statischen System-Baseline.}
+    \label{tab:controlled_vars} \\
+    \toprule
+    \textbf{Kategorie} & \textbf{Variable (Symbol \& Mapping)} & \textbf{Standardwert (Baseline)} \\
+    \midrule
+    \endfirsthead
+
+    \multicolumn{3}{c}{{\tablename\ \thetable{} -- Fortsetzung von der vorherigen Seite}} \\
+    \toprule
+    \textbf{Kategorie} & \textbf{Variable (Symbol \& Mapping)} & \textbf{Standardwert (Baseline)} \\
+    \midrule
+    \endhead
+
+    \midrule
+    \multicolumn{3}{r}{{Weiter auf der nächsten Seite...}} \\
+    \endfoot
+
+    \bottomrule
+    \endlastfoot
+
+    Rendering \& Pipeline & \ac{HDR}-Genauigkeit ($HDR_{\text{16bit}}$) \newline \scriptsize{\texttt{use16BitHDR}} &
+    Aktiviert (Basis für RMW-Blending) \\ \nopagebreak
+    & Basis-Auflösung ($R_{\text{Base}}$) \newline \scriptsize{\texttt{renderResolution}} & $1920 \times 1080$ Pixel
+    (1080p) \\ \nopagebreak
+    & Screen-Space-Abdeckung ($C_{\text{Floor}}$) \newline \scriptsize{\texttt{renderFloor}} & Aktiviert \\
+    \midrule
+
+    Verteilung \& Geometrie & Basis-Instanzen ($N_{\text{Inst\_Base}}$) \newline
+    \scriptsize{\texttt{activeObstacleCount}} & 5.000 Objekte \\ \nopagebreak
+    & Spawn-Radius ($r_{\text{Spawn}}$) \newline \scriptsize{\texttt{objectSphereRadius}} & 200,0 Einheiten \\
+    \nopagebreak
+    & Basis-Detailgrad ($LOD_{\text{Base}}$) \newline \scriptsize{\texttt{currentLodIndex}} & 1 \\ \nopagebreak
+    & Räumliche Entropie ($E_{\text{Spatial}}$) \newline \scriptsize{\texttt{useClusteredStyles}} & Deaktiviert
+    (Gestreute Verteilung) \\
+    \midrule
+
+    Licht-Physik & Umgebungslicht ($I_{\text{Ambient}}$) \newline \scriptsize{\texttt{ambientLightStrength}} & 1,0
+    (Neutrale Grundausleuchtung) \\ \nopagebreak
+    & Licht-Radius ($r_{\text{Light}}$) \newline \scriptsize{\texttt{lightIntensity}} & 2,0 Einheiten \\ \nopagebreak
+    & Licht-Singularität ($S_{\text{Light}}$) \newline \scriptsize{\texttt{useLightSingularity}} & Deaktiviert
+    (Zufällige Verteilung) \\
+    \midrule
+
+    \ac{NPR} / Stilisierung & Aktive Stile ($S_{\text{Count}}$) \newline \scriptsize{\texttt{enableGooch/Toon}} &
+    Deaktiviert (0 Stile, reine Basis-Beleuchtung) \\ \nopagebreak
+    & Post-Processing ($P_{\text{FX}}$) \newline \scriptsize{\texttt{enableOutlines/Kuwahara}} & Deaktiviert \\
+    \nopagebreak
+    & Filter-Radius ($r_{\text{Kuwahara}}$) \newline \scriptsize{\texttt{kuwaharaRadius}} & 4 Pixel \\ \nopagebreak
+    & Filter-Intensität ($i_{\text{Kuwahara}}$) \newline \scriptsize{\texttt{kuwaharaIntensity}} & 4,0 \\
+    \midrule
+
+    Test-Orchestrierung & Warm-up-Dauer ($T_{\text{Warmup}}$) \newline \scriptsize{\texttt{warmupDuration}} & 10,0
+    Sekunden (Cache-Sättigung) \\ \nopagebreak
+    & Sampling-Dauer ($T_{\text{Sample}}$) \newline \scriptsize{\texttt{captureDuration}} & 1.000 Frames (Statistische
+    Mittelwertbildung) \\
+\end{longtable}
+
+
+\chapter{Struktur des digitalen Anhangs}
+\label{ch:AB_digital_appendix}
+
+\dirtree{%
+    .1 MarBau-201521192\_BA\_Digitaler\_Anhang.
+    .2 Generative\_KI\DTcomment{Sämtliche Prompts \& Antworten}.
+    .2 Literatur-Quellen\DTcomment{Digitale Kopien der öffentlichen Publikationen}.
+    .2 Logbuch\DTcomment{Projektdokumentation}.
+    .2 Rohdaten\_und\_Skripte\DTcomment{Messreihen aus Kap.~5 \& Parsing-Skripte}.
+    .2 Schriftliche\_Ausarbeitung.
+    .2 Software-Artefakt.
+    .3 Executables\DTcomment{Ausführbare Programme für Linux \& Windows}.
+    .3 Quellcode\DTcomment{Vollständiger Quellcode des HyDra-Frameworks}.
+    .2 Video\_Kurzfassung.
+}

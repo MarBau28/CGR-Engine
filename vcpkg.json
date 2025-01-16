@@ -1,0 +1,14 @@
+{
+    "name": "cgr-engine",
+    "version-string": "0.1.0",
+    "dependencies": [
+        "asio",
+        "glfw3",
+        "opengl",
+        "glad",
+        "stb",
+        "glm",
+        "raylib"
+    ],
+    "builtin-baseline": "05442024c3fda64320bd25d2251cc9807b84fb6f"
+}

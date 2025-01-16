@@ -1,0 +1,510 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg21"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   sodipodi:docname="GPU-hardware-model.svg"
+   inkscape:export-filename="GPU-hardware-model.pdf"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview23"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="1"
+     inkscape:cx="334"
+     inkscape:cy="401"
+     inkscape:window-width="2048"
+     inkscape:window-height="1076"
+     inkscape:window-x="2048"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs18">
+    <marker
+       style="overflow:visible"
+       id="Arrow3"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Arrow3"
+       markerWidth="4.2071066"
+       markerHeight="7"
+       viewBox="0 0 4.2071068 7"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         style="fill:none;stroke:context-stroke;stroke-width:1;stroke-linecap:round"
+         d="M 3,-3 0,0 3,3"
+         id="arrow3"
+         transform="rotate(180,0.125,0)"
+         sodipodi:nodetypes="ccc" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="marker15348"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Arrow1"
+       markerWidth="4.0606604"
+       markerHeight="6.7071066"
+       viewBox="0 0 4.0606602 6.7071068"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         style="fill:none;stroke:context-stroke;stroke-width:1;stroke-linecap:butt"
+         d="M 3,-3 0,0 3,3"
+         id="path15346"
+         transform="rotate(180,0.125,0)"
+         sodipodi:nodetypes="ccc" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="marker15348-1"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Arrow1"
+       markerWidth="4.0606604"
+       markerHeight="6.7071066"
+       viewBox="0 0 4.0606602 6.7071068"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         style="fill:none;stroke:context-stroke;stroke-width:1;stroke-linecap:butt"
+         d="M 3,-3 0,0 3,3"
+         id="path15346-2"
+         transform="rotate(180,0.125,0)"
+         sodipodi:nodetypes="ccc" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow3-7"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Arrow3"
+       markerWidth="4.2071066"
+       markerHeight="7"
+       viewBox="0 0 4.2071068 7"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         style="fill:none;stroke:context-stroke;stroke-width:1;stroke-linecap:round"
+         d="M 3,-3 0,0 3,3"
+         id="arrow3-0"
+         transform="rotate(180,0.125,0)"
+         sodipodi:nodetypes="ccc" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="marker15348-1-4"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Arrow1"
+       markerWidth="4.0606604"
+       markerHeight="6.7071066"
+       viewBox="0 0 4.0606602 6.7071068"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         style="fill:none;stroke:context-stroke;stroke-width:1;stroke-linecap:butt"
+         d="M 3,-3 0,0 3,3"
+         id="path15346-2-5"
+         transform="rotate(180,0.125,0)"
+         sodipodi:nodetypes="ccc" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow3-7-0"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Arrow3"
+       markerWidth="4.2071066"
+       markerHeight="7"
+       viewBox="0 0 4.2071068 7"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         style="fill:none;stroke:context-stroke;stroke-width:1;stroke-linecap:round"
+         d="M 3,-3 0,0 3,3"
+         id="arrow3-0-3"
+         transform="rotate(180,0.125,0)"
+         sodipodi:nodetypes="ccc" />
+    </marker>
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:#d9d5f9;fill-opacity:1;stroke:#000000;stroke-width:0.289409;stroke-opacity:1"
+       id="rect804"
+       width="42.213139"
+       height="73.093132"
+       x="12.908767"
+       y="30.781551"
+       ry="0.054554313" />
+    <rect
+       style="fill:#e6e5e9;fill-opacity:1;stroke:#000000;stroke-width:0.288839;stroke-opacity:1"
+       id="rect8970"
+       width="112.67727"
+       height="73.093704"
+       x="82.647591"
+       y="30.781267"
+       ry="0.054319344" />
+    <text
+       xml:space="preserve"
+       style="font-weight:bold;font-size:7.05556px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0;stroke-opacity:1;stroke-dasharray:none"
+       x="24.568213"
+       y="66.063164"
+       id="text10534"><tspan
+         sodipodi:role="line"
+         id="tspan10532"
+         style="font-size:7.05556px;fill:#000000;fill-opacity:1;stroke-width:0;stroke-dasharray:none"
+         x="24.568213"
+         y="66.063164">VRAM</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333px;font-family:sans-serif;-inkscape-font-specification:sans-serif;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0;stroke-opacity:1;stroke-dasharray:none"
+       x="19.84807"
+       y="72.893822"
+       id="text10748"><tspan
+         sodipodi:role="line"
+         id="tspan10746"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333px;font-family:sans-serif;-inkscape-font-specification:sans-serif;stroke-width:0;stroke-dasharray:none"
+         x="19.84807"
+         y="72.893822">(GPU Speicher)</tspan></text>
+    <rect
+       style="fill:#efd2bb;fill-opacity:1;stroke:#000000;stroke-width:0.277349;stroke-opacity:1"
+       id="rect11003"
+       width="22.733551"
+       height="66.987801"
+       x="86.24604"
+       y="33.855862"
+       ry="0.05591305" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.1;stroke-dasharray:none;stroke-opacity:1"
+       x="97.591644"
+       y="66.215233"
+       id="text12594"><tspan
+         sodipodi:role="line"
+         id="tspan12592"
+         style="text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke-width:0.1;stroke-dasharray:none"
+         x="97.591644"
+         y="66.215233">L2</tspan><tspan
+         sodipodi:role="line"
+         style="text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke-width:0.1;stroke-dasharray:none"
+         x="97.591644"
+         y="71.506897"
+         id="tspan12596">Cache</tspan></text>
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.259795;stroke-opacity:1"
+       id="rect12754-2"
+       width="65.042603"
+       height="31.878307"
+       x="125.96288"
+       y="68.974129"
+       ry="0.043911945"
+       inkscape:transform-center-x="-8.7195762"
+       inkscape:transform-center-y="3.5358429" />
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.259795;stroke-opacity:1"
+       id="rect12754-2-9"
+       width="65.042603"
+       height="31.878307"
+       x="125.96289"
+       y="33.920815"
+       ry="0.043911945"
+       inkscape:transform-center-x="-8.7195762"
+       inkscape:transform-center-y="3.5358429" />
+    <path
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.721696;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#marker15348);marker-end:url(#Arrow3)"
+       d="m 109.7992,49.859968 h 15.36959"
+       id="path14401" />
+    <path
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.721696;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#marker15348-1);marker-end:url(#Arrow3-7)"
+       d="m 109.7992,84.913283 h 15.36959"
+       id="path14401-9" />
+    <path
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.923617;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#marker15348-1-4);marker-end:url(#Arrow3-7-0)"
+       d="M 56.298324,66.195455 H 81.471457"
+       id="path14401-9-6" />
+    <rect
+       style="fill:#fdf8b7;fill-opacity:1;stroke:#000000;stroke-width:0.179555;stroke-dasharray:none;stroke-opacity:1"
+       id="rect16445-3"
+       width="58.165611"
+       height="6.3882475"
+       x="129.40138"
+       y="72.439751"
+       ry="0.020913729" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.1;stroke-dasharray:none;stroke-opacity:1"
+       x="159.01334"
+       y="76.711327"
+       id="text16528"><tspan
+         sodipodi:role="line"
+         id="tspan16526"
+         style="font-size:3.175px;fill:#000000;fill-opacity:1;stroke-width:0.1;stroke-dasharray:none"
+         x="159.01334"
+         y="76.711327">Register &amp; L1-Cache</tspan></text>
+    <rect
+       style="fill:#8ef5bc;fill-opacity:1;stroke:#000000;stroke-width:0.16;stroke-dasharray:none;stroke-opacity:1"
+       id="rect16738"
+       width="9.8098707"
+       height="8.7692642"
+       x="130.04434"
+       y="82.525421"
+       ry="0.020913728" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.16;stroke-dasharray:none;stroke-opacity:1"
+       x="135.0938"
+       y="88.032417"
+       id="text16908"><tspan
+         sodipodi:role="line"
+         id="tspan16906"
+         style="fill:#000000;fill-opacity:1;stroke-width:0.16"
+         x="135.0938"
+         y="88.032417">ALU</tspan></text>
+    <rect
+       style="fill:#8ef5bc;fill-opacity:1;stroke:#000000;stroke-width:0.16;stroke-dasharray:none;stroke-opacity:1"
+       id="rect16738-2"
+       width="9.8098707"
+       height="8.7692642"
+       x="145.00366"
+       y="82.525421"
+       ry="0.020913728" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.16;stroke-dasharray:none;stroke-opacity:1"
+       x="150.05305"
+       y="88.032417"
+       id="text16908-6"><tspan
+         sodipodi:role="line"
+         id="tspan16906-1"
+         style="fill:#000000;fill-opacity:1;stroke-width:0.16"
+         x="150.05305"
+         y="88.032417">ALU</tspan></text>
+    <rect
+       style="fill:#8ef5bc;fill-opacity:1;stroke:#000000;stroke-width:0.16;stroke-dasharray:none;stroke-opacity:1"
+       id="rect16738-2-0"
+       width="9.8098707"
+       height="8.7692642"
+       x="160.93428"
+       y="82.525421"
+       ry="0.020913728" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.16;stroke-dasharray:none;stroke-opacity:1"
+       x="165.98367"
+       y="88.032417"
+       id="text16908-6-2"><tspan
+         sodipodi:role="line"
+         id="tspan16906-1-3"
+         style="fill:#000000;fill-opacity:1;stroke-width:0.16"
+         x="165.98367"
+         y="88.032417">ALU</tspan></text>
+    <rect
+       style="fill:#8ef5bc;fill-opacity:1;stroke:#000000;stroke-width:0.16;stroke-dasharray:none;stroke-opacity:1"
+       id="rect16738-8"
+       width="9.8098707"
+       height="8.7692642"
+       x="176.28435"
+       y="82.525421"
+       ry="0.020913728" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.16;stroke-dasharray:none;stroke-opacity:1"
+       x="181.33374"
+       y="88.032417"
+       id="text16908-7"><tspan
+         sodipodi:role="line"
+         id="tspan16906-9"
+         style="fill:#000000;fill-opacity:1;stroke-width:0.16"
+         x="181.33374"
+         y="88.032417">ALU</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0;stroke-dasharray:none;stroke-opacity:1"
+       x="158.46672"
+       y="96.81617"
+       id="text17038"><tspan
+         sodipodi:role="line"
+         id="tspan17036"
+         style="stroke-width:0;stroke-dasharray:none"
+         x="158.46672"
+         y="96.81617">Streaming Multiprocessor (SM)</tspan></text>
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.259795;stroke-opacity:1"
+       id="rect12754-2-7"
+       width="65.042603"
+       height="31.878307"
+       x="125.96289"
+       y="33.920815"
+       ry="0.043911945"
+       inkscape:transform-center-x="-8.7195762"
+       inkscape:transform-center-y="3.5358429" />
+    <rect
+       style="fill:#fdf8b7;fill-opacity:1;stroke:#000000;stroke-width:0.179555;stroke-dasharray:none;stroke-opacity:1"
+       id="rect16445-3-5"
+       width="58.165611"
+       height="6.3882475"
+       x="129.40138"
+       y="37.386436"
+       ry="0.020913729" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.1;stroke-dasharray:none;stroke-opacity:1"
+       x="159.01335"
+       y="41.658012"
+       id="text16528-9"><tspan
+         sodipodi:role="line"
+         id="tspan16526-2"
+         style="font-size:3.175px;fill:#000000;fill-opacity:1;stroke-width:0.1;stroke-dasharray:none"
+         x="159.01335"
+         y="41.658012">Register &amp; L1-Cache</tspan></text>
+    <rect
+       style="fill:#8ef5bc;fill-opacity:1;stroke:#000000;stroke-width:0.16;stroke-dasharray:none;stroke-opacity:1"
+       id="rect16738-28"
+       width="9.8098707"
+       height="8.7692642"
+       x="130.04437"
+       y="47.472099"
+       ry="0.020913728" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.16;stroke-dasharray:none;stroke-opacity:1"
+       x="135.09381"
+       y="52.979103"
+       id="text16908-9"><tspan
+         sodipodi:role="line"
+         id="tspan16906-7"
+         style="fill:#000000;fill-opacity:1;stroke-width:0.16"
+         x="135.09381"
+         y="52.979103">ALU</tspan></text>
+    <rect
+       style="fill:#8ef5bc;fill-opacity:1;stroke:#000000;stroke-width:0.16;stroke-dasharray:none;stroke-opacity:1"
+       id="rect16738-2-3"
+       width="9.8098707"
+       height="8.7692642"
+       x="145.00368"
+       y="47.472099"
+       ry="0.020913728" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.16;stroke-dasharray:none;stroke-opacity:1"
+       x="150.05307"
+       y="52.979103"
+       id="text16908-6-6"><tspan
+         sodipodi:role="line"
+         id="tspan16906-1-1"
+         style="fill:#000000;fill-opacity:1;stroke-width:0.16"
+         x="150.05307"
+         y="52.979103">ALU</tspan></text>
+    <rect
+       style="fill:#8ef5bc;fill-opacity:1;stroke:#000000;stroke-width:0.16;stroke-dasharray:none;stroke-opacity:1"
+       id="rect16738-2-0-2"
+       width="9.8098707"
+       height="8.7692642"
+       x="160.9343"
+       y="47.472099"
+       ry="0.020913728" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.16;stroke-dasharray:none;stroke-opacity:1"
+       x="165.98369"
+       y="52.979103"
+       id="text16908-6-2-9"><tspan
+         sodipodi:role="line"
+         id="tspan16906-1-3-3"
+         style="fill:#000000;fill-opacity:1;stroke-width:0.16"
+         x="165.98369"
+         y="52.979103">ALU</tspan></text>
+    <rect
+       style="fill:#8ef5bc;fill-opacity:1;stroke:#000000;stroke-width:0.16;stroke-dasharray:none;stroke-opacity:1"
+       id="rect16738-8-1"
+       width="9.8098707"
+       height="8.7692642"
+       x="176.28436"
+       y="47.472099"
+       ry="0.020913728" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.16;stroke-dasharray:none;stroke-opacity:1"
+       x="181.33376"
+       y="52.979103"
+       id="text16908-7-9"><tspan
+         sodipodi:role="line"
+         id="tspan16906-9-4"
+         style="fill:#000000;fill-opacity:1;stroke-width:0.16"
+         x="181.33376"
+         y="52.979103">ALU</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0;stroke-dasharray:none;stroke-opacity:1"
+       x="158.46674"
+       y="61.762856"
+       id="text17038-7"><tspan
+         sodipodi:role="line"
+         id="tspan17036-8"
+         style="stroke-width:0;stroke-dasharray:none"
+         x="158.46674"
+         y="61.762856">Streaming Multiprocessor (SM)</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:3.52778px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0;stroke-dasharray:none;stroke-opacity:1"
+       x="68.874306"
+       y="59.707912"
+       id="text19286"><tspan
+         sodipodi:role="line"
+         id="tspan19284"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:3.52778px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';stroke-width:0;stroke-dasharray:none"
+         x="68.874306"
+         y="59.707912">Speicherbus</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:3.175px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0;stroke-dasharray:none;stroke-opacity:1"
+       x="68.884888"
+       y="73.939453"
+       id="text19290"><tspan
+         sodipodi:role="line"
+         id="tspan19288"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:sans-serif;-inkscape-font-specification:sans-serif;stroke-width:0;stroke-dasharray:none"
+         x="68.884888"
+         y="73.939453">(Bandbreiten-</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:sans-serif;-inkscape-font-specification:sans-serif;stroke-width:0;stroke-dasharray:none"
+         x="68.884888"
+         y="77.908203"
+         id="tspan19292">Limit)</tspan></text>
+  </g>
+</svg>

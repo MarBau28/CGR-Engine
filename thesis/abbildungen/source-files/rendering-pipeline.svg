@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   sodipodi:docname="rendering-pipeline.svg"
+   inkscape:export-filename="rendering-pipeline.pdf"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="0.83205668"
+     inkscape:cx="693.46237"
+     inkscape:cy="419.44258"
+     inkscape:window-width="2048"
+     inkscape:window-height="1076"
+     inkscape:window-x="2048"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2">
+    <marker
+       style="overflow:visible"
+       id="Arrow4"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Arrow4"
+       markerWidth="5"
+       markerHeight="6"
+       viewBox="0 0 5 6"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         d="m 1,0 -3,3 h -2 l 3,-3 -3,-3 h 2 z"
+         id="path1741" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow4-2-9-0"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Arrow4"
+       markerWidth="5"
+       markerHeight="6"
+       viewBox="0 0 5 6"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         d="m 1,0 -3,3 h -2 l 3,-3 -3,-3 h 2 z"
+         id="path1741-7-3-6" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow4-3"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Arrow4"
+       markerWidth="5"
+       markerHeight="6"
+       viewBox="0 0 5 6"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         d="m 1,0 -3,3 h -2 l 3,-3 -3,-3 h 2 z"
+         id="path1741-6" />
+    </marker>
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:#e0e7ff;fill-opacity:1;stroke:#000000;stroke-width:0.104436"
+       id="rect234-6"
+       width="49.186565"
+       height="22.699474"
+       x="17.123062"
+       y="10.771517"
+       ry="0.054308731" />
+    <rect
+       style="fill:#ffd5d5;fill-opacity:1;stroke:#000000;stroke-width:0.104436"
+       id="rect234-6-5"
+       width="49.186447"
+       height="22.699476"
+       x="80.520607"
+       y="10.771516"
+       ry="0.054308731" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.93889px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.799999;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:0.960578;paint-order:normal"
+       x="105.15173"
+       y="19.202053"
+       id="text1744-6"><tspan
+         sodipodi:role="line"
+         id="tspan1742-1"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.93889px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.8;stroke-opacity:0.960578"
+         x="105.15173"
+         y="19.202053"><tspan
+   style="font-size:4.58611px"
+   id="tspan4487">Vertex</tspan>-Shader</tspan></text>
+    <rect
+       style="fill:#f1f5f9;fill-opacity:1;stroke:#000000;stroke-width:0.104436"
+       id="rect234-6-6"
+       width="49.186565"
+       height="22.699476"
+       x="143.79881"
+       y="10.865282"
+       ry="0.054308731" />
+    <rect
+       style="fill:#ffd5d5;fill-opacity:1;stroke:#000000;stroke-width:0.104436"
+       id="rect234-6-6-2"
+       width="49.186565"
+       height="22.699474"
+       x="17.123062"
+       y="44.524776"
+       ry="0.054308731" />
+    <rect
+       style="fill:#e0e7ff;fill-opacity:1;stroke:#000000;stroke-width:0.104676"
+       id="rect234-6-6-1"
+       width="49.413872"
+       height="22.699238"
+       x="80.29306"
+       y="44.423725"
+       ry="0.054308165" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.704747;stroke-dasharray:none;marker-end:url(#Arrow4)"
+       d="M 66.309628,22.121254 H 80.518385"
+       id="path598" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.704747;stroke-dasharray:none;marker-end:url(#Arrow4-3)"
+       d="m 129.5337,22.160556 h 14.20876"
+       id="path598-7" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.68641;stroke-dasharray:none;marker-end:url(#Arrow4-2-9-0)"
+       d="M 66.73241,55.512565 H 80.211401"
+       id="path598-0-6-2" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.799984;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;paint-order:normal"
+       d="m 166.4601,34.016969 -1e-5,2.946318"
+       id="path1680" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.796384;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;paint-order:normal"
+       d="M 41.939351,37.738187 166.4619,37.334562"
+       id="path1682" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.799999;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;marker-end:url(#Arrow4-2-9-0);paint-order:normal"
+       d="m 41.539905,37.792202 v 6.786187"
+       id="path1684" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.58611px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.799999;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:0.960578;paint-order:normal"
+       x="41.922722"
+       y="18.994089"
+       id="text1744"><tspan
+         sodipodi:role="line"
+         id="tspan1742"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.58611px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.8;stroke-opacity:0.960578"
+         x="41.922722"
+         y="18.994089">VRAM</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.58611px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';text-align:center;text-anchor:middle;fill:#000101;fill-opacity:1;stroke:none;stroke-width:0.799999;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:0.960578;paint-order:normal"
+       x="168.95694"
+       y="18.498543"
+       id="text4242"><tspan
+         sodipodi:role="line"
+         id="tspan4240"
+         style="font-size:4.58611px;fill:#000101;fill-opacity:1;stroke-width:0.8"
+         x="168.95694"
+         y="18.498543">Rasterisierung</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.58611px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';text-align:center;text-anchor:middle;fill:#000101;fill-opacity:1;stroke:none;stroke-width:0.799999;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:0.960578;paint-order:normal"
+       x="41.049728"
+       y="52.002193"
+       id="text4242-9"><tspan
+         sodipodi:role="line"
+         style="font-size:4.58611px;fill:#000101;fill-opacity:1;stroke-width:0.8"
+         x="41.049728"
+         y="52.002193"
+         id="tspan4433">Fragment-Shader</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.58611px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';text-align:center;text-anchor:middle;fill:#000101;fill-opacity:1;stroke:none;stroke-width:0.799999;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:0.960578;paint-order:normal"
+       x="105.54673"
+       y="52.541061"
+       id="text4242-9-0-3"><tspan
+         sodipodi:role="line"
+         style="font-size:4.58611px;fill:#000101;fill-opacity:1;stroke-width:0.8"
+         x="105.54673"
+         y="52.541061"
+         id="tspan4524-7">Framebuffer</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.5861px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;fill:#000101;fill-opacity:1;stroke:none;stroke-width:0.799999;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:0.960578;paint-order:normal"
+       x="41.757263"
+       y="26.524818"
+       id="text4563"><tspan
+         sodipodi:role="line"
+         id="tspan4561"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:sans-serif;stroke-width:0.8"
+         x="41.757263"
+         y="26.524818"><tspan
+           style="font-size:3.88056px"
+           id="tspan7116">VAO &amp; VBO</tspan></tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;fill:#000101;fill-opacity:1;stroke:none;stroke-width:0.799999;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:0.960578;paint-order:normal"
+       x="51.452347"
+       y="57.938488"
+       id="text4563-2"><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:end;text-anchor:end;stroke-width:0.8"
+         x="51.452347"
+         y="57.938488"
+         id="tspan4641">Setzen der </tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:end;text-anchor:end;stroke-width:0.8"
+         x="51.452347"
+         y="62.789188"
+         id="tspan7136">Pixel-Farbe</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;fill:#000101;fill-opacity:1;stroke:none;stroke-width:0.799999;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:0.960578;paint-order:normal"
+       x="105.29781"
+       y="58.424438"
+       id="text4563-2-9"><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:sans-serif;-inkscape-font-specification:sans-serif;stroke-width:0.8"
+         x="105.29781"
+         y="58.424438"
+         id="tspan7136-7">Render-Pass Ende</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:sans-serif;-inkscape-font-specification:sans-serif;stroke-width:0.8"
+         x="105.29781"
+         y="63.275139"
+         id="tspan7315">und Bildschirmausgabe</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.5861px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;fill:#000101;fill-opacity:1;stroke:none;stroke-width:0.799999;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:0.960578;paint-order:normal"
+       x="104.36086"
+       y="24.186258"
+       id="text4567"><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.8"
+         x="104.36086"
+         y="24.186258"
+         id="tspan7132" /></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;fill:#000101;fill-opacity:1;stroke:none;stroke-width:0.799999;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:0.960578;paint-order:normal"
+       x="168.28149"
+       y="25.206966"
+       id="text4567-5"><tspan
+         sodipodi:role="line"
+         style="font-size:3.88056px;stroke-width:0.8"
+         x="168.28149"
+         y="25.206966"
+         id="tspan4602">Überführung in den</tspan><tspan
+         sodipodi:role="line"
+         style="font-size:3.88056px;stroke-width:0.8"
+         x="168.28149"
+         y="30.057667"
+         id="tspan7130">Bildraum (Screen-Space)</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:sans-serif;-inkscape-font-specification:sans-serif;text-align:center;text-anchor:middle;fill:#000101;fill-opacity:1;stroke:none;stroke-width:0.799999;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:0.960578;paint-order:normal"
+       x="104.98925"
+       y="25.020529"
+       id="text4567-5-9"><tspan
+         sodipodi:role="line"
+         style="font-size:3.88056px;stroke-width:0.8"
+         x="104.98925"
+         y="25.020529"
+         id="tspan7130-1">Geometrie-</tspan><tspan
+         sodipodi:role="line"
+         style="font-size:3.88056px;stroke-width:0.8"
+         x="104.98925"
+         y="29.871229"
+         id="tspan7254">Verarbeitung</tspan></text>
+  </g>
+</svg>

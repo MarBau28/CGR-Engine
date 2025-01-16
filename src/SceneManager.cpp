@@ -1,0 +1,426 @@
+#include "../include/SceneManager.h"
+#include "../include/BenchmarkOrchestrator.h"
+#include "../include/CameraController.h"
+#include "../include/Config.h"
+#include <algorithm>
+#include <cmath>
+#include <raymath.h>
+
+namespace {
+    // Internal spatial math structures
+    struct FrustumPlane {
+        Vector3 normal;
+        float distance;
+
+        void Normalize() {
+            const float length = Vector3Length(normal);
+            normal             = Vector3Scale(normal, 1.0f / length);
+            distance /= length;
+        }
+    };
+
+    struct Frustum {
+        FrustumPlane planes[6];
+
+        void Extract(const Matrix &vp) {
+            // Left Plane
+            planes[0].normal.x = vp.m3 + vp.m0;
+            planes[0].normal.y = vp.m7 + vp.m4;
+            planes[0].normal.z = vp.m11 + vp.m8;
+            planes[0].distance = vp.m15 + vp.m12;
+
+            // Right Plane
+            planes[1].normal.x = vp.m3 - vp.m0;
+            planes[1].normal.y = vp.m7 - vp.m4;
+            planes[1].normal.z = vp.m11 - vp.m8;
+            planes[1].distance = vp.m15 - vp.m12;
+
+            // Bottom Plane
+            planes[2].normal.x = vp.m3 + vp.m1;
+            planes[2].normal.y = vp.m7 + vp.m5;
+            planes[2].normal.z = vp.m11 + vp.m9;
+            planes[2].distance = vp.m15 + vp.m13;
+
+            // Top Plane
+            planes[3].normal.x = vp.m3 - vp.m1;
+            planes[3].normal.y = vp.m7 - vp.m5;
+            planes[3].normal.z = vp.m11 - vp.m9;
+            planes[3].distance = vp.m15 - vp.m13;
+
+            // Near Plane
+            planes[4].normal.x = vp.m3 + vp.m2;
+            planes[4].normal.y = vp.m7 + vp.m6;
+            planes[4].normal.z = vp.m11 + vp.m10;
+            planes[4].distance = vp.m15 + vp.m14;
+
+            // Far Plane
+            planes[5].normal.x = vp.m3 - vp.m2;
+            planes[5].normal.y = vp.m7 - vp.m6;
+            planes[5].normal.z = vp.m11 - vp.m10;
+            planes[5].distance = vp.m15 - vp.m14;
+
+            for (auto &plane : planes)
+                plane.Normalize();
+        }
+
+        [[nodiscard]] bool IsSphereVisible(const BoundingSphere &sphere) const {
+            return std::ranges::all_of(planes, [&](const FrustumPlane &plane) {
+                const float dist = Vector3DotProduct(plane.normal, sphere.center) + plane.distance;
+                return dist >= -sphere.radius;
+            });
+        }
+    };
+}
+
+SceneManager::SceneManager() {
+    masterObstacleTransforms.reserve(Config::EngineSettings::MAX_OBSTACLES);
+    masterObstacleStyleIds.reserve(Config::EngineSettings::MAX_OBSTACLES);
+    masterObstacleSpheres.reserve(Config::EngineSettings::MAX_OBSTACLES);
+    masterLightPositions.reserve(Config::EngineSettings::MAX_LIGHTS);
+    masterLightProxyTransforms.reserve(Config::EngineSettings::MAX_LIGHTS);
+
+    visibleObstacleTransforms.reserve(Config::EngineSettings::MAX_OBSTACLES);
+    visibleObstacleStyleIds.reserve(Config::EngineSettings::MAX_OBSTACLES);
+    visibleLightProxyTransforms.reserve(Config::EngineSettings::MAX_LIGHTS);
+    visibleLightVolumeTransforms.reserve(Config::EngineSettings::MAX_LIGHTS);
+    visibleLightPositions.reserve(Config::EngineSettings::MAX_LIGHTS);
+
+    fwdTransformsBlinn.reserve(Config::EngineSettings::MAX_OBSTACLES);
+    fwdTransformsGooch.reserve(Config::EngineSettings::MAX_OBSTACLES);
+    fwdTransformsToon.reserve(Config::EngineSettings::MAX_OBSTACLES);
+    fwdTransformsOutline.reserve(Config::EngineSettings::MAX_OBSTACLES);
+}
+
+void SceneManager::RebuildScene(const EngineState &state) {
+    if (state.useNprRoom) {
+        GenerateNprRoomScene(state.activeLightCount);
+    } else {
+        GenerateStandardScene(state);
+    }
+}
+
+void SceneManager::GenerateStandardScene(const EngineState &state) {
+    SetRandomSeed(1337);
+
+    masterObstacleTransforms.clear();
+    masterObstacleStyleIds.clear();
+    masterObstacleSpheres.clear();
+    masterLightPositions.clear();
+    masterLightProxyTransforms.clear();
+
+    // Rebuild the active style pool from scratch every call
+    std::vector<float> activeStyles;
+    activeStyles.push_back(1.0f);
+
+    if (state.enableGooch)
+        activeStyles.push_back(2.0f);
+    if (state.enableToon)
+        activeStyles.push_back(3.0f);
+
+    if (state.activeRenderPath != RenderPath::Forward && state.enableKuwahara) {
+        activeStyles.push_back(4.0f);
+    }
+
+    if (state.activeRenderPath == RenderPath::Forward) {
+        std::erase_if(activeStyles, [](const float id) { return id > 3.0f; });
+    }
+
+    const auto numStyles = static_cast<float>(activeStyles.size());
+
+    // Generate objects
+    for (int i = 0; i < Config::EngineSettings::MAX_OBSTACLES; i++) {
+        constexpr float baseRadius = 0.6495f;
+        const float scale          = static_cast<float>(GetRandomValue(10, 30)) / 10.0f;
+        const float u              = static_cast<float>(GetRandomValue(0, 10000)) / 10000.0f;
+        const float radius         = std::sqrt(u) * state.objectSphereRadius;
+        const float angle          = static_cast<float>(GetRandomValue(0, 360)) * DEG2RAD;
+        const float height         = static_cast<float>(GetRandomValue(
+                                 static_cast<int>(scale) * 10,
+                                 static_cast<int>(state.objectSphereRadius / 2.0f) * 10)) /
+                             10.0f;
+
+        const Vector3 pos = {cosf(angle) * radius, height, sinf(angle) * radius};
+
+        float styleId;
+        if (state.useClusteredStyles) {
+            float normAngle = std::fmod(angle, 2.0f * PI);
+            if (normAngle < 0.0f)
+                normAngle += 2.0f * PI;
+
+            // Divide the circle by the current number of active styles
+            const float slice = (2.0f * PI) / numStyles;
+            const int clusterIndex =
+                std::clamp(static_cast<int>(normAngle / slice), 0, static_cast<int>(numStyles - 1));
+            styleId = activeStyles[clusterIndex];
+        } else {
+            // Distribute using the current pool size
+            styleId = activeStyles[i % static_cast<int>(numStyles)];
+        }
+
+        const Vector3 rotAxis = Vector3Normalize({static_cast<float>(GetRandomValue(0, 100)),
+                                                  static_cast<float>(GetRandomValue(0, 100)),
+                                                  static_cast<float>(GetRandomValue(0, 100))});
+        const auto rotAngle   = static_cast<float>(GetRandomValue(0, 360));
+
+        Matrix transform = MatrixMultiply(MatrixMultiply(MatrixScale(scale, scale, scale),
+                                                         MatrixRotate(rotAxis, rotAngle * DEG2RAD)),
+                                          MatrixTranslate(pos.x, pos.y, pos.z));
+
+        masterObstacleTransforms.push_back(transform);
+        masterObstacleStyleIds.push_back(styleId);
+        masterObstacleSpheres.push_back({pos, baseRadius * scale});
+    }
+
+    // Light generation
+    int lightsGenerated = 0;
+    while (lightsGenerated < Config::EngineSettings::MAX_LIGHTS) {
+        const float u      = static_cast<float>(GetRandomValue(0, 10000)) / 10000.0f;
+        const float radius = std::sqrt(u) * state.objectSphereRadius;
+        const float angle  = static_cast<float>(GetRandomValue(0, 360)) * DEG2RAD;
+        const float height = static_cast<float>(GetRandomValue(
+                                 20, static_cast<int>(state.objectSphereRadius / 2.0f) * 10)) /
+                             10.0f;
+
+        Vector3 pos = {cosf(angle) * radius, height, sinf(angle) * radius};
+        masterLightPositions.push_back(pos);
+        masterLightProxyTransforms.push_back(
+            MatrixMultiply(MatrixScale(1.5f, 1.5f, 1.5f), MatrixTranslate(pos.x, pos.y, pos.z)));
+        lightsGenerated++;
+    }
+    actualGeneratedLights = lightsGenerated;
+}
+
+void SceneManager::GenerateNprRoomScene(const int lightCount) {
+    masterObstacleTransforms.clear();
+    masterObstacleStyleIds.clear();
+    masterObstacleSpheres.clear();
+    masterLightPositions.clear();
+    masterLightProxyTransforms.clear();
+
+    constexpr float baseScale = 1.0f / 0.75f;
+    constexpr float vW        = 100.0f;
+    constexpr float vH        = 100.0f;
+    constexpr float vT        = 1.0f;
+
+    constexpr float sW   = vW * baseScale;
+    constexpr float sH   = vH * baseScale;
+    constexpr float sT   = vT * baseScale;
+    constexpr float padW = (vW + vT * 2.0f) * baseScale;
+
+    masterObstacleTransforms.push_back(
+        MatrixMultiply(MatrixScale(padW, sT, padW), MatrixTranslate(0, -vT / 2.0f, 0)));
+    masterObstacleStyleIds.push_back(1.0f);
+    masterObstacleSpheres.push_back({{0, 0, 0}, vW * 0.75f});
+
+    masterObstacleTransforms.push_back(
+        MatrixMultiply(MatrixScale(padW, sT, padW), MatrixTranslate(0, vH + vT / 2.0f, 0)));
+    masterObstacleStyleIds.push_back(1.0f);
+    masterObstacleSpheres.push_back({{0, vH, 0}, vW * 0.75f});
+
+    masterObstacleTransforms.push_back(MatrixMultiply(
+        MatrixScale(padW, sH, sT), MatrixTranslate(0, vH / 2.0f, -vW / 2.0f - vT / 2.0f)));
+    masterObstacleStyleIds.push_back(2.0f);
+    masterObstacleSpheres.push_back({{0, vH / 2.0f, -vW / 2.0f}, vW * 0.75f});
+
+    masterObstacleTransforms.push_back(MatrixMultiply(
+        MatrixScale(sT, sH, sW), MatrixTranslate(-vW / 2.0f - vT / 2.0f, vH / 2.0f, 0)));
+    masterObstacleStyleIds.push_back(3.0f);
+    masterObstacleSpheres.push_back({{-vW / 2.0f, vH / 2.0f, 0}, vW * 0.75f});
+
+    masterObstacleTransforms.push_back(MatrixMultiply(
+        MatrixScale(sT, sH, sW), MatrixTranslate(vW / 2.0f + vT / 2.0f, vH / 2.0f, 0)));
+    masterObstacleStyleIds.push_back(4.0f);
+    masterObstacleSpheres.push_back({{vW / 2.0f, vH / 2.0f, 0}, vW * 0.75f});
+
+    const float phi = PI * (3.0f - std::sqrt(5.0f));
+
+    for (int i = 0; i < lightCount; ++i) {
+        constexpr float usableRadius = 40.0f;
+        const float y                = 1.0f - (static_cast<float>(i) /
+                                static_cast<float>(lightCount > 1 ? lightCount - 1 : 1)) *
+                                   2.0f;
+        const float radius = std::sqrt(1.0f - y * y) * usableRadius;
+        const float theta  = phi * static_cast<float>(i);
+
+        Vector3 pos = {cosf(theta) * radius, (y * usableRadius) + (vH / 2.0f),
+                       sinf(theta) * radius};
+
+        masterLightPositions.push_back(pos);
+        masterLightProxyTransforms.push_back(
+            MatrixMultiply(MatrixScale(1.5f, 1.5f, 1.5f), MatrixTranslate(pos.x, pos.y, pos.z)));
+    }
+    actualGeneratedLights = lightCount;
+}
+
+void SceneManager::UpdateVisibility(CameraController &camera, const EngineState &state) {
+    double aspect =
+        static_cast<double>(state.renderWidth) / static_cast<double>(state.renderHeight);
+    Matrix proj     = MatrixPerspective(camera.GetCamera().fovy * DEG2RAD, aspect,
+                                        Config::EngineSettings::CameraNearPlane,
+                                        Config::EngineSettings::CameraFarPlane);
+    Matrix view     = GetCameraMatrix(camera.GetCamera());
+    Matrix viewProj = MatrixMultiply(view, proj);
+
+    Frustum cameraFrustum{};
+    cameraFrustum.Extract(viewProj);
+
+    // Cull Obstacles
+    visibleObstacleTransforms.clear();
+    visibleObstacleStyleIds.clear();
+    visibleObstacleSpheres.clear();
+    fwdTransformsBlinn.clear();
+    fwdTransformsGooch.clear();
+    fwdTransformsToon.clear();
+    fwdTransformsOutline.clear();
+
+    int currentObstacleCount = GetTotalObstacleCount(state);
+
+    for (int i = 0; i < currentObstacleCount; i++) {
+        if (cameraFrustum.IsSphereVisible(masterObstacleSpheres[i])) {
+            visibleObstacleTransforms.push_back(masterObstacleTransforms[i]);
+            visibleObstacleStyleIds.push_back(masterObstacleStyleIds[i]);
+            visibleObstacleSpheres.push_back(masterObstacleSpheres[i]);
+
+            if (state.activeRenderPath == RenderPath::Forward) {
+                if (int currentStyle = static_cast<int>(masterObstacleStyleIds[i]);
+                    currentStyle == 2) {
+                    if (state.enableGooch)
+                        fwdTransformsGooch.push_back(masterObstacleTransforms[i]);
+                    else
+                        fwdTransformsBlinn.push_back(masterObstacleTransforms[i]);
+                } else if (currentStyle == 3) {
+                    if (state.enableToon)
+                        fwdTransformsToon.push_back(masterObstacleTransforms[i]);
+                    else
+                        fwdTransformsBlinn.push_back(masterObstacleTransforms[i]);
+                    fwdTransformsOutline.push_back(masterObstacleTransforms[i]);
+                } else {
+                    fwdTransformsBlinn.push_back(masterObstacleTransforms[i]);
+                }
+            }
+        }
+    }
+
+    // Cull Lights
+    visibleLightProxyTransforms.clear();
+    visibleLightVolumeTransforms.clear();
+    visibleLightPositions.clear();
+
+    // Use runtime state variable
+    float c = Config::EngineSettings::AttenuationConstant -
+              (state.lightIntensity / Config::EngineSettings::MinLightThreshold);
+    float dynamicMaxRadius = 0.0f;
+
+    if (state.lightIntensity > 0.0f) {
+        dynamicMaxRadius = (-Config::EngineSettings::AttenuationLinear +
+                            std::sqrt(Config::EngineSettings::AttenuationLinear *
+                                          Config::EngineSettings::AttenuationLinear -
+                                      (4.0f * Config::EngineSettings::AttenuationQuadratic * c))) /
+                           (2.0f * Config::EngineSettings::AttenuationQuadratic);
+    }
+
+    if (state.useLightSingularity) {
+        Vector3 singularityPos = {0.0f, 10.0f, 0.0f};
+        if (BoundingSphere singularitySphere = {singularityPos, dynamicMaxRadius};
+            cameraFrustum.IsSphereVisible(singularitySphere)) {
+            Matrix volTransform = MatrixMultiply(
+                MatrixScale(-dynamicMaxRadius * 2.0f, -dynamicMaxRadius * 2.0f,
+                            -dynamicMaxRadius * 2.0f),
+                MatrixTranslate(singularityPos.x, singularityPos.y, singularityPos.z));
+            Matrix proxyTransform = MatrixMultiply(
+                MatrixScale(1.5f, 1.5f, 1.5f),
+                MatrixTranslate(singularityPos.x, singularityPos.y, singularityPos.z));
+
+            for (int i = 0; i < state.activeLightCount; i++) {
+                visibleLightVolumeTransforms.push_back(volTransform);
+                visibleLightProxyTransforms.push_back(proxyTransform);
+                visibleLightPositions.push_back(singularityPos);
+            }
+        }
+    } else {
+        for (int i = 0; i < state.activeLightCount; i++) {
+            if (BoundingSphere volumeSphere = {masterLightPositions[i], dynamicMaxRadius};
+                cameraFrustum.IsSphereVisible(volumeSphere)) {
+                Matrix volumeTransform = MatrixMultiply(
+                    MatrixScale(-dynamicMaxRadius * 2.0f, -dynamicMaxRadius * 2.0f,
+                                -dynamicMaxRadius * 2.0f),
+                    MatrixTranslate(masterLightPositions[i].x, masterLightPositions[i].y,
+                                    masterLightPositions[i].z));
+                visibleLightVolumeTransforms.push_back(volumeTransform);
+                visibleLightPositions.push_back(masterLightPositions[i]);
+            }
+            if (BoundingSphere proxySphere = {masterLightPositions[i], 0.75f};
+                cameraFrustum.IsSphereVisible(proxySphere)) {
+                visibleLightProxyTransforms.push_back(masterLightProxyTransforms[i]);
+            }
+        }
+    }
+}
+
+int SceneManager::GetTotalObstacleCount(const EngineState &state) const {
+    return state.useNprRoom ? static_cast<int>(masterObstacleTransforms.size())
+                            : state.activeObstacleCount;
+}
+
+// Overdraw Factor = (Total Area of all drawn objects) / (Actual Screen Area)
+// 1.0 = Screen is exactly covered once. 3.5 = Every pixel is shaded 3.5 times on average.
+float SceneManager::CalculateTheoreticalOverdraw(const EngineState &state,
+                                                 const Camera3D &camera) const {
+    if (state.objectSphereRadius <= 0.0f)
+        return 0.0f;
+
+    float totalScreenSpaceArea = 0.0f;
+    const float fovRad         = (camera.fovy * DEG2RAD) / 2.0f;
+    const float tanFov         = std::tan(fovRad);
+    const auto screenHeight    = static_cast<float>(state.renderHeight);
+    const auto screenArea      = static_cast<float>(state.renderWidth * state.renderHeight);
+
+    // View-Dependent Geometry Footprint
+    for (const auto &[center, radius] : visibleObstacleSpheres) {
+        float dist = Vector3Distance(camera.position, center);
+        dist = std::max(dist, Config::EngineSettings::CameraNearPlane); // Prevent division by zero
+
+        const float projectedRadius = (radius * screenHeight) / (2.0f * dist * tanFov);
+        totalScreenSpaceArea += PI * (projectedRadius * projectedRadius);
+    }
+
+    // View-Dependent Light Footprint
+    if (state.activeRenderPath == RenderPath::DeferredVolume ||
+        state.activeRenderPath == RenderPath::DeferredUber) {
+        const float c = Config::EngineSettings::AttenuationConstant -
+                        (state.lightIntensity / Config::EngineSettings::MinLightThreshold);
+        float dynamicMaxRadius = 0.0f;
+
+        if (state.lightIntensity > 0.0f) {
+            dynamicMaxRadius =
+                (-Config::EngineSettings::AttenuationLinear +
+                 std::sqrt(Config::EngineSettings::AttenuationLinear *
+                               Config::EngineSettings::AttenuationLinear -
+                           (4.0f * Config::EngineSettings::AttenuationQuadratic * c))) /
+                (2.0f * Config::EngineSettings::AttenuationQuadratic);
+        }
+
+        if (state.useLightSingularity) {
+            if (!visibleLightVolumeTransforms.empty()) {
+                constexpr Vector3 singularityPos = {0.0f, 10.0f, 0.0f};
+                float dist                       = Vector3Distance(camera.position, singularityPos);
+                dist = std::max(dist, Config::EngineSettings::CameraNearPlane);
+
+                const float projectedRadius =
+                    (dynamicMaxRadius * screenHeight) / (2.0f * dist * tanFov);
+                totalScreenSpaceArea += PI * (projectedRadius * projectedRadius);
+            }
+        } else {
+            for (const Vector3 &lightPos : visibleLightPositions) {
+                float dist = Vector3Distance(camera.position, lightPos);
+                dist       = std::max(dist, Config::EngineSettings::CameraNearPlane);
+
+                const float projectedRadius =
+                    (dynamicMaxRadius * screenHeight) / (2.0f * dist * tanFov);
+                totalScreenSpaceArea += PI * (projectedRadius * projectedRadius);
+            }
+        }
+    }
+
+    return totalScreenSpaceArea / screenArea;
+}
