@@ -1,0 +1,11 @@
+prefix=C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/pkgs/fmt_x64-windows
+exec_prefix=C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/pkgs/fmt_x64-windows
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: fmt
+Description: A modern formatting library
+Version: 7.1.3
+Libs: -L${libdir} -lfmt
+Cflags: -I${includedir}
+

@@ -1,0 +1,8 @@
+# ninja log v6
+10	645	7613200669280794	src/glad.c	e852cb60c90e9074
+10	645	7613200669280794	include/glad/glad.h	e852cb60c90e9074
+10	645	7613200669280794	C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/blds/glad/x64-windows-rel/src/glad.c	e852cb60c90e9074
+10	645	7613200669280794	C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/blds/glad/x64-windows-rel/include/glad/glad.h	e852cb60c90e9074
+647	1226	7613200670468529	CMakeFiles/glad.dir/src/glad.c.obj	eab1aa3e07c5449e
+1228	1295	7613200676280904	glad.lib	5fff1a70079b2da4
+1295	1449	7613200676944228	CMakeFiles/install.util	e8bc7fe124866b7a

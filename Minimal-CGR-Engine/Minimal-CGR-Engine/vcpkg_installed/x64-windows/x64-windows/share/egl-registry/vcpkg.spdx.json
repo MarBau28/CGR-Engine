@@ -1,0 +1,110 @@
+{
+  "$schema": "https://raw.githubusercontent.com/spdx/spdx-spec/v2.2.1/schemas/spdx-schema.json",
+  "spdxVersion": "SPDX-2.2",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "documentNamespace": "https://spdx.org/spdxdocs/egl-registry-x64-windows-2020-02-20-e67c541d-4236-4cdc-b0d2-7bb236496c7b",
+  "name": "egl-registry:x64-windows@2020-02-20 38765c400a06114bce80a6eeb21e4d6a4944835faa4705076b7710dbbdb215b5",
+  "creationInfo": {
+    "creators": [
+      "Tool: vcpkg-2024-09-30-ab8988503c7cffabfd440b243a383c0a352a023d"
+    ],
+    "created": "2025-02-15T10:53:51Z"
+  },
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "GENERATES",
+      "relatedSpdxElement": "SPDXRef-binary"
+    },
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-file-0"
+    },
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-file-1"
+    },
+    {
+      "spdxElementId": "SPDXRef-binary",
+      "relationshipType": "GENERATED_FROM",
+      "relatedSpdxElement": "SPDXRef-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-file-0",
+      "relationshipType": "CONTAINED_BY",
+      "relatedSpdxElement": "SPDXRef-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-file-1",
+      "relationshipType": "CONTAINED_BY",
+      "relatedSpdxElement": "SPDXRef-port"
+    }
+  ],
+  "packages": [
+    {
+      "name": "egl-registry",
+      "SPDXID": "SPDXRef-port",
+      "versionInfo": "2020-02-20",
+      "downloadLocation": "git+https://github.com/microsoft/vcpkg@3140fdc59c3d9481800dd9f9e3fbe75bd4595c6f",
+      "homepage": "https://github.com/KhronosGroup/EGL-Registry",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "description": "the EGL API and Extension Registry",
+      "comment": "This is the port (recipe) consumed by vcpkg."
+    },
+    {
+      "name": "egl-registry:x64-windows",
+      "SPDXID": "SPDXRef-binary",
+      "versionInfo": "38765c400a06114bce80a6eeb21e4d6a4944835faa4705076b7710dbbdb215b5",
+      "downloadLocation": "NONE",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "comment": "This is a binary package built by vcpkg."
+    },
+    {
+      "SPDXID": "SPDXRef-resource-1",
+      "name": "KhronosGroup/EGL-Registry",
+      "downloadLocation": "git+https://github.com/KhronosGroup/EGL-Registry@11478904448bbdf5757b798c856a525aa2b351b1",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "f1e54810cb2948e9d8798d65507069bba4ee6534d719e792db11e36d600ef37e59a34262809d8b1e41160ae1e45a283fa322cd9d9a647985c48a6d7d6d1706ee"
+        }
+      ]
+    }
+  ],
+  "files": [
+    {
+      "fileName": "./C:/Users/Marvi/AppData/Local/vcpkg/registries/git-trees/3140fdc59c3d9481800dd9f9e3fbe75bd4595c6f/CONTROL",
+      "SPDXID": "SPDXRef-file-0",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "1807e88cd34dcff46a8999e863326562dca15160cceca551819ba1e64ddc8b3f"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./C:/Users/Marvi/AppData/Local/vcpkg/registries/git-trees/3140fdc59c3d9481800dd9f9e3fbe75bd4595c6f/portfile.cmake",
+      "SPDXID": "SPDXRef-file-1",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "baa0fe012fb787e26ff89d15d77ae14c68122b933faa7d2f3f4582ebb20b845d"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    }
+  ]
+}

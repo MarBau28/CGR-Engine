@@ -1,0 +1,50 @@
+Package: vcpkg-cmake-config
+Version: 2021-02-26
+Architecture: x64-windows
+Multi-Arch: same
+Abi: c589c6bbf6e64b1b4dfd95b1e135fb94acdb500fca4d395b475b538e289a7e55
+Status: purge ok not-installed
+
+Package: vcpkg-cmake
+Version: 2021-02-26
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 680c7840a29f291d1907fd64077b9702b55166c3ac0155dcd311c19351475a94
+Status: purge ok not-installed
+
+Package: fmt
+Version: 7.1.3
+Port-Version: 1
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 37fdfa2fb293d63ade8b0bf99634fa737ea02a428b659095b11bf249157edf7c
+Description: Formatting library for C++. It can be used as a safe alternative to printf or as a fast alternative to IOStreams.
+Status: purge ok not-installed
+
+Package: asio
+Version: 1.18.0
+Architecture: x64-windows
+Multi-Arch: same
+Abi: ee44c1b4ab3d8b8091c7c71123eb28bec625dec73f38989666c220dc9846859c
+Description: Asio is a cross-platform C++ library for network and low-level I/O programming that provides developers with a consistent asynchronous model using a modern C++ approach.
+Status: install ok installed
+
+Package: glfw3
+Version: 3.3.2
+Port-Version: 1
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 5ea5abb4a03aa3f7a577bf9d2c0ee3f193aa76b3f9f4ac45c68f72abf62f1868
+Description: GLFW is a free, Open Source, multi-platform library for OpenGL, OpenGL ES and Vulkan application development. It provides a simple, platform-independent API for creating windows, contexts and surfaces, reading input, handling events, etc.
+Status: install ok installed
+
+Package: opengl
+Version: 0.0
+Port-Version: 8
+Architecture: x64-windows
+Multi-Arch: same
+Abi: b78cdaf7b183aef0465c9fb9faadc0a6e752682ad42e74aafd1d63d28635581c
+Description: Open Graphics Library (OpenGL)[3][4][5] is a cross-language, cross-platform application programming interface (API) for rendering 2D and 3D vector graphics.
+Status: install ok installed
+

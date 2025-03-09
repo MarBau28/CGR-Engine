@@ -1,0 +1,6 @@
+Package: asio
+Version: 1.18.0
+Architecture: x64-windows
+Multi-Arch: same
+Abi: ee44c1b4ab3d8b8091c7c71123eb28bec625dec73f38989666c220dc9846859c
+Description: Asio is a cross-platform C++ library for network and low-level I/O programming that provides developers with a consistent asynchronous model using a modern C++ approach.
