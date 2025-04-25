@@ -1,8 +1,0 @@
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/blds/fmt/x64-windows-dbg/CMakeFiles/fmt.dir
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/blds/fmt/x64-windows-dbg/CMakeFiles/package.dir
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/blds/fmt/x64-windows-dbg/CMakeFiles/package_source.dir
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/blds/fmt/x64-windows-dbg/CMakeFiles/edit_cache.dir
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/blds/fmt/x64-windows-dbg/CMakeFiles/rebuild_cache.dir
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/blds/fmt/x64-windows-dbg/CMakeFiles/list_install_components.dir
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/blds/fmt/x64-windows-dbg/CMakeFiles/install.dir
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/blds/fmt/x64-windows-dbg/CMakeFiles/install/local.dir

@@ -1,7 +1,0 @@
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/pkgs/glad_x64-windows/lib/glad.lib
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/pkgs/glad_x64-windows/include/glad/glad.h
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/pkgs/glad_x64-windows/include/KHR/khrplatform.h
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/pkgs/glad_x64-windows/lib/cmake/glad/gladConfig.cmake
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/pkgs/glad_x64-windows/lib/cmake/glad/gladConfigVersion.cmake
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/pkgs/glad_x64-windows/lib/cmake/glad/gladTargets.cmake
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/pkgs/glad_x64-windows/lib/cmake/glad/gladTargets-release.cmake

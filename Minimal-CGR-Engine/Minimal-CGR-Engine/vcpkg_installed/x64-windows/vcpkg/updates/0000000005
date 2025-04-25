@@ -1,8 +1,0 @@
-Package: glad
-Version: 0.1.33-1
-Depends: egl-registry, opengl-registry
-Architecture: x64-windows
-Multi-Arch: same
-Abi: 6e45d2116b8d27362e73f98c78e72de764d37273a59c4b1817eed628300da91b
-Description: Multi-Language Vulkan/GL/GLES/EGL/GLX/WGL Loader-Generator based on the official specs.
-Status: install ok installed

@@ -1,9 +1,0 @@
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/pkgs/glfw3_x64-windows/debug/include/GLFW/glfw3.h
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/pkgs/glfw3_x64-windows/debug/include/GLFW/glfw3native.h
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/pkgs/glfw3_x64-windows/debug/lib/cmake/glfw3/glfw3Config.cmake
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/pkgs/glfw3_x64-windows/debug/lib/cmake/glfw3/glfw3ConfigVersion.cmake
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/pkgs/glfw3_x64-windows/debug/lib/cmake/glfw3/glfw3Targets.cmake
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/pkgs/glfw3_x64-windows/debug/lib/cmake/glfw3/glfw3Targets-debug.cmake
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/pkgs/glfw3_x64-windows/debug/lib/pkgconfig/glfw3.pc
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/pkgs/glfw3_x64-windows/debug/lib/glfw3dll.lib
-C:/Users/Marvi/Meine Ablage/Main/Development/Code/VS Code/CGR/Minimal-CGR-Engine/Minimal-CGR-Engine/vcpkg_installed/x64-windows/vcpkg/pkgs/glfw3_x64-windows/debug/bin/glfw3.dll
