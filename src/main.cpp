@@ -1,6 +1,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 
-#include "main.h"
+#include "../include/main.h"
 #include <filesystem>
 #include <iostream>
 #include <string>
@@ -8,11 +8,11 @@
 #include <GLFW/glfw3.h>
 #include <array>
 
-#include"Texture.h"
-#include"shaderClass.h"
-#include"VBO.h"
-#include"VAO.h"
-#include"EBO.h"
+#include "../include/Texture.h"
+#include "../include/shaderClass.h"
+#include "../include/VBO.h"
+#include "../include/VAO.h"
+#include "../include/EBO.h"
 
 
 // vertext data
@@ -61,7 +61,7 @@ int main() {
         windowDeleter
     );
     GLFWwindow* window = windowPtr.get();
-    if (!window) 
+    if (!window)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
