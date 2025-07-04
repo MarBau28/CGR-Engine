@@ -1,17 +1,17 @@
 #pragma once
 
 #include<glad/glad.h>
-#include "../VBO.h"
+#include "VBO.h"
 
 class VAO {
 
 	public:
-		GLuint ID;
+		GLuint ID{};
 		VAO();
 
-		void LinkAttrib(VBO& VBO, GLuint layout, GLuint numComponents, GLenum type, GLsizeiptr stride, void* offset) const;
+		static void LinkAttrib(const ::VBO& VBO, GLuint layout, GLint numComponents, GLenum type, GLsizei stride, const void* offset);
 		void Bind() const;
-		void Unbind() const;
+		static void Unbind();
 		void Delete() const;
 };
 

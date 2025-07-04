@@ -1,4 +1,4 @@
-#include "../VBO.h"
+#include "VBO.h"
 
 VBO::VBO(GLfloat* vertices, GLsizeiptr size) {
 
@@ -11,7 +11,8 @@ void VBO::Bind() const {
 	glBindBuffer(GL_ARRAY_BUFFER, ID);
 }
 
-void VBO::Unbind() const {
+void VBO::Unbind()
+{
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 

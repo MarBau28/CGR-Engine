@@ -1,6 +1,7 @@
-#include "../Texture.h"
+#include "Texture.h"
+#include"stb_image.h"
 
-Texture::Texture(const char* image, GLenum texType, GLenum slot, GLenum format, GLenum pixelType)
+Texture::Texture(const char* image, const GLenum texType, const GLenum slot, const GLenum format, const GLenum pixelType)
 {
 	type = texType;
 
@@ -28,9 +29,9 @@ Texture::Texture(const char* image, GLenum texType, GLenum slot, GLenum format, 
     glBindTexture(texType, 0);
 }
 
-void Texture::texUnit(Shader& shader, const char* uniform, GLuint unit)
+void Texture::texUnit(const Shader& shader, GLuint unit)
 {
-    GLuint tex0Uni = glGetUniformLocation(shader.ID, "tex0");
+    const GLint tex0Uni = glGetUniformLocation(shader.ID, "tex0");
     shader.ActivateProgram();
     glUniform1i(tex0Uni, 0);
 }

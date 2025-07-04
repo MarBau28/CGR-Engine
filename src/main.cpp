@@ -3,19 +3,19 @@
 #include "../include/main.h"
 #include <filesystem>
 #include <iostream>
-#include <string>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <array>
 
+#include "stb_image.h"
 #include "../include/Texture.h"
-#include "../include/shaderClass.h"
+#include "../include/Shader.h"
 #include "../include/VBO.h"
 #include "../include/VAO.h"
 #include "../include/EBO.h"
 
 
-// vertext data
+// vertex data
 //std::array<GLfloat, 36> triangleVertices = {
 //    -0.5f, -0.5f * float(sqrt(3)) / 3,     0.0f, 0.8f, 0.3f,  0.02f,
 //     0.5f, -0.5f * float(sqrt(3)) / 3,     0.0f, 0.8f, 0.3f,  0.02f,
@@ -24,7 +24,7 @@
 //     0.25f, 0.5f * float(sqrt(3)) / 6,     0.0f, 0.9f, 0.45f, 0.17f,
 //     0.0f, -0.5f * float(sqrt(3)) / 3,     0.0f, 0.8f, 0.3f,  0.02f,
 //};
-//std::array<GLuint, 9> triangleIindices = {
+//std::array<GLuint, 9> triangleIndices = {
 //    0,3,5,
 //    3,2,4,
 //    5,4,1
@@ -55,7 +55,7 @@ int main() {
         glfwDestroyWindow(win);
         glfwTerminate();
     };
-    std::unique_ptr<GLFWwindow, decltype(windowDeleter)> windowPtr
+    const std::unique_ptr<GLFWwindow, decltype(windowDeleter)> windowPtr
     (
         glfwCreateWindow(800, 800, "MinimalCGREngine", nullptr, nullptr),
         windowDeleter
@@ -70,35 +70,35 @@ int main() {
     glfwMakeContextCurrent(window);
 
     // initialize GLAD and viewport
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+    if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)))
     {
         std::cout << "Failed to initialize GLAD" << std::endl;
-        return -1; // Oder eine andere geeignete Fehlerbehandlung
+        return -1;
     }
     glViewport(0, 0, 800, 800);
 
     //create shader program by specifying the sources
-    Shader shaderProgram("default.vert", "default.frag");
+    const Shader shaderProgram("../shaders/default.vert", "../shaders/default.frag");
 
     // create and configure (VOA) buffers (VBO, EBO)
-    VAO VAO1;
+    const VAO VAO1;
     VAO1.Bind();
-    VBO VBO1(textureVertices.data(), sizeof(textureVertices));
-    EBO EBO1(textureIndices.data(), sizeof(textureIndices));
+    const VBO VBO1(textureVertices.data(), sizeof(textureVertices));
+    const EBO EBO1(textureIndices.data(), sizeof(textureIndices));
     VBO1.Bind();
-    VAO1.LinkAttrib(VBO1, 0, 3, GL_FLOAT, 8 * sizeof(float), (void*)0);
-    VAO1.LinkAttrib(VBO1, 1, 3, GL_FLOAT, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    VAO1.LinkAttrib(VBO1, 2, 2, GL_FLOAT, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    VAO1.Unbind();
-    VBO1.Unbind();
-    EBO1.Unbind();
+    VAO::LinkAttrib(VBO1, 0, 3, GL_FLOAT, 8 * sizeof(float), (void*)nullptr);
+    VAO::LinkAttrib(VBO1, 1, 3, GL_FLOAT, 8 * sizeof(float), reinterpret_cast<void*>(3 * sizeof(float)));
+    VAO::LinkAttrib(VBO1, 2, 2, GL_FLOAT, 8 * sizeof(float), reinterpret_cast<void*>(6 * sizeof(float)));
+    VAO::Unbind();
+    VBO::Unbind();
+    EBO::Unbind();
 
     // uniform for scaling
-    GLuint uniID = glGetUniformLocation(shaderProgram.ID, "scale");
+    const GLint uniID = glGetUniformLocation(shaderProgram.ID, "scale");
 
     // Texture
-    Texture starySkyTex("square_tst.JPG", GL_TEXTURE_2D, GL_TEXTURE0, GL_RGB, GL_UNSIGNED_BYTE);
-    starySkyTex.texUnit(shaderProgram, "tex0", 0);
+    const Texture texture("../assets/textures/square_tst.JPG", GL_TEXTURE_2D, GL_TEXTURE0, GL_RGB, GL_UNSIGNED_BYTE);
+    Texture::texUnit(shaderProgram, 0);
 
     // main rendering loop to run poll the buffers and draw on screen
     while (!glfwWindowShouldClose(window))
@@ -110,9 +110,9 @@ int main() {
         // use shaders to draw a triangle
         shaderProgram.ActivateProgram();
         glUniform1f(uniID, 0.5f);
-        starySkyTex.Bind();
+        texture.Bind();
         VAO1.Bind();
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
         glfwSwapBuffers(window);
 
         glfwPollEvents();
@@ -122,7 +122,7 @@ int main() {
     VAO1.Delete();
     VBO1.Delete();
     EBO1.Delete();
-    starySkyTex.Delete();
+    texture.Delete();
     shaderProgram.DeleteProgram();
 
     return 0;
