@@ -8,6 +8,7 @@ BreakBeforeBraces: Attach
 # Indentation
 IndentWidth: 4
 ColumnLimit: 100
+NamespaceIndentation: All
 
 # Spacing Logic (The "Breathing Room" Rules)
 MaxEmptyLinesToKeep: 1
@@ -15,9 +16,11 @@ KeepEmptyLinesAtTheStartOfBlocks: false
 
 # Alignment (Makes OpenGL buffer/attribute blocks look clean)
 AlignAfterOpenBracket: Align
-AlignConsecutiveAssignments: false
+AlignConsecutiveAssignments: true
 AlignConsecutiveDeclarations: false
 
 # Space before parens (standard C++ look)
 SpaceBeforeParens: ControlStatements
----
+
+# Namespace Comments (Disables the trailing '// namespace X' comments)
+FixNamespaceComments: false
