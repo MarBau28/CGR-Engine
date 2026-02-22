@@ -371,3 +371,6 @@ FodyWeavers.xsd
 # Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
+
+# the idea files (CLio/Jetbrains specific)
+.idea/
