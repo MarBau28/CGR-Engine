@@ -1,0 +1,23 @@
+---
+Language: Cpp
+BasedOnStyle: LLVM
+
+# Braces: Same line for functions, namespaces, and classes (OTBS)
+BreakBeforeBraces: Attach
+
+# Indentation
+IndentWidth: 4
+ColumnLimit: 100
+
+# Spacing Logic (The "Breathing Room" Rules)
+MaxEmptyLinesToKeep: 1
+KeepEmptyLinesAtTheStartOfBlocks: false
+
+# Alignment (Makes OpenGL buffer/attribute blocks look clean)
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+
+# Space before parens (standard C++ look)
+SpaceBeforeParens: ControlStatements
+---

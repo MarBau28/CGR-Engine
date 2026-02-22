@@ -1,51 +1,55 @@
 cmake_minimum_required(VERSION 3.15)
-project(CGR-Engine CXX) # Add CXX to specify language
-
-set(CMAKE_CXX_STANDARD 17)
+project(CGR-Engine CXX)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # Useful for static analysis tools
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Enable folders in IDEs like CLion
+# Enable folders
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-# Detect and include vcpkg toolchain automatically (good fallback!)
-# This block should ideally be near the top, after project()
+# Vcpkg integration
 if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
             CACHE STRING "Vcpkg toolchain file")
 endif()
 
+# Gather source files
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h
 )
 
 # Define executable
-add_executable(CGR-Engine ${SOURCES})
+add_executable(CGR-Engine ${SOURCES}
+        old/old_Texture.cpp
+        old/old_Texture.h)
 
-# Add include directory for your own headers, tied to the executable
+# Include directories
 target_include_directories(CGR-Engine PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-# Find packages (Vcpkg should provide these configs)
+# Find Packages
 find_package(glfw3 CONFIG REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(glad CONFIG REQUIRED)
+find_package(raylib CONFIG REQUIRED)
 
-# Manual include path for stb (no config file is available from vcpkg for header-only)
-find_path(STB_INCLUDE_DIRS "stb.h")
-if(NOT STB_INCLUDE_DIRS)
-    message(FATAL_ERROR "stb.h not found. Make sure stb is installed via vcpkg.")
-endif()
-target_include_directories(CGR-Engine PRIVATE ${STB_INCLUDE_DIRS})
+# Force CMake to find the absolute path  fo raylib because the vcpkg config is defective
+find_library(RAYLIB_ABSOLUTE_PATH NAMES raylib REQUIRED)
+target_include_directories(CGR-Engine PRIVATE ${raylib_INCLUDE_DIRS})
 
-# Link libraries
-target_link_libraries(CGR-Engine
-        PRIVATE
+target_link_libraries(CGR-Engine PRIVATE
+        ${RAYLIB_ABSOLUTE_PATH}
         glfw
         glad::glad
         OpenGL::GL
         glm
 )
+
+# Inject required sanitizer runtimes for Debug builds to satisfy the vcpkg binary
+if(CMAKE_BUILD_TYPE MATCHES "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
+    target_compile_options(CGR-Engine PRIVATE -fsanitize=address -fsanitize=undefined)
+    target_link_options(CGR-Engine PRIVATE -fsanitize=address -fsanitize=undefined)
+endif()
