@@ -1,12 +1,15 @@
 #version 330 core
-out vec4 FragColor;
 
-in vec3 color;
-in vec2 texCoord;
+// in from vertex shader
+in vec2 fragTexCoord;
 
-uniform sampler2D tex0;
+// out to screen
+out vec4 finalColor;
+
+// Raylib's default texture sampler name
+uniform sampler2D texture0;
 
 void main()
 {
-    FragColor = texture(tex0, texCoord);
+    finalColor = texture(texture0, fragTexCoord);
 }

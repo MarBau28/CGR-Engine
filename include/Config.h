@@ -10,8 +10,12 @@ namespace Config::Paths {
 }
 
 namespace Config::EngineSettings {
-    inline constexpr int ScreenWidth        = 1920;
-    inline constexpr int ScreenHeight       = 1080;
-    inline constexpr float CameraFOV        = 45.0f;
-    inline constexpr Vector3 CameraPosition = {4.0f, 4.0f, 4.0f};
+    inline constexpr int ScreenWidth             = 1920;
+    inline constexpr int ScreenHeight            = 1080;
+    inline constexpr float CameraFOV             = 45.0f;
+    inline constexpr Vector3 CameraOrientation   = {0.0f, 1.0f, 0.0f};
+    inline constexpr Vector3 CameraViewDirection = {0.0f, 0.0f, 0.0f};
+    inline constexpr Vector3 CameraPosition      = {4.0f, 4.0f, 4.0f};
+    inline constexpr int TargetFPS               = 60;
+    inline constexpr Color BackgroundColor       = {18, 33, 43, 255};
 }
