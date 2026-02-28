@@ -7,7 +7,7 @@
 constexpr std::string_view SquareTexture         = "square_tex.png";
 constexpr std::string_view DefaultVertShaderName = "default.vert";
 constexpr std::string_view DefaultFragShaderName = "default.frag";
-constexpr Vector3 lightPos                       = {1.0f, 3.0f, 2.0f};
+constexpr Vector3 lightPos                       = {1.5f, 2.5f, -2.5f};
 constexpr Vector3 cubePosition                   = {0.0f, 1.0f, 0.0f};
 
 int main() {
@@ -49,11 +49,13 @@ int main() {
     // attach shaders to model
     myModel.materials[0].shader = customShader;
 
-    // define uniform location variables
+    // define uniform location variables (vertex)
     int modelMatShaderLoc  = GetShaderLocation(customShader, "modelMat");
     int normalMatShaderLoc = GetShaderLocation(customShader, "normalMat");
-    int lightPosShaderLoc  = GetShaderLocation(customShader, "lightPos");
-    int viewPosShaderLoc   = GetShaderLocation(customShader, "viewPos");
+
+    // define uniform location variables (fragment)
+    int lightPosShaderLoc = GetShaderLocation(customShader, "lightPos");
+    int viewPosShaderLoc  = GetShaderLocation(customShader, "viewPos");
 
     // Game Loop
     while (!WindowShouldClose()) {

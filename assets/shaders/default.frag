@@ -17,24 +17,36 @@ void main()
 {
     // Light settings
     vec3 lightColor = vec3(1.0, 0.9, 0.75);
+    float lightIntensity = 2.0;
     float ambientLightStrength = 0.1f;
     float specularStrength = 0.5;
     int shininess = 48;
+    float constant = 1.0; // light distance (attenuation)
+    float linear = 0.09; // light distance (attenuation)
+    float quadratic = 0.032; // light distance (attenuation)
+    vec3 effectiveLight = lightColor * lightIntensity;
 
     // calculate ambient light color
     vec3 ambient = ambientLightStrength * lightColor;
 
     // calculate diffuse lighting
+    vec3 lightVector = lightPos - fragPosition;
     vec3 normal = normalize(fragNormal);
-    vec3 lightDir = normalize(lightPos - fragPosition);
+    vec3 lightDir = normalize(lightVector);
     float diff = max(dot(normal, lightDir), 0.0);
-    vec3 diffuse = diff * lightColor;
+    vec3 diffuse = diff * effectiveLight;
 
     // calculate specular lighting
     vec3 viewDir = normalize(viewPos - fragPosition);
     vec3 reflectDir = reflect(-lightDir, normal);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
-    vec3 specular = specularStrength * spec * lightColor;
+    vec3 specular = specularStrength * spec * effectiveLight;
+
+    // calculate attenuation (light distance factor)
+    float lightDistance = length(lightVector);
+    float attenuation = 1.0 / (constant + linear * lightDistance + quadratic * (lightDistance * lightDistance));
+    diffuse *= attenuation;
+    specular *= attenuation;
 
     // calculate textur color
     vec4 textureMapping = texture(texture0, fragTexCoord);
