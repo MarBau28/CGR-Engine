@@ -7,12 +7,12 @@
 // #include <glad/glad.h>
 // #include <iostream>
 //
-// #include "stb_image.h"
-// #include "../include/old_Texture.h"
-// #include "../include/Shader.h"
-// #include "../include/VBO.h"
-// #include "../include/VAO.h"
 // #include "../include/EBO.h"
+// #include "../include/Shader.h"
+// #include "../include/VAO.h"
+// #include "../include/VBO.h"
+// #include "../include/old_Texture.h"
+// #include "stb_image.h"
 //
 // // vertex data
 // // std::array<GLfloat, 36> triangleVertices = {
@@ -31,10 +31,10 @@
 //
 // std::array<GLfloat, 32> exampleObjectVertices = {
 //     // X, Y, Z (Position) | R, G, B (Color) | U, V (Texture)
-//     -0.5f, -0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   0.0f, 0.0f, // bottom left
-//     -0.5f,  0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   0.0f, 1.0f, // bottom right
-//      0.5f,  0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   1.0f, 1.0f, // top right
-//      0.5f, -0.5f, 0.0f,   1.0f, 1.0f, 1.0f,   1.0f, 0.0f, // top left
+//     -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // bottom left
+//     -0.5f, 0.5f,  0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, // bottom right
+//     0.5f,  0.5f,  0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, // top right
+//     0.5f,  -0.5f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, // top left
 // };
 // std::array<GLuint, 6> exampleObjectIndices = {0, 2, 1, 0, 3, 2};
 //
@@ -99,7 +99,8 @@
 //     const GLint scalerUniId = glGetUniformLocation(shaderProgram.ID, "scale");
 //
 //     // Texture
-//     const Texture texture("../assets/textures/square_tst.JPG", GL_TEXTURE_2D, GL_TEXTURE0, GL_RGB,
+//     const Texture texture("../assets/textures/square_tst.JPG", GL_TEXTURE_2D, GL_TEXTURE0,
+//     GL_RGB,
 //                           GL_UNSIGNED_BYTE);
 //     Texture::TexUnit(shaderProgram, 0);
 //
@@ -114,7 +115,8 @@
 //         glUniform1f(scalerUniId, 0.5f);
 //         texture.Bind();
 //         VAO1.Bind();
-//         glDrawElements(GL_TRIANGLES, sizeof(exampleObjectIndices)/sizeof(int), GL_UNSIGNED_INT, nullptr);
+//         glDrawElements(GL_TRIANGLES, sizeof(exampleObjectIndices) / sizeof(int), GL_UNSIGNED_INT,
+//                        nullptr);
 //         glfwSwapBuffers(window);
 //
 //         glfwPollEvents();
