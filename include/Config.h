@@ -7,6 +7,7 @@ namespace Config::Paths {
     inline constexpr std::string_view Assets   = "../assets/";
     inline constexpr std::string_view Textures = "../assets/textures/";
     inline constexpr std::string_view Shaders  = "../assets/shaders/";
+    inline constexpr std::string_view Models   = "../assets/models/";
 }
 
 namespace Config::EngineSettings {
@@ -15,7 +16,7 @@ namespace Config::EngineSettings {
     inline constexpr float CameraFOV             = 45.0f;
     inline constexpr Vector3 CameraOrientation   = {0.0f, 1.0f, 0.0f};
     inline constexpr Vector3 CameraViewDirection = {0.0f, 0.0f, 0.0f};
-    inline constexpr Vector3 CameraPosition      = {4.0f, 4.0f, 4.0f};
+    inline constexpr Vector3 CameraPosition      = {6.0f, 6.0f, 6.0f};
     inline constexpr int TargetFPS               = 60;
     inline constexpr Color BackgroundColor       = {36, 39, 58, 255};
 }

@@ -37,7 +37,7 @@ find_package(glm CONFIG REQUIRED)
 find_package(glad CONFIG REQUIRED)
 find_package(raylib CONFIG REQUIRED)
 
-# Force CMake to find the absolute path  fo raylib because the vcpkg config is defective
+# Force CMake to find the absolute path for raylib because vcpkg config is defective
 find_library(RAYLIB_ABSOLUTE_PATH NAMES raylib REQUIRED)
 target_include_directories(CGR-Engine PRIVATE ${raylib_INCLUDE_DIRS})
 

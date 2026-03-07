@@ -18,12 +18,12 @@ void main()
     // Light settings
     vec3 lightColor = vec3(1.0, 0.9, 0.75);
     float lightIntensity = 2.0;
-    float ambientLightStrength = 0.1f;
+    float ambientLightStrength = 0.15f;
     float specularStrength = 0.5;
     int shininess = 48;
-    float constant = 1.0; // light distance (attenuation)
-    float linear = 0.09; // light distance (attenuation)
-    float quadratic = 0.032; // light distance (attenuation)
+    float attenuationConstant = 1.0; // light distance (attenuation)
+    float attenuationLinear = 0.09; // light distance (attenuation)
+    float attenuationQuadratic = 0.032; // light distance (attenuation)
     vec3 effectiveLight = lightColor * lightIntensity;
 
     // calculate ambient light color
@@ -42,9 +42,10 @@ void main()
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
     vec3 specular = specularStrength * spec * effectiveLight;
 
-    // calculate attenuation (light distance factor)
+    // calculate attenuation (ligth distance amplification)
     float lightDistance = length(lightVector);
-    float attenuation = 1.0 / (constant + linear * lightDistance + quadratic * (lightDistance * lightDistance));
+    float attenuation = 1.0 / (attenuationConstant + attenuationLinear * lightDistance
+    + attenuationQuadratic * (lightDistance * lightDistance));
     diffuse *= attenuation;
     specular *= attenuation;
 
