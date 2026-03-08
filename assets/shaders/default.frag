@@ -5,55 +5,29 @@ in vec2 fragTexCoord;
 in vec3 fragNormal;
 in vec3 fragPosition;
 
-// out to screen
-out vec4 finalColor;
+// MRT Outputs
+layout (location = 0) out vec4 gAlbedo;
+layout (location = 1) out vec4 gNormal;
+layout (location = 2) out vec4 gPosition;
 
-// Uniforms
-uniform sampler2D texture0; // Raylib's default texture sampler namess
-uniform vec3 lightPos; // light source position
-uniform vec3 viewPos; // camera position
-uniform vec4 colDiffuse; // diffuse color for tinting
+// uniforms
+uniform sampler2D texture0;
+uniform vec4 colDiffuse;
+uniform int isLightSource; // to identify unlit objects
 
 void main()
 {
-    // Light settings
-    vec3 lightColor = vec3(1.0, 0.9, 0.75);
-    float lightIntensity = 10.0;
-    float ambientLightStrength = 0.33f;
-    float specularStrength = 0.5;
-    int shininess = 48;
-    float attenuationConstant = 1.0; // light distance (attenuation)
-    float attenuationLinear = 0.09; // light distance (attenuation)
-    float attenuationQuadratic = 0.032; // light distance (attenuation)
-    vec3 effectiveLight = lightColor * lightIntensity;
+    // Raw Color
+    gAlbedo = texture(texture0, fragTexCoord) * colDiffuse;
 
-    // calculate ambient light color
-    vec3 ambient = ambientLightStrength * lightColor;
+    // Surface Normal
+    if (isLightSource == 1) {
+        // If it's light source, force empty normals to trigger the post-process mask
+        gNormal = vec4(0.0);
+    } else {
+        gNormal = vec4(normalize(fragNormal), 1.0);
+    }
 
-    // calculate diffuse lighting
-    vec3 lightVector = lightPos - fragPosition;
-    vec3 normal = normalize(fragNormal);
-    vec3 lightDir = normalize(lightVector);
-    float diff = max(dot(normal, lightDir), 0.0);
-    vec3 diffuse = diff * effectiveLight;
-
-    // calculate specular lighting
-    vec3 viewDir = normalize(viewPos - fragPosition);
-    vec3 reflectDir = reflect(-lightDir, normal);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
-    vec3 specular = specularStrength * spec * effectiveLight;
-
-    // calculate attenuation (ligth distance amplification)
-    float lightDistance = length(lightVector);
-    float attenuation = 1.0 / (attenuationConstant + attenuationLinear * lightDistance
-    + attenuationQuadratic * (lightDistance * lightDistance));
-    diffuse *= attenuation;
-    specular *= attenuation;
-
-    // calculate textur color
-    vec4 textureMapping = texture(texture0, fragTexCoord) * colDiffuse;
-
-    // final output: ambient light color + diffuse light color * texture color
-    vec3 color = (ambient + diffuse + specular) * textureMapping.rgb;
-    finalColor = vec4(color, textureMapping.a);
+    // World Position
+    gPosition = vec4(fragPosition, 1.0);
 }

@@ -1,7 +1,6 @@
 #include "../include/Config.h"
 #include "algorithm"
 #include "filesystem"
-#include "glad/glad.h"
 #include "raylib.h"
 #include "raymath.h"
 #include "rlgl.h"
@@ -25,10 +24,11 @@ constexpr std::string_view lucyMeshFileName           = "stanford_lucy.glb";
 constexpr std::string_view stanfordDragonMeshFileName = "stanford_dragon.glb";
 constexpr float modelScalar                           = 1.0f;
 constexpr float modelRotation                         = 1.5f;
-constexpr int cameraMode                              = CAMERA_ORBITAL;
+constexpr int cameraMode                              = CAMERA_FREE;
 constexpr int obstacleCount                           = 500;
-constexpr float innerRadius                           = 10.0f; // obstacle cloud dimension
-constexpr float outerRadius                           = 50.0f; // obstacle cloud dimension
+constexpr float innerRadius                           = 10.0f; // obstacle cloud inner empty
+constexpr float outerRadius                           = 50.0f; // obstacle cloud size
+constexpr Color lightColor                            = {255, 229, 191, 255};
 
 // global variables
 Vector3 lightPos = {0.0f, 5.0f, 0.0f};
@@ -140,46 +140,62 @@ int main() {
     }
 
     // light mesh
-    const Mesh lightningSphereMesh   = GenMeshSphere(0.5f, 16, 16);
-    const Model lightningSourceModel = LoadModelFromMesh(lightningSphereMesh);
+    Mesh lightningSphereMesh                 = GenMeshSphere(0.5f, 16, 16);
+    Model lightningSourceModel               = LoadModelFromMesh(lightningSphereMesh);
+    lightningSourceModel.materials[0].shader = pbrShader;
+
+    // G-BUFFER INITIALIZATION
+    unsigned int FboId = rlLoadFramebuffer();
+    if (FboId == 0)
+        TraceLog(LOG_ERROR, "Failed to create FBO");
+
+    // Allocate Texture Memory block Target 0: Albedo (8-bit RGBA)
+    unsigned int albedoTexId =
+        rlLoadTexture(nullptr, screenWidth, screenHeight, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, 1);
+    // Allocate Texture Memory blocks Target 1 & 2: Normal and Position (32-bit Float RGBA)
+    unsigned int normalTexId =
+        rlLoadTexture(nullptr, screenWidth, screenHeight, PIXELFORMAT_UNCOMPRESSED_R32G32B32A32, 1);
+    unsigned int positionTexId =
+        rlLoadTexture(nullptr, screenWidth, screenHeight, PIXELFORMAT_UNCOMPRESSED_R32G32B32A32, 1);
+    // Depth texture for Z-sorting
+    unsigned int depthTexId = rlLoadTextureDepth(screenWidth, screenHeight, false);
+
+    // Bind FBO and attach all textures
+    rlEnableFramebuffer(FboId);
+    rlFramebufferAttach(FboId, albedoTexId, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D,
+                        0);
+    rlFramebufferAttach(FboId, normalTexId, RL_ATTACHMENT_COLOR_CHANNEL1, RL_ATTACHMENT_TEXTURE2D,
+                        0);
+    rlFramebufferAttach(FboId, positionTexId, RL_ATTACHMENT_COLOR_CHANNEL2, RL_ATTACHMENT_TEXTURE2D,
+                        0);
+    rlFramebufferAttach(FboId, depthTexId, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_TEXTURE2D, 0);
+
+    // Verify completeness and unbind
+    if (!rlFramebufferComplete(FboId))
+        TraceLog(LOG_ERROR, "G-Buffer FBO is incomplete.");
+    rlDisableFramebuffer();
+
+    // Wrap texture for use in the lighting pass
+    Texture2D gAlbedo   = {albedoTexId, screenWidth, screenHeight, 1,
+                           PIXELFORMAT_UNCOMPRESSED_R8G8B8A8};
+    Texture2D gNormal   = {normalTexId, screenWidth, screenHeight, 1,
+                           PIXELFORMAT_UNCOMPRESSED_R32G32B32A32};
+    Texture2D gPosition = {positionTexId, screenWidth, screenHeight, 1,
+                           PIXELFORMAT_UNCOMPRESSED_R32G32B32A32};
 
     // define uniform location variables (vertex)
     int modelMatShaderLoc  = GetShaderLocation(pbrShader, "modelMat");
     int normalMatShaderLoc = GetShaderLocation(pbrShader, "normalMat");
 
-    // define uniform location variables (fragment)
-    int lightPosShaderLoc = GetShaderLocation(pbrShader, "lightPos");
-    int viewPosShaderLoc  = GetShaderLocation(pbrShader, "viewPos");
+    // define uniform locations variable (default fragment)
+    int isLightSourceLoc = GetShaderLocation(pbrShader, "isLightSource");
 
     // define uniform location variables (post processing fragment)
-    int resolutionShaderLoc = GetShaderLocation(postShader, "resolution");
-
-    // Generate the Framebuffer ID
-    unsigned int FboId = rlLoadFramebuffer();
-    if (FboId == 0) {
-        TraceLog(LOG_ERROR, "Failed to create custom FBO");
-    }
-
-    // Generate the Color and Depth Attachment Texture in GPU memory for FBO
-    unsigned int colorTexId =
-        rlLoadTexture(nullptr, screenWidth, screenHeight, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, 1);
-    unsigned int depthTexId = rlLoadTextureDepth(screenWidth, screenHeight, true);
-
-    // Bind the FBO and attach the textures
-    rlEnableFramebuffer(FboId);
-    rlFramebufferAttach(FboId, colorTexId, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D,
-                        0);
-    rlFramebufferAttach(FboId, depthTexId, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_RENDERBUFFER, 0);
-
-    // Verify FBO completeness and unbind to return to the default screen buffer
-    if (!rlFramebufferComplete(FboId)) {
-        TraceLog(LOG_ERROR, "Custom FBO is incomplete!");
-    }
-    rlDisableFramebuffer();
-
-    // Wrap raw OpenGL color texture ID in Raylib Texture2D struct for FBO
-    Texture2D fboOutputTexture = {colorTexId, screenWidth, screenHeight, 1,
-                                  PIXELFORMAT_UNCOMPRESSED_R8G8B8A8};
+    int resolutionShaderLoc  = GetShaderLocation(postShader, "resolution");
+    int normalTexShaderLoc   = GetShaderLocation(postShader, "gNormalTex");
+    int positionTexShaderLoc = GetShaderLocation(postShader, "gPositionTex");
+    int postLightPosLoc      = GetShaderLocation(postShader, "lightPos");
+    int postViewPosLoc       = GetShaderLocation(postShader, "viewPos");
 
     // MAIN GAME LOOP
     while (!WindowShouldClose()) {
@@ -198,23 +214,18 @@ int main() {
         {
             // FBO Off-Screen rendering
             rlEnableFramebuffer(FboId); // Redirect GPU output to custom FBO
-            ClearBackground(Config::EngineSettings::BackgroundColor); // Background color
-            rlClearScreenBuffers(); // Manually clear the FBOs color and depth buffers
+            rlActiveDrawBuffers(3);     // Activate all 3 G-Buffer color attachments simultaneously
+            ClearBackground(BLANK);     // Background color
+            rlClearScreenBuffers();     // Manually clear the FBOs color and depth buffers
 
-            // apply Camera's MVP matrices
+            // Draw models
             BeginMode3D(camera);
             {
-                // Set fragment uniforms
-                SetShaderValue(pbrShader, lightPosShaderLoc, &lightPos, SHADER_UNIFORM_VEC3);
-                SetShaderValue(pbrShader, viewPosShaderLoc, &camera.position, SHADER_UNIFORM_VEC3);
-
-                // Reset transform state for un-rotated objects (after obstacles manipulate them)
-                SetShaderValueMatrix(pbrShader, modelMatShaderLoc, MatrixIdentity());
-                SetShaderValueMatrix(pbrShader, normalMatShaderLoc, MatrixIdentity());
+                int isLight = 0;
+                SetShaderValue(pbrShader, isLightSourceLoc, &isLight, SHADER_UNIFORM_INT);
 
                 // Draw static models
                 DrawModel(floorModel, {0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
-                DrawModel(lightningSourceModel, lightPos, 2.0f, WHITE);
 
                 // Draw obstacles
                 for (const auto &obs : obstacles) {
@@ -223,6 +234,17 @@ int main() {
                     SetShaderValueMatrix(pbrShader, normalMatShaderLoc, obs.normalMatrix);
                     DrawModel(obs.model, {0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
                 }
+
+                // set lightning
+                isLight = 1;
+                SetShaderValue(pbrShader, isLightSourceLoc, &isLight, SHADER_UNIFORM_INT);
+
+                // Reset transform state for un-rotated objects (after obstacles manipulate them)
+                SetShaderValueMatrix(pbrShader, modelMatShaderLoc, MatrixIdentity());
+                SetShaderValueMatrix(pbrShader, normalMatShaderLoc, MatrixIdentity());
+
+                // draw lightning source
+                DrawModel(lightningSourceModel, lightPos, 2.0f, lightColor);
 
                 // debug grid for floor
                 // DrawGrid(100, 1.0f);
@@ -233,19 +255,23 @@ int main() {
             rlDisableFramebuffer();
 
             // Define source rectangle.
-            const Rectangle sourceRec = {0.0f, 0.0f, static_cast<float>(fboOutputTexture.width),
-                                         -static_cast<float>(fboOutputTexture.height)};
+            const Rectangle sourceRec = {0.0f, 0.0f, static_cast<float>(gAlbedo.width),
+                                         -static_cast<float>(gAlbedo.height)};
             const Rectangle destRec   = {0.0f, 0.0f, currentWidth, currentHeight};
-
-            // post processing uniform passing
-            float res[2] = {currentWidth, currentHeight};
-            SetShaderValue(postShader, resolutionShaderLoc, res, SHADER_UNIFORM_VEC2);
 
             // Post-processing fragment Shader
             BeginShaderMode(postShader);
             {
+                // post-processing uniform passing
+                float res[2] = {currentWidth, currentHeight};
+                SetShaderValue(postShader, resolutionShaderLoc, res, SHADER_UNIFORM_VEC2);
+                SetShaderValue(postShader, postLightPosLoc, &lightPos, SHADER_UNIFORM_VEC3);
+                SetShaderValue(postShader, postViewPosLoc, &camera.position, SHADER_UNIFORM_VEC3);
+                SetShaderValueTexture(postShader, normalTexShaderLoc, gNormal);
+                SetShaderValueTexture(postShader, positionTexShaderLoc, gPosition);
+
                 // Draw FBO texture to screen
-                DrawTexturePro(fboOutputTexture, sourceRec, destRec, {0, 0}, 0.0f, WHITE);
+                DrawTexturePro(gAlbedo, sourceRec, destRec, {0, 0}, 0.0f, WHITE);
             }
             EndShaderMode();
 
@@ -257,20 +283,20 @@ int main() {
 
     // cleanup
     rlUnloadFramebuffer(FboId);
-    rlUnloadTexture(colorTexId);
+    rlUnloadTexture(albedoTexId);
+    rlUnloadTexture(normalTexId);
+    rlUnloadTexture(positionTexId);
+    rlUnloadTexture(depthTexId);
     UnloadShader(pbrShader);
     UnloadShader(postShader);
-    for (auto &obs : obstacles) {
+    for (Obstacle &obs : obstacles) {
         UnloadModel(obs.model);
     }
     UnloadMesh(baseMesh);
     UnloadTexture(obstacleTexture);
     UnloadModel(lightningSourceModel);
-    UnloadMesh(lightningSphereMesh);
     UnloadModel(floorModel);
-    UnloadMesh(floorMesh);
     UnloadTexture(floorTexture);
-    glDeleteRenderbuffers(1, &depthTexId);
 
     CloseWindow();
 

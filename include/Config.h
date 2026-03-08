@@ -18,5 +18,4 @@ namespace Config::EngineSettings {
     inline constexpr Vector3 CameraViewDirection = {0.0f, 0.0f, 0.0f};
     inline constexpr Vector3 CameraPosition      = {40.0f, 40.0f, 40.0f};
     inline constexpr int TargetFPS               = 60;
-    inline constexpr Color BackgroundColor       = {36, 39, 58, 255};
 }
