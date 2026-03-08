@@ -25,18 +25,6 @@ void main()
     // color = vec3(average, average, average);
 
     // Kernel Effects
-    //    vec2 offset = vec2(1.0 / resolution.x, 1.0 / resolution.y);
-    //    vec2 offsets[9] = vec2[](
-    //    vec2(-offset.x, offset.y), // top-left
-    //    vec2(0.0f, offset.y), // top-center
-    //    vec2(offset.x, offset.y), // top-right
-    //    vec2(-offset.x, 0.0f), // center-left
-    //    vec2(0.0f, 0.0f), // center-center
-    //    vec2(offset.x, 0.0f), // center-right
-    //    vec2(-offset.x, -offset.y), // bottom-left
-    //    vec2(0.0f, -offset.y), // bottom-center
-    //    vec2(offset.x, -offset.y)  // bottom-right
-    //    );
 
     // sharpening kernel
     //    const float kernel[9] = float[](
@@ -52,11 +40,24 @@ void main()
     //    1.0 / 16, 2.0 / 16, 1.0 / 16
     //    );
 
-    //Edge detection kernel
+    // Edge detection kernel
     //    const float kernel[9] = float[](
     //    1, 1, 1,
     //    1, -8, 1,
     //    1, 1, 1
+    //    );
+
+    //    vec2 offset = vec2(1.0 / resolution.x, 1.0 / resolution.y);
+    //    vec2 offsets[9] = vec2[](
+    //    vec2(-offset.x, offset.y), // top-left
+    //    vec2(0.0f, offset.y), // top-center
+    //    vec2(offset.x, offset.y), // top-right
+    //    vec2(-offset.x, 0.0f), // center-left
+    //    vec2(0.0f, 0.0f), // center-center
+    //    vec2(offset.x, 0.0f), // center-right
+    //    vec2(-offset.x, -offset.y), // bottom-left
+    //    vec2(0.0f, -offset.y), // bottom-center
+    //    vec2(offset.x, -offset.y)  // bottom-right
     //    );
 
     //    vec3 sampleTex[9];

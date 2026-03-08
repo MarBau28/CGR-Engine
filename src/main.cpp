@@ -1,24 +1,37 @@
 #include "../include/Config.h"
+#include "algorithm"
 #include "filesystem"
 #include "glad/glad.h"
 #include "raylib.h"
 #include "raymath.h"
 #include "rlgl.h"
+#include "vector"
+
+// Structure to hold static geometry data
+struct Obstacle {
+    Model model;
+    Matrix normalMatrix;
+    Vector3 position;
+    float boundingRadius;
+};
 
 // global constants
-constexpr std::string_view SquareTexture              = "square_tex.png";
+constexpr std::string_view ObstacleTexture            = "starry-galaxy_tex.png";
+constexpr std::string_view WoodTexture                = "wood_tex.png";
 constexpr std::string_view DefaultVertShaderName      = "default.vert";
 constexpr std::string_view DefaultFragShaderName      = "default.frag";
 constexpr std::string_view PostProcessFragShaderName  = "postprocess.frag";
 constexpr std::string_view lucyMeshFileName           = "stanford_lucy.glb";
 constexpr std::string_view stanfordDragonMeshFileName = "stanford_dragon.glb";
-constexpr Vector3 objectPosition                      = {0.0f, 1.0f, 0.0f};
 constexpr float modelScalar                           = 1.0f;
 constexpr float modelRotation                         = 1.5f;
 constexpr int cameraMode                              = CAMERA_ORBITAL;
+constexpr int obstacleCount                           = 500;
+constexpr float innerRadius                           = 10.0f; // obstacle cloud dimension
+constexpr float outerRadius                           = 50.0f; // obstacle cloud dimension
 
 // global variables
-Vector3 lightPos = {1.5f, 2.5f, -2.5f};
+Vector3 lightPos = {0.0f, 5.0f, 0.0f};
 
 int main() {
     // Context & Window Creation
@@ -35,55 +48,100 @@ int main() {
     camera.fovy       = Config::EngineSettings::CameraFOV;           // Field of View
     camera.projection = CAMERA_PERSPECTIVE;                          // standard 3D-depth projection
 
-    // main testing Model
-    Mesh simpleGeoMesh = GenMeshCube(2.0f, 2.0f, 2.0f);
-    // Mesh simpleGeoMesh = GenMeshKnot(1.0f, 2.0f, 128, 32);
-    // Mesh simpleGeoMesh = GenMeshSphere(1.0f, 32, 32);
-    // Mesh simpleGeoMesh = GenMeshCylinder(1.0f, 2.0f, 32);
-    // Mesh simpleGeoMesh = GenMeshCone(1.0f, 2.0f, 32);
-    // Mesh simpleGeoMesh = GenMeshHemiSphere(1.5f, 32, 32);
-    // Mesh simpleGeoMesh = GenMeshTorus(0.5f, 2.0f, 16, 32);
-    GenMeshTangents(&simpleGeoMesh);
-    Model mainModel = LoadModelFromMesh(simpleGeoMesh);
-    // const std::string complexMesh =
-    //     std::string(Config::Paths::Models) + std::string(lucyMeshFileName);
-    // const std::string complexMesh =
-    //     std::string(Config::Paths::Models) + std::string(stanfordDragonMeshFileName);
-    // Model mainModel = LoadModel(complexMesh.c_str());
-
-    // scale, rotate model
-    Matrix scaleMat     = MatrixScale(modelScalar, modelScalar, modelScalar); // scale
-    Matrix rotMat       = MatrixRotateY(PI / modelRotation);                  // rotation
-    Matrix transformFix = MatrixMultiply(scaleMat, rotMat);
-    mainModel.transform = MatrixMultiply(transformFix, mainModel.transform);
-
-    // light mesh (small sphere)
-    const Mesh lightningSphere       = GenMeshSphere(0.5f, 16, 16);
-    const Model lightningSourceModel = LoadModelFromMesh(lightningSphere);
-
-    // Load texture and assign it to the model's default material
-    const std::string texturePath =
-        std::string(Config::Paths::Textures) + std::string(SquareTexture);
-    const Texture2D defaultTexture = LoadTexture(texturePath.c_str());
-
-    // Load custom Shaders
+    // Load  and link Shaders
     const std::string vertPath =
         std::string(Config::Paths::Shaders) + std::string(DefaultVertShaderName);
     const std::string fragPath =
         std::string(Config::Paths::Shaders) + std::string(DefaultFragShaderName);
     const std::string postFragPath =
         std::string(Config::Paths::Shaders) + std::string(PostProcessFragShaderName);
-
-    // Linking Shaders
     const Shader postShader = LoadShader(nullptr, postFragPath.c_str());
     const Shader pbrShader  = LoadShader(vertPath.c_str(), fragPath.c_str());
 
-    // attach shaders to model
-    for (int i = 0; i < mainModel.materialCount; i++) {
-        mainModel.materials[i].shader                            = pbrShader;
-        mainModel.materials[i].maps[MATERIAL_MAP_ALBEDO].texture = defaultTexture;
-        mainModel.materials[i].maps[MATERIAL_MAP_ALBEDO].color   = WHITE;
+    // Generate obstacle base Meshes
+    Mesh baseMesh = GenMeshCube(0.75f, 0.75f, 0.75f);
+    GenMeshTangents(&baseMesh);
+
+    // load default texture
+    const std::string texturePath =
+        std::string(Config::Paths::Textures) + std::string(ObstacleTexture);
+    const Texture2D obstacleTexture = LoadTexture(texturePath.c_str());
+
+    // Populate the obstacle array as a cloud of objects
+    std::vector<Obstacle> obstacles;
+    int attempts = 0;
+
+    while (obstacles.size() < obstacleCount && attempts < 5000) {
+        attempts++;
+
+        // Generate basic physical properties
+        float scale = static_cast<float>(GetRandomValue(10, 30)) / 10.0f;
+        float radius =
+            static_cast<float>(GetRandomValue(innerRadius * 10, outerRadius * 10)) / 10.0f;
+        float angle  = static_cast<float>(GetRandomValue(0, 360)) * DEG2RAD;
+        float height = static_cast<float>(GetRandomValue(static_cast<int>(scale) * 10, 200)) /
+                       10.0f; // Scale acts as minHeight
+
+        Vector3 testPos = {cosf(angle) * radius, height, sinf(angle) * radius};
+
+        // If generated object hits something, skip to the next attempt
+        bool isCollidingWithExistingObject = std::ranges::any_of(obstacles, [&](const auto &obs) {
+            return Vector3Distance(testPos, obs.position) < (scale + obs.boundingRadius);
+        });
+        if (isCollidingWithExistingObject)
+            continue;
+
+        // Build the Object
+        Obstacle obs{};
+        obs.position       = testPos;
+        obs.boundingRadius = scale;
+        obs.model          = LoadModelFromMesh(baseMesh);
+
+        // Materials
+        obs.model.materials[0].shader                            = pbrShader;
+        obs.model.materials[0].maps[MATERIAL_MAP_ALBEDO].texture = obstacleTexture;
+
+        // Calculate matrices once
+        Vector3 rotAxis = Vector3Normalize({static_cast<float>(GetRandomValue(0, 100)),
+                                            static_cast<float>(GetRandomValue(0, 100)),
+                                            static_cast<float>(GetRandomValue(0, 100))});
+        auto rotAngle   = static_cast<float>(GetRandomValue(0, 360));
+
+        // apply random transformations
+        obs.model.transform =
+            MatrixMultiply(MatrixMultiply(MatrixScale(scale, scale, scale),
+                                          MatrixRotate(rotAxis, rotAngle * DEG2RAD)),
+                           MatrixTranslate(testPos.x, testPos.y, testPos.z));
+        obs.normalMatrix = MatrixTranspose(MatrixInvert(obs.model.transform));
+
+        obstacles.push_back(obs);
     }
+
+    // floor Mesh Setup
+    Mesh floorMesh   = GenMeshPlane(500.0f, 500.0f, 100, 100);
+    Model floorModel = LoadModelFromMesh(floorMesh);
+
+    const std::string woodTexPath = std::string(Config::Paths::Textures) + std::string(WoodTexture);
+    Texture2D floorTexture        = LoadTexture(woodTexPath.c_str());
+    SetTextureWrap(floorTexture, TEXTURE_WRAP_REPEAT); // Force the texture repeat
+
+    // Scale UV coordinates of the mesh so the texture tiles 100 times
+    for (int i = 0; i < floorMesh.vertexCount; i++) {
+        floorMesh.texcoords[i * 2] *= 100.0f;     // Scale U
+        floorMesh.texcoords[i * 2 + 1] *= 100.0f; // Scale V
+    }
+    UpdateMeshBuffer(floorMesh, 1, floorMesh.texcoords,
+                     floorMesh.vertexCount * static_cast<int>(2 * sizeof(float)), 0);
+    // apply texture to floor
+    for (int i = 0; i < floorModel.materialCount; i++) {
+        floorModel.materials[i].shader                            = pbrShader;
+        floorModel.materials[i].maps[MATERIAL_MAP_ALBEDO].texture = floorTexture;
+        floorModel.materials[i].maps[MATERIAL_MAP_ALBEDO].color   = WHITE;
+    }
+
+    // light mesh
+    const Mesh lightningSphereMesh   = GenMeshSphere(0.5f, 16, 16);
+    const Model lightningSourceModel = LoadModelFromMesh(lightningSphereMesh);
 
     // define uniform location variables (vertex)
     int modelMatShaderLoc  = GetShaderLocation(pbrShader, "modelMat");
@@ -97,8 +155,8 @@ int main() {
     int resolutionShaderLoc = GetShaderLocation(postShader, "resolution");
 
     // Generate the Framebuffer ID
-    unsigned int customFboId = rlLoadFramebuffer();
-    if (customFboId == 0) {
+    unsigned int FboId = rlLoadFramebuffer();
+    if (FboId == 0) {
         TraceLog(LOG_ERROR, "Failed to create custom FBO");
     }
 
@@ -108,14 +166,13 @@ int main() {
     unsigned int depthTexId = rlLoadTextureDepth(screenWidth, screenHeight, true);
 
     // Bind the FBO and attach the textures
-    rlEnableFramebuffer(customFboId);
-    rlFramebufferAttach(customFboId, colorTexId, RL_ATTACHMENT_COLOR_CHANNEL0,
-                        RL_ATTACHMENT_TEXTURE2D, 0);
-    rlFramebufferAttach(customFboId, depthTexId, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_RENDERBUFFER,
+    rlEnableFramebuffer(FboId);
+    rlFramebufferAttach(FboId, colorTexId, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D,
                         0);
+    rlFramebufferAttach(FboId, depthTexId, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_RENDERBUFFER, 0);
 
     // Verify FBO completeness and unbind to return to the default screen buffer
-    if (!rlFramebufferComplete(customFboId)) {
+    if (!rlFramebufferComplete(FboId)) {
         TraceLog(LOG_ERROR, "Custom FBO is incomplete!");
     }
     rlDisableFramebuffer();
@@ -124,7 +181,7 @@ int main() {
     Texture2D fboOutputTexture = {colorTexId, screenWidth, screenHeight, 1,
                                   PIXELFORMAT_UNCOMPRESSED_R8G8B8A8};
 
-    // Game Loop
+    // MAIN GAME LOOP
     while (!WindowShouldClose()) {
         // Update
         UpdateCamera(&camera, cameraMode);
@@ -132,41 +189,43 @@ int main() {
         auto currentHeight = static_cast<float>(GetScreenHeight());
 
         // move light a bit
-        double time = GetTime();
-        lightPos.x  = cosf(static_cast<float>(time)) * 3.0f;
-        lightPos.z  = sinf(static_cast<float>(time)) * 3.0f;
+        // double time = GetTime();
+        // lightPos.x  = cosf(static_cast<float>(time)) * 3.0f;
+        // lightPos.z  = sinf(static_cast<float>(time)) * 3.0f;
 
         // Draw
         BeginDrawing();
         {
             // FBO Off-Screen rendering
-            rlEnableFramebuffer(customFboId); // Redirect GPU output to custom FBO
+            rlEnableFramebuffer(FboId); // Redirect GPU output to custom FBO
             ClearBackground(Config::EngineSettings::BackgroundColor); // Background color
             rlClearScreenBuffers(); // Manually clear the FBOs color and depth buffers
 
             // apply Camera's MVP matrices
             BeginMode3D(camera);
             {
-                // generate the normal matrices for normal transform to world space
-                Matrix modelMatrix  = mainModel.transform;
-                Matrix normalMatrix = MatrixTranspose(MatrixInvert(modelMatrix));
-
-                // Set vertex uniforms
-                SetShaderValueMatrix(pbrShader, modelMatShaderLoc, modelMatrix);
-                SetShaderValueMatrix(pbrShader, normalMatShaderLoc, normalMatrix);
-
                 // Set fragment uniforms
                 SetShaderValue(pbrShader, lightPosShaderLoc, &lightPos, SHADER_UNIFORM_VEC3);
                 SetShaderValue(pbrShader, viewPosShaderLoc, &camera.position, SHADER_UNIFORM_VEC3);
 
-                // Draw the model
-                rlDisableBackfaceCulling();
-                DrawModel(mainModel, objectPosition, 1.0f, WHITE);
-                rlEnableBackfaceCulling();
-                DrawModel(lightningSourceModel, lightPos, 1.0f, WHITE);
+                // Reset transform state for un-rotated objects (after obstacles manipulate them)
+                SetShaderValueMatrix(pbrShader, modelMatShaderLoc, MatrixIdentity());
+                SetShaderValueMatrix(pbrShader, normalMatShaderLoc, MatrixIdentity());
+
+                // Draw static models
+                DrawModel(floorModel, {0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
+                DrawModel(lightningSourceModel, lightPos, 2.0f, WHITE);
+
+                // Draw obstacles
+                for (const auto &obs : obstacles) {
+                    // Set vertex uniforms with pre-calculated matrices
+                    SetShaderValueMatrix(pbrShader, modelMatShaderLoc, obs.model.transform);
+                    SetShaderValueMatrix(pbrShader, normalMatShaderLoc, obs.normalMatrix);
+                    DrawModel(obs.model, {0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
+                }
 
                 // debug grid for floor
-                DrawGrid(100, 1.0f);
+                // DrawGrid(100, 1.0f);
             }
             EndMode3D(); // stop applying 3D math
 
@@ -182,13 +241,12 @@ int main() {
             float res[2] = {currentWidth, currentHeight};
             SetShaderValue(postShader, resolutionShaderLoc, res, SHADER_UNIFORM_VEC2);
 
-            // Enable Post-processing fragment Shader
+            // Post-processing fragment Shader
             BeginShaderMode(postShader);
             {
                 // Draw FBO texture to screen
                 DrawTexturePro(fboOutputTexture, sourceRec, destRec, {0, 0}, 0.0f, WHITE);
             }
-            // Disable Post-processing fragment Shader
             EndShaderMode();
 
             // Draw UI
@@ -198,13 +256,20 @@ int main() {
     }
 
     // cleanup
-    rlUnloadFramebuffer(customFboId);
+    rlUnloadFramebuffer(FboId);
     rlUnloadTexture(colorTexId);
     UnloadShader(pbrShader);
     UnloadShader(postShader);
-    UnloadTexture(defaultTexture);
-    UnloadModel(mainModel);
+    for (auto &obs : obstacles) {
+        UnloadModel(obs.model);
+    }
+    UnloadMesh(baseMesh);
+    UnloadTexture(obstacleTexture);
     UnloadModel(lightningSourceModel);
+    UnloadMesh(lightningSphereMesh);
+    UnloadModel(floorModel);
+    UnloadMesh(floorMesh);
+    UnloadTexture(floorTexture);
     glDeleteRenderbuffers(1, &depthTexId);
 
     CloseWindow();

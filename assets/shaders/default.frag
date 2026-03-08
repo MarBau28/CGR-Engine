@@ -12,13 +12,14 @@ out vec4 finalColor;
 uniform sampler2D texture0; // Raylib's default texture sampler namess
 uniform vec3 lightPos; // light source position
 uniform vec3 viewPos; // camera position
+uniform vec4 colDiffuse; // diffuse color for tinting
 
 void main()
 {
     // Light settings
     vec3 lightColor = vec3(1.0, 0.9, 0.75);
-    float lightIntensity = 2.0;
-    float ambientLightStrength = 0.15f;
+    float lightIntensity = 10.0;
+    float ambientLightStrength = 0.33f;
     float specularStrength = 0.5;
     int shininess = 48;
     float attenuationConstant = 1.0; // light distance (attenuation)
@@ -50,7 +51,7 @@ void main()
     specular *= attenuation;
 
     // calculate textur color
-    vec4 textureMapping = texture(texture0, fragTexCoord);
+    vec4 textureMapping = texture(texture0, fragTexCoord) * colDiffuse;
 
     // final output: ambient light color + diffuse light color * texture color
     vec3 color = (ambient + diffuse + specular) * textureMapping.rgb;
