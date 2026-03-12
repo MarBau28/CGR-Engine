@@ -6,26 +6,31 @@ in vec2 fragTexCoord;
 // out to screen
 out vec4 finalColor;
 
-// uniforms
+// Uniforms
 uniform vec2 resolution;
 uniform vec3 lightPos;
-uniform vec3 viewPos;
-uniform sampler2D texture0; // from G-Buffer
-uniform sampler2D gNormalTex; // from G-Buffer
-uniform sampler2D gPositionTex; // from G-Buffer
+uniform vec3 viewPos; // camera
+
+// static vars from settings
+uniform vec3 backgroundColor;
+uniform vec3 lightColor;
+uniform float lightIntensity;
+uniform float ambientLightStrength;
+uniform float specularStrength;
+uniform int shininess;
+
+// G-Buffer
+uniform sampler2D texture0;
+uniform sampler2D gNormalTex;
+uniform sampler2D gPositionTex;
+
+// light distance (attenuation) constants
+const float attenuationConstant = 1.0;
+const float attenuationLinear = 0.09;
+const float attenuationQuadratic = 0.032;
 
 void main()
 {
-    // Light settings
-    vec3 lightColor = vec3(1.0, 0.9, 0.75);
-    float lightIntensity = 10.0;
-    float ambientLightStrength = 0.33f;
-    float specularStrength = 1.0;
-    int shininess = 96;
-    float attenuationConstant = 1.0; // light distance (attenuation)
-    float attenuationLinear = 0.09; // light distance (attenuation)
-    float attenuationQuadratic = 0.032; // light distance (attenuation)
-    vec3 skyboxColor = vec3(0.141, 0.153, 0.227);;
     vec3 effectiveLight = lightColor * lightIntensity;
 
     // Extract data from G-Buffer
@@ -37,15 +42,15 @@ void main()
     // Test: standard textures
     //    finalColor = vec4(albedo, 1.0);
     // Test: Normal vectors mapped as colors
-    //    finalColor = vec4(normal * 0.5 + 0.5, 1.0);
+    //    finalColor = vec4(normalize(rawNormal) * 0.5 + 0.5, 1.0);
     // Test: raw World Position coordinates mapped as colors
-    //    finalColor = vec4(position * 0.05, 1.0);
+    //    finalColor = vec4(fragPosition * 0.05, 1.0);
 
-    // Masking check for (light sources and sky box)
+    // Masking check (for light sources and sky box)
     if (length(rawNormal) < 0.1) {
-        // If empty space draw skybox
+        // If empty space draw backgroundColor
         if (albedoData.a == 0.0) {
-            finalColor = vec4(skyboxColor, 1.0);
+            finalColor = vec4(backgroundColor, 1.0);
         }
         // If Alpha is > 0.0, it's normal object that should not be shaded
         else {
@@ -53,7 +58,7 @@ void main()
         }
         return;
     }
-    
+
     // normalize the rawNormal for further lightning calcs
     vec3 normal = normalize(rawNormal);
 
@@ -139,7 +144,6 @@ void main()
 
     // Output
     //    finalColor = vec4(color, texColor.a);
-
 
     // Output
     finalColor = vec4(color, albedoData.a);

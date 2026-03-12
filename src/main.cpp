@@ -24,11 +24,16 @@ constexpr std::string_view lucyMeshFileName           = "stanford_lucy.glb";
 constexpr std::string_view stanfordDragonMeshFileName = "stanford_dragon.glb";
 constexpr float modelScalar                           = 1.0f;
 constexpr float modelRotation                         = 1.5f;
-constexpr int cameraMode                              = CAMERA_FREE;
+constexpr int cameraMode                              = CAMERA_ORBITAL;
 constexpr int obstacleCount                           = 500;
 constexpr float innerRadius                           = 10.0f; // obstacle cloud inner empty
 constexpr float outerRadius                           = 50.0f; // obstacle cloud size
-constexpr Color lightColor                            = {255, 229, 191, 255};
+constexpr Vector3 BackgroundColor = {Config::EngineSettings::BackgroundColor.x / 255.0f,
+                                     Config::EngineSettings::BackgroundColor.y / 255.0f,
+                                     Config::EngineSettings::BackgroundColor.z / 255.0f};
+constexpr Vector3 MainLightColor  = {Config::EngineSettings::MainLightColor.x / 255.0f,
+                                     Config::EngineSettings::MainLightColor.y / 255.0f,
+                                     Config::EngineSettings::MainLightColor.z / 255.0f};
 
 // global variables
 Vector3 lightPos = {0.0f, 5.0f, 0.0f};
@@ -55,8 +60,8 @@ int main() {
         std::string(Config::Paths::Shaders) + std::string(DefaultFragShaderName);
     const std::string postFragPath =
         std::string(Config::Paths::Shaders) + std::string(PostProcessFragShaderName);
-    const Shader postShader = LoadShader(nullptr, postFragPath.c_str());
-    const Shader pbrShader  = LoadShader(vertPath.c_str(), fragPath.c_str());
+    const Shader postShader       = LoadShader(nullptr, postFragPath.c_str());
+    const Shader preProcessShader = LoadShader(vertPath.c_str(), fragPath.c_str());
 
     // Generate obstacle base Meshes
     Mesh baseMesh = GenMeshCube(0.75f, 0.75f, 0.75f);
@@ -98,7 +103,7 @@ int main() {
         obs.model          = LoadModelFromMesh(baseMesh);
 
         // Materials
-        obs.model.materials[0].shader                            = pbrShader;
+        obs.model.materials[0].shader                            = preProcessShader;
         obs.model.materials[0].maps[MATERIAL_MAP_ALBEDO].texture = obstacleTexture;
 
         // Calculate matrices once
@@ -134,7 +139,7 @@ int main() {
                      floorMesh.vertexCount * static_cast<int>(2 * sizeof(float)), 0);
     // apply texture to floor
     for (int i = 0; i < floorModel.materialCount; i++) {
-        floorModel.materials[i].shader                            = pbrShader;
+        floorModel.materials[i].shader                            = preProcessShader;
         floorModel.materials[i].maps[MATERIAL_MAP_ALBEDO].texture = floorTexture;
         floorModel.materials[i].maps[MATERIAL_MAP_ALBEDO].color   = WHITE;
     }
@@ -142,7 +147,19 @@ int main() {
     // light mesh
     Mesh lightningSphereMesh                 = GenMeshSphere(0.5f, 16, 16);
     Model lightningSourceModel               = LoadModelFromMesh(lightningSphereMesh);
-    lightningSourceModel.materials[0].shader = pbrShader;
+    lightningSourceModel.materials[0].shader = preProcessShader;
+
+    // calculate light-Mesh color
+
+    float t              = std::clamp(Config::EngineSettings::LightIntensity / 15.0f, 0.0f, 1.0f);
+    Color lightMeshColor = {
+        static_cast<unsigned char>(Config::EngineSettings::MainLightColor.x +
+                                   (255.0f - Config::EngineSettings::MainLightColor.x) * t),
+        static_cast<unsigned char>(Config::EngineSettings::MainLightColor.y +
+                                   (255.0f - Config::EngineSettings::MainLightColor.y) * t),
+        static_cast<unsigned char>(Config::EngineSettings::MainLightColor.z +
+                                   (255.0f - Config::EngineSettings::MainLightColor.z) * t),
+        255};
 
     // G-BUFFER INITIALIZATION
     unsigned int FboId = rlLoadFramebuffer();
@@ -184,18 +201,36 @@ int main() {
                            PIXELFORMAT_UNCOMPRESSED_R32G32B32A32};
 
     // define uniform location variables (vertex)
-    int modelMatShaderLoc  = GetShaderLocation(pbrShader, "modelMat");
-    int normalMatShaderLoc = GetShaderLocation(pbrShader, "normalMat");
+    int modelMatLoc  = GetShaderLocation(preProcessShader, "modelMat");
+    int normalMatLoc = GetShaderLocation(preProcessShader, "normalMat");
 
     // define uniform locations variable (default fragment)
-    int isLightSourceLoc = GetShaderLocation(pbrShader, "isLightSource");
+    int isLightLoc = GetShaderLocation(preProcessShader, "isLightSource");
 
     // define uniform location variables (post processing fragment)
-    int resolutionShaderLoc  = GetShaderLocation(postShader, "resolution");
-    int normalTexShaderLoc   = GetShaderLocation(postShader, "gNormalTex");
-    int positionTexShaderLoc = GetShaderLocation(postShader, "gPositionTex");
-    int postLightPosLoc      = GetShaderLocation(postShader, "lightPos");
-    int postViewPosLoc       = GetShaderLocation(postShader, "viewPos");
+    int resolutionLoc          = GetShaderLocation(postShader, "resolution");
+    int normalTexLoc           = GetShaderLocation(postShader, "gNormalTex");
+    int positionTexLoc         = GetShaderLocation(postShader, "gPositionTex");
+    int postLightPosLoc        = GetShaderLocation(postShader, "lightPos");
+    int postViewPosLoc         = GetShaderLocation(postShader, "viewPos");
+    int postBackgroundColorLoc = GetShaderLocation(postShader, "backgroundColor");
+    int postLightColorLoc      = GetShaderLocation(postShader, "lightColor");
+    int intensityLoc           = GetShaderLocation(postShader, "lightIntensity");
+    int ambientLoc             = GetShaderLocation(postShader, "ambientLightStrength");
+    int specularLoc            = GetShaderLocation(postShader, "specularStrength");
+    int shininessLoc           = GetShaderLocation(postShader, "shininess");
+
+    // set static shader values for postProcessingShader
+    SetShaderValue(postShader, postBackgroundColorLoc, &BackgroundColor, SHADER_UNIFORM_VEC3);
+    SetShaderValue(postShader, postLightColorLoc, &MainLightColor, SHADER_UNIFORM_VEC3);
+    SetShaderValue(postShader, intensityLoc, &Config::EngineSettings::LightIntensity,
+                   SHADER_UNIFORM_FLOAT);
+    SetShaderValue(postShader, ambientLoc, &Config::EngineSettings::AmbientLightStrength,
+                   SHADER_UNIFORM_FLOAT);
+    SetShaderValue(postShader, specularLoc, &Config::EngineSettings::SpecularStrength,
+                   SHADER_UNIFORM_FLOAT);
+    SetShaderValue(postShader, shininessLoc, &Config::EngineSettings::Shininess,
+                   SHADER_UNIFORM_INT);
 
     // MAIN GAME LOOP
     while (!WindowShouldClose()) {
@@ -221,30 +256,27 @@ int main() {
             // Draw models
             BeginMode3D(camera);
             {
-                int isLight = 0;
-                SetShaderValue(pbrShader, isLightSourceLoc, &isLight, SHADER_UNIFORM_INT);
+                // Reset transform state for un-rotated objects (after obstacles manipulate them)
+                SetShaderValueMatrix(preProcessShader, modelMatLoc, MatrixIdentity());
+                SetShaderValueMatrix(preProcessShader, normalMatLoc, MatrixIdentity());
 
                 // Draw static models
                 DrawModel(floorModel, {0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
 
+                // set lightning
+                int isLight = 1;
+                SetShaderValue(preProcessShader, isLightLoc, &isLight, SHADER_UNIFORM_INT);
+                DrawModel(lightningSourceModel, lightPos, 2.0f, lightMeshColor);
+                isLight = 0; // reset lightning filter
+                SetShaderValue(preProcessShader, isLightLoc, &isLight, SHADER_UNIFORM_INT);
+
                 // Draw obstacles
                 for (const auto &obs : obstacles) {
                     // Set vertex uniforms with pre-calculated matrices
-                    SetShaderValueMatrix(pbrShader, modelMatShaderLoc, obs.model.transform);
-                    SetShaderValueMatrix(pbrShader, normalMatShaderLoc, obs.normalMatrix);
+                    SetShaderValueMatrix(preProcessShader, modelMatLoc, obs.model.transform);
+                    SetShaderValueMatrix(preProcessShader, normalMatLoc, obs.normalMatrix);
                     DrawModel(obs.model, {0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
                 }
-
-                // set lightning
-                isLight = 1;
-                SetShaderValue(pbrShader, isLightSourceLoc, &isLight, SHADER_UNIFORM_INT);
-
-                // Reset transform state for un-rotated objects (after obstacles manipulate them)
-                SetShaderValueMatrix(pbrShader, modelMatShaderLoc, MatrixIdentity());
-                SetShaderValueMatrix(pbrShader, normalMatShaderLoc, MatrixIdentity());
-
-                // draw lightning source
-                DrawModel(lightningSourceModel, lightPos, 2.0f, lightColor);
 
                 // debug grid for floor
                 // DrawGrid(100, 1.0f);
@@ -264,11 +296,11 @@ int main() {
             {
                 // post-processing uniform passing
                 float res[2] = {currentWidth, currentHeight};
-                SetShaderValue(postShader, resolutionShaderLoc, res, SHADER_UNIFORM_VEC2);
+                SetShaderValue(postShader, resolutionLoc, res, SHADER_UNIFORM_VEC2);
                 SetShaderValue(postShader, postLightPosLoc, &lightPos, SHADER_UNIFORM_VEC3);
                 SetShaderValue(postShader, postViewPosLoc, &camera.position, SHADER_UNIFORM_VEC3);
-                SetShaderValueTexture(postShader, normalTexShaderLoc, gNormal);
-                SetShaderValueTexture(postShader, positionTexShaderLoc, gPosition);
+                SetShaderValueTexture(postShader, normalTexLoc, gNormal);
+                SetShaderValueTexture(postShader, positionTexLoc, gPosition);
 
                 // Draw FBO texture to screen
                 DrawTexturePro(gAlbedo, sourceRec, destRec, {0, 0}, 0.0f, WHITE);
@@ -287,7 +319,7 @@ int main() {
     rlUnloadTexture(normalTexId);
     rlUnloadTexture(positionTexId);
     rlUnloadTexture(depthTexId);
-    UnloadShader(pbrShader);
+    UnloadShader(preProcessShader);
     UnloadShader(postShader);
     for (Obstacle &obs : obstacles) {
         UnloadModel(obs.model);

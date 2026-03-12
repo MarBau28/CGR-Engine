@@ -23,7 +23,7 @@ void main()
     // Surface Normal
     if (isLightSource == 1) {
         // If it's light source, force empty normals to trigger the post-process mask
-        gNormal = vec4(0.0);
+        gNormal = vec4(0.0, 0.0, 0.0, 1.0);
     } else {
         gNormal = vec4(normalize(fragNormal), 1.0);
     }
