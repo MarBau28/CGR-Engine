@@ -78,7 +78,7 @@
 //     glViewport(0, 0, 800, 800);
 //
 //     // create shader program by specifying the sources
-//     const Shader shaderProgram("../shaders/default.vert", "../shaders/default.frag");
+//     const Shader shaderProgram("../shaders/geometry_pass.vert", "../shaders/geometry_pass.frag");
 //
 //     // create and configure (VOA) buffers (VBO, EBO)
 //     const VAO VAO1;

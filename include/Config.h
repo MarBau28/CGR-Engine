@@ -21,13 +21,8 @@ namespace Config::EngineSettings {
 
     // Light settings
     inline constexpr Vector3 MainLightColor     = {255.0f, 242.0f, 217.0f};
-    inline constexpr float LightIntensity       = 10.0f;
+    inline constexpr float LightIntensity       = 2.0f;
     inline constexpr float AmbientLightStrength = 0.33f;
-    inline constexpr float SpecularStrength     = 1.0f;
-    inline constexpr int Shininess              = 96;
-    inline constexpr float AttenuationConstant  = 1.0f;
-    inline constexpr float AttenuationLinear    = 0.09f;
-    inline constexpr float AttenuationQuadratic = 0.032f;
 
     // Misc
     inline constexpr Vector3 BackgroundColor = {36.0f, 39.0f, 58.0f};
