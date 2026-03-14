@@ -12,6 +12,7 @@ struct Obstacle {
     Matrix normalMatrix;
     Vector3 position;
     float boundingRadius;
+    float styleId;
 };
 
 // Tracks physical volume of every Object
@@ -23,23 +24,24 @@ struct BoundingVolume {
 // global constants
 inline constexpr std::string_view obstacleTextureName        = "starry-galaxy_tex.png";
 inline constexpr std::string_view woodTextureName            = "wood_tex.png";
-inline constexpr std::string_view geomitryVertexShaderName   = "geometry_pass.vert";
-inline constexpr std::string_view geomitryFragmentShaderName = "geometry_pass.frag";
+inline constexpr std::string_view geometryVertexShaderName   = "geometry_pass.vert";
+inline constexpr std::string_view geometryFragmentShaderName = "geometry_pass.frag";
 inline constexpr std::string_view lightingFragmentShaderName = "lighting_pass.frag";
 inline constexpr std::string_view postFragmentShaderName     = "postprocess.frag";
 inline constexpr float modelScalar                           = 1.0f;
 inline constexpr float modelRotation                         = 1.5f;
 inline constexpr int cameraMode                              = CAMERA_ORBITAL;
 inline constexpr int obstacleCount                           = 500;
-inline constexpr float outerRadius                           = 50.0f; // obstacle cloud size
-inline constexpr int activeLightCount                        = 50;
+inline constexpr float outerRadius                           = 100.0f; // obstacle cloud size
+inline constexpr int activeLightCount                        = 100;
 inline constexpr float minLightThreshold                     = 0.03f;
 inline constexpr float specularStrength                      = 1.0f;
-inline constexpr int generalMaterialShininess                = 96;
+inline constexpr int generalMaterialShininess                = 48;
 inline constexpr float attenuationConstant                   = 1.0f;
 inline constexpr float attenuationLinear                     = 0.09f;
 inline constexpr float attenuationQuadratic                  = 0.032f;
 inline constexpr bool useMultipleLightColors                 = false;
+inline constexpr bool setFrameLimit                          = false;
 
 // global variables
 Vector3 lightPositions[activeLightCount];
@@ -56,7 +58,9 @@ int main() {
     constexpr int screenWidth  = Config::EngineSettings::ScreenWidth;
     constexpr int screenHeight = Config::EngineSettings::ScreenHeight;
     InitWindow(screenWidth, screenHeight, "HyDra");
-    SetTargetFPS(Config::EngineSettings::TargetFPS);
+    if (setFrameLimit) {
+        SetTargetFPS(Config::EngineSettings::TargetFPS);
+    }
 
     // Camera Setup
     Camera3D camera   = {0};
@@ -67,17 +71,17 @@ int main() {
     camera.projection = CAMERA_PERSPECTIVE;                          // standard 3D-depth projection
 
     // Load  and link Shaders
-    const std::string geomitryVertPath =
-        std::string(Config::Paths::Shaders) + std::string(geomitryVertexShaderName);
-    const std::string geomitryFragPath =
-        std::string(Config::Paths::Shaders) + std::string(geomitryFragmentShaderName);
+    const std::string geometryVertPath =
+        std::string(Config::Paths::Shaders) + std::string(geometryVertexShaderName);
+    const std::string geometryFragPath =
+        std::string(Config::Paths::Shaders) + std::string(geometryFragmentShaderName);
     const std::string lightingFragPath =
         std::string(Config::Paths::Shaders) + std::string(lightingFragmentShaderName);
     const std::string postFragPath =
         std::string(Config::Paths::Shaders) + std::string(postFragmentShaderName);
 
-    const Shader geomitryPassShader =
-        LoadShader(geomitryVertPath.c_str(), geomitryFragPath.c_str());
+    const Shader geometryPassShader =
+        LoadShader(geometryVertPath.c_str(), geometryFragPath.c_str());
     const Shader lightingPassShader = LoadShader(nullptr, lightingFragPath.c_str());
     const Shader postShader         = LoadShader(nullptr, postFragPath.c_str());
 
@@ -107,7 +111,7 @@ int main() {
                      floorMesh.vertexCount * static_cast<int>(2 * sizeof(float)), 0);
     // apply texture to floor
     for (int i = 0; i < floorModel.materialCount; i++) {
-        floorModel.materials[i].shader                            = geomitryPassShader;
+        floorModel.materials[i].shader                            = geometryPassShader;
         floorModel.materials[i].maps[MATERIAL_MAP_ALBEDO].texture = floorTexture;
         floorModel.materials[i].maps[MATERIAL_MAP_ALBEDO].color   = WHITE;
     }
@@ -115,7 +119,7 @@ int main() {
     // light mesh
     Mesh lightningSphereMesh                 = GenMeshSphere(0.5f, 16, 16);
     Model lightningSourceModel               = LoadModelFromMesh(lightningSphereMesh);
-    lightningSourceModel.materials[0].shader = geomitryPassShader;
+    lightningSourceModel.materials[0].shader = geometryPassShader;
 
     // Pre-allocate vectors
     std::vector<Obstacle> obstacles;
@@ -161,9 +165,10 @@ int main() {
             obs.position       = validPos;
             obs.boundingRadius = scale;
             obs.model          = LoadModelFromMesh(baseMesh);
+            obs.styleId        = static_cast<float>(GetRandomValue(1, 2));
 
             // Materials
-            obs.model.materials[0].shader                            = geomitryPassShader;
+            obs.model.materials[0].shader                            = geometryPassShader;
             obs.model.materials[0].maps[MATERIAL_MAP_ALBEDO].texture = obstacleTexture;
 
             // Calculate normal matrices
@@ -199,10 +204,11 @@ int main() {
                                                  static_cast<float>(GetRandomValue(100, 255))}
                                                : Config::EngineSettings::MainLightColor;
             lightColors[lightsGenerated] = {x / 255.0f, y / 255.0f, z / 255.0f};
-            auto lerpColor               = [&](const float channel) {
+            auto getMeshColor            = [&](const float channel) {
                 return static_cast<unsigned char>(std::lerp(channel, 255.0f, t));
             };
-            lightMeshColors[lightsGenerated] = {lerpColor(x), lerpColor(y), lerpColor(z), 255};
+            lightMeshColors[lightsGenerated] = {getMeshColor(x), getMeshColor(y), getMeshColor(z),
+                                                255};
 
             // Store the initial polar coordinates and convert to Cartesian coordinates
             float radius = sqrtf(validPos.x * validPos.x + validPos.z * validPos.z);
@@ -262,12 +268,13 @@ int main() {
     // SHADER LOCATION AND UNIFORM SETUP
     // -------------------------------------------------------------------------------------------
 
-    // define uniform location variables (geomitry vertex)
-    int modelMatLoc  = GetShaderLocation(geomitryPassShader, "modelMat");
-    int normalMatLoc = GetShaderLocation(geomitryPassShader, "normalMat");
+    // define uniform location variables (geometry vertex)
+    int modelMatLoc  = GetShaderLocation(geometryPassShader, "modelMat");
+    int normalMatLoc = GetShaderLocation(geometryPassShader, "normalMat");
 
-    // define uniform locations variable (geomitry fragment)
-    int isLightLoc = GetShaderLocation(geomitryPassShader, "isLightSource");
+    // define uniform locations variable (geometry fragment)
+    int isLightLoc = GetShaderLocation(geometryPassShader, "isLightSource");
+    int styleIdLoc = GetShaderLocation(geometryPassShader, "styleId");
 
     // define uniform location variables (lighting fragment)
     int lightPosArrayLoc        = GetShaderLocation(lightingPassShader, "lightPositions");
@@ -359,33 +366,43 @@ int main() {
             // FBO Off-Screen rendering
             rlEnableFramebuffer(FboId); // Redirect GPU output to custom FBO
             rlActiveDrawBuffers(3);     // Activate all 3 G-Buffer color attachments simultaneously
-            ClearBackground(BLANK);     // Background color
-            rlClearScreenBuffers();     // Manually clear the FBOs color and depth buffers
+            ClearBackground(BLANK);
+            rlClearScreenBuffers(); // Manually clear the FBOs color and depth buffers
+            rlDisableColorBlend();  // to prevent autoi blending
 
             // Draw models
             BeginMode3D(camera);
             {
                 // Reset transform state for un-rotated objects (after obstacles manipulate them)
-                SetShaderValueMatrix(geomitryPassShader, modelMatLoc, MatrixIdentity());
-                SetShaderValueMatrix(geomitryPassShader, normalMatLoc, MatrixIdentity());
+                SetShaderValueMatrix(geometryPassShader, modelMatLoc, MatrixIdentity());
+                SetShaderValueMatrix(geometryPassShader, normalMatLoc, MatrixIdentity());
+
+                // reset styleID for all objects not being stylized
+                float styleId = 1;
+                SetShaderValue(geometryPassShader, styleIdLoc, &styleId, SHADER_UNIFORM_FLOAT);
 
                 // Draw static models
                 DrawModel(floorModel, {0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
 
                 // Draw Lights
                 int isLight = 1;
-                SetShaderValue(geomitryPassShader, isLightLoc, &isLight, SHADER_UNIFORM_INT);
+                SetShaderValue(geometryPassShader, isLightLoc, &isLight, SHADER_UNIFORM_INT);
                 for (int i = 0; i < activeLightCount; i++) {
                     DrawModel(lightningSourceModel, lightPositions[i], 1.5f, lightMeshColors[i]);
                 }
                 isLight = 0; // reset switch
-                SetShaderValue(geomitryPassShader, isLightLoc, &isLight, SHADER_UNIFORM_INT);
+                SetShaderValue(geometryPassShader, isLightLoc, &isLight, SHADER_UNIFORM_INT);
 
                 // Draw obstacles
                 for (const auto &obs : obstacles) {
                     // Set vertex uniforms with pre-calculated matrices
-                    SetShaderValueMatrix(geomitryPassShader, modelMatLoc, obs.model.transform);
-                    SetShaderValueMatrix(geomitryPassShader, normalMatLoc, obs.normalMatrix);
+                    SetShaderValueMatrix(geometryPassShader, modelMatLoc, obs.model.transform);
+                    SetShaderValueMatrix(geometryPassShader, normalMatLoc, obs.normalMatrix);
+
+                    // Set randomized styleID
+                    SetShaderValue(geometryPassShader, styleIdLoc, &obs.styleId,
+                                   SHADER_UNIFORM_FLOAT);
+
                     DrawModel(obs.model, {0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
                 }
 
@@ -395,6 +412,7 @@ int main() {
             EndMode3D(); // stop applying 3D math
 
             // Restore GPU output back to the default screen buffer
+            rlEnableColorBlend();
             rlDisableFramebuffer();
 
             // LIGHTING PASS
@@ -451,7 +469,7 @@ int main() {
     rlUnloadTexture(positionTexId);
     rlUnloadTexture(depthTexId);
     UnloadRenderTexture(litSceneTarget);
-    UnloadShader(geomitryPassShader);
+    UnloadShader(geometryPassShader);
     UnloadShader(lightingPassShader);
     UnloadShader(postShader);
     for (Obstacle &obs : obstacles) {

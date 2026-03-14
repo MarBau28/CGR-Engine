@@ -22,7 +22,6 @@ void main()
 
     // Transform normal to world space using specialized normal matrix
     fragNormal = mat3(normalMat) * vertexNormal;
-    //fragNormal = normalize(vec3(modelMat * vec4(vertexNormal, 0.0)));
 
     // Calculate world position for lighting calculations
     fragPosition = vec3(modelMat * vec4(vertexPosition, 1.0));

@@ -17,12 +17,12 @@ namespace Config::EngineSettings {
     inline constexpr float CameraFOV             = 45.0f;
     inline constexpr Vector3 CameraOrientation   = {0.0f, 1.0f, 0.0f};
     inline constexpr Vector3 CameraViewDirection = {0.0f, 0.0f, 0.0f};
-    inline constexpr Vector3 CameraPosition      = {40.0f, 40.0f, 40.0f};
+    inline constexpr Vector3 CameraPosition      = {55.0f, 55.0f, 55.0f};
 
     // Light settings
     inline constexpr Vector3 MainLightColor     = {255.0f, 242.0f, 217.0f};
-    inline constexpr float LightIntensity       = 2.0f;
-    inline constexpr float AmbientLightStrength = 0.33f;
+    inline constexpr float LightIntensity       = 1.0f;
+    inline constexpr float AmbientLightStrength = 0.25f;
 
     // Misc
     inline constexpr Vector3 BackgroundColor = {36.0f, 39.0f, 58.0f};

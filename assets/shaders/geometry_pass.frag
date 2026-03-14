@@ -15,6 +15,8 @@ uniform sampler2D texture0;
 uniform vec4 colDiffuse;
 uniform int isLightSource; // to identify unlit objects
 
+uniform float styleId; // Main Style ID for NPR Shader
+
 void main()
 {
     // Raw Color
@@ -29,5 +31,11 @@ void main()
     }
 
     // World Position
-    gPosition = vec4(fragPosition, 1.0);
+    if (isLightSource == 1) {
+        // If it's light source, force empty normals to trigger the post-process mask
+        gNormal = vec4(0.0, 0.0, 0.0, 1.0);
+    } else {
+        gNormal = vec4(normalize(fragNormal), 1.0);
+    }
+    gPosition = vec4(fragPosition, styleId);
 }
