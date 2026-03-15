@@ -30,12 +30,6 @@ void main()
         gNormal = vec4(normalize(fragNormal), 1.0);
     }
 
-    // World Position
-    if (isLightSource == 1) {
-        // If it's light source, force empty normals to trigger the post-process mask
-        gNormal = vec4(0.0, 0.0, 0.0, 1.0);
-    } else {
-        gNormal = vec4(normalize(fragNormal), 1.0);
-    }
+    // Position dadta with the StyleId on the unused variable
     gPosition = vec4(fragPosition, styleId);
 }

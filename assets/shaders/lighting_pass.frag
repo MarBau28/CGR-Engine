@@ -34,21 +34,12 @@ uniform vec3 lightColors[MAX_LIGHTS];
 
 void main()
 {
-    //    vec3 effectiveLight = lightColor * lightIntensity;
-
     // Extract data from G-Buffer
     vec4 albedoData = texture(texture0, fragTexCoord);
     vec3 albedo = albedoData.rgb;
     vec3 rawNormal = texture(gNormalTex, fragTexCoord).rgb;
     vec3 fragPosition = texture(gPositionTex, fragTexCoord).rgb;
     int styleID = int(round(texture(gPositionTex, fragTexCoord).a));
-
-    // Test: standard textures
-    //    finalColor = vec4(albedo, 1.0);
-    // Test: Normal vectors mapped as colors
-    //    finalColor = vec4(normalize(rawNormal) * 0.5 + 0.5, 1.0);
-    // Test: raw World Position coordinates mapped as colors
-    //    finalColor = vec4(fragPosition * 0.05, 1.0);
 
     if (styleID == 1) {
 
@@ -78,7 +69,7 @@ void main()
             vec3 lightVector = lightPositions[i] - fragPosition;
             float lightDistance = length(lightVector);
 
-            // If the light is to far away ligth calc can be skipped
+            // If the light is to far away, ligth calc can be skipped
             if (lightDistance > maxLightRadius) continue;
 
             vec3 lightDir = normalize(lightVector);
@@ -114,7 +105,6 @@ void main()
 
     } else if (styleID == 2) {
 
-        //        finalColor = vec4(normalize(rawNormal) * 0.5 + 0.5, 1.0);
         finalColor = vec4(fragPosition * 0.05, 1.0);
     }
 }

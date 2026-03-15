@@ -6,16 +6,14 @@
 #include "rlgl.h"
 #include "vector"
 
-// Structure to hold static geometry data
+// Struct to hold static geometry data
 struct Obstacle {
     Model model;
     Matrix normalMatrix;
-    Vector3 position;
-    float boundingRadius;
     float styleId;
 };
 
-// Tracks physical volume of every Object
+// Struct to track physical volume of every Object
 struct BoundingVolume {
     Vector3 position;
     float radius;
@@ -28,11 +26,12 @@ inline constexpr std::string_view geometryVertexShaderName   = "geometry_pass.ve
 inline constexpr std::string_view geometryFragmentShaderName = "geometry_pass.frag";
 inline constexpr std::string_view lightingFragmentShaderName = "lighting_pass.frag";
 inline constexpr std::string_view postFragmentShaderName     = "postprocess.frag";
+inline constexpr std::string_view debugFragmentShaderName    = "debug_view.frag";
 inline constexpr float modelScalar                           = 1.0f;
 inline constexpr float modelRotation                         = 1.5f;
 inline constexpr int cameraMode                              = CAMERA_ORBITAL;
 inline constexpr int obstacleCount                           = 500;
-inline constexpr float outerRadius                           = 100.0f; // obstacle cloud size
+inline constexpr float ObjectSphereRadius                    = 75.0f; // obstacle cloud size
 inline constexpr int activeLightCount                        = 100;
 inline constexpr float minLightThreshold                     = 0.03f;
 inline constexpr float specularStrength                      = 1.0f;
@@ -40,8 +39,6 @@ inline constexpr int generalMaterialShininess                = 48;
 inline constexpr float attenuationConstant                   = 1.0f;
 inline constexpr float attenuationLinear                     = 0.09f;
 inline constexpr float attenuationQuadratic                  = 0.032f;
-inline constexpr bool useMultipleLightColors                 = false;
-inline constexpr bool setFrameLimit                          = false;
 
 // global variables
 Vector3 lightPositions[activeLightCount];
@@ -49,15 +46,21 @@ Vector3 lightColors[activeLightCount];
 Color lightMeshColors[activeLightCount];
 Vector3 lightOrbitOffsets[activeLightCount];
 std::vector<BoundingVolume> occupiedVolumes;
+bool showDebugMode          = false;
+bool setFrameLimit          = false;
+bool useMultipleLightColors = false;
 
 int main() {
     // BASIC SETUP
     // -------------------------------------------------------------------------------------------
 
     // Context & Window Creation
-    constexpr int screenWidth  = Config::EngineSettings::ScreenWidth;
-    constexpr int screenHeight = Config::EngineSettings::ScreenHeight;
-    InitWindow(screenWidth, screenHeight, "HyDra");
+    constexpr int renderWidth      = Config::EngineSettings::ScreenWidth;
+    constexpr int renderHeight     = Config::EngineSettings::ScreenHeight;
+    constexpr float internalRes[2] = {static_cast<float>(renderWidth),
+                                      static_cast<float>(renderHeight)};
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_MAXIMIZED);
+    InitWindow(renderWidth, renderHeight, "HyDra");
     if (setFrameLimit) {
         SetTargetFPS(Config::EngineSettings::TargetFPS);
     }
@@ -79,11 +82,14 @@ int main() {
         std::string(Config::Paths::Shaders) + std::string(lightingFragmentShaderName);
     const std::string postFragPath =
         std::string(Config::Paths::Shaders) + std::string(postFragmentShaderName);
+    const std::string debugFragPath =
+        std::string(Config::Paths::Shaders) + std::string(debugFragmentShaderName);
 
     const Shader geometryPassShader =
         LoadShader(geometryVertPath.c_str(), geometryFragPath.c_str());
     const Shader lightingPassShader = LoadShader(nullptr, lightingFragPath.c_str());
     const Shader postShader         = LoadShader(nullptr, postFragPath.c_str());
+    Shader debugShader              = LoadShader(nullptr, debugFragPath.c_str());
 
     // OBJECT GENERATION
     // -------------------------------------------------------------------------------------------
@@ -130,8 +136,9 @@ int main() {
     auto TryFindEmptySpace = [&](float radiusToClear, const float minHeight, const float maxHeight,
                                  Vector3 &outPos) -> bool {
         for (int attempts = 0; attempts < 50; attempts++) {
-            const float radius = static_cast<float>(GetRandomValue(0, outerRadius * 10)) / 10.0f;
-            const float angle  = static_cast<float>(GetRandomValue(0, 360)) * DEG2RAD;
+            const float radius =
+                static_cast<float>(GetRandomValue(0, ObjectSphereRadius * 10)) / 10.0f;
+            const float angle = static_cast<float>(GetRandomValue(0, 360)) * DEG2RAD;
             const float height =
                 static_cast<float>(GetRandomValue(static_cast<int>(minHeight) * 10,
                                                   static_cast<int>(maxHeight) * 10)) /
@@ -162,10 +169,8 @@ int main() {
         if (Vector3 validPos; TryFindEmptySpace(scale, scale, 20.0f, validPos)) {
             // Build Object
             Obstacle obs{};
-            obs.position       = validPos;
-            obs.boundingRadius = scale;
-            obs.model          = LoadModelFromMesh(baseMesh);
-            obs.styleId        = static_cast<float>(GetRandomValue(1, 2));
+            obs.model   = LoadModelFromMesh(baseMesh);
+            obs.styleId = static_cast<float>(GetRandomValue(1, 2));
 
             // Materials
             obs.model.materials[0].shader                            = geometryPassShader;
@@ -230,14 +235,14 @@ int main() {
 
     // Allocate Texture Memory block Target 0: Albedo (8-bit RGBA)
     unsigned int albedoTexId =
-        rlLoadTexture(nullptr, screenWidth, screenHeight, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, 1);
+        rlLoadTexture(nullptr, renderWidth, renderHeight, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, 1);
     // Allocate Texture Memory blocks Target 1 & 2: Normal and Position (32-bit Float RGBA)
     unsigned int normalTexId =
-        rlLoadTexture(nullptr, screenWidth, screenHeight, PIXELFORMAT_UNCOMPRESSED_R32G32B32A32, 1);
+        rlLoadTexture(nullptr, renderWidth, renderHeight, PIXELFORMAT_UNCOMPRESSED_R32G32B32A32, 1);
     unsigned int positionTexId =
-        rlLoadTexture(nullptr, screenWidth, screenHeight, PIXELFORMAT_UNCOMPRESSED_R32G32B32A32, 1);
+        rlLoadTexture(nullptr, renderWidth, renderHeight, PIXELFORMAT_UNCOMPRESSED_R32G32B32A32, 1);
     // Depth texture for Z-sorting
-    unsigned int depthTexId = rlLoadTextureDepth(screenWidth, screenHeight, false);
+    unsigned int depthTexId = rlLoadTextureDepth(renderWidth, renderHeight, false);
 
     // Bind FBO and attach all textures
     rlEnableFramebuffer(FboId);
@@ -255,15 +260,15 @@ int main() {
     rlDisableFramebuffer();
 
     // Wrap texture for use in the lighting pass
-    Texture2D gAlbedo   = {albedoTexId, screenWidth, screenHeight, 1,
+    Texture2D gAlbedo   = {albedoTexId, renderWidth, renderHeight, 1,
                            PIXELFORMAT_UNCOMPRESSED_R8G8B8A8};
-    Texture2D gNormal   = {normalTexId, screenWidth, screenHeight, 1,
+    Texture2D gNormal   = {normalTexId, renderWidth, renderHeight, 1,
                            PIXELFORMAT_UNCOMPRESSED_R32G32B32A32};
-    Texture2D gPosition = {positionTexId, screenWidth, screenHeight, 1,
+    Texture2D gPosition = {positionTexId, renderWidth, renderHeight, 1,
                            PIXELFORMAT_UNCOMPRESSED_R32G32B32A32};
 
     // Canvas for Pass 2 (Lighting) to draw onto for post-processing effects
-    RenderTexture2D litSceneTarget = LoadRenderTexture(screenWidth, screenHeight);
+    RenderTexture2D litSceneTarget = LoadRenderTexture(renderWidth, renderHeight);
 
     // SHADER LOCATION AND UNIFORM SETUP
     // -------------------------------------------------------------------------------------------
@@ -297,6 +302,9 @@ int main() {
     // define uniform location variables (post-process fragment)
     int postResolutionLoc = GetShaderLocation(postShader, "resolution");
 
+    // define uniform location variables (debug-view fragment)
+    int debugViewModeLoc = GetShaderLocation(debugShader, "viewMode");
+
     // calculate maximum lightRadius based on light intensity to safe shader calcs
     constexpr float c =
         attenuationConstant - (Config::EngineSettings::LightIntensity / minLightThreshold);
@@ -329,17 +337,29 @@ int main() {
     // MAIN GAME LOOP
     // -------------------------------------------------------------------------------------------
 
+    // Define source and destination rectangles for FBO
+    constexpr Rectangle sourceRec = {0.0f, 0.0f, static_cast<float>(renderWidth),
+                                     -static_cast<float>(renderHeight)};
+
+    // FBO Target. Exactly defined res so the Lighting pass matches G-Buffer
+    constexpr Rectangle fboDestRec = {0.0f, 0.0f, static_cast<float>(renderWidth),
+                                      static_cast<float>(renderHeight)};
+
     while (!WindowShouldClose()) {
         // Update Camera and Screen
         UpdateCamera(&camera, cameraMode);
-        auto currentWidth  = static_cast<float>(GetScreenWidth());
-        auto currentHeight = static_cast<float>(GetScreenHeight());
-        float res[2]       = {currentWidth, currentHeight};
+        auto currentWidth   = static_cast<float>(GetScreenWidth());
+        auto currentHeight  = static_cast<float>(GetScreenHeight());
+        float dynamicRes[2] = {currentWidth, currentHeight};
+        int fontSize        = static_cast<int>(currentHeight) / 30;
 
-        // Define source rectangle
-        const Rectangle sourceRec = {0.0f, 0.0f, static_cast<float>(gAlbedo.width),
-                                     -static_cast<float>(gAlbedo.height)};
-        const Rectangle destRec   = {0.0f, 0.0f, currentWidth, currentHeight};
+        // Screen Target. Forces final image to fill the window
+        const Rectangle screenDestRec = {0.0f, 0.0f, currentWidth, currentHeight};
+
+        // Key Bindings
+        if (IsKeyPressed(KEY_TAB)) {
+            showDebugMode = !showDebugMode;
+        }
 
         // move the lights
         // double time = GetTime();
@@ -350,7 +370,7 @@ int main() {
         //         lightOrbitOffsets[i].z + static_cast<float>(time) * (0.5f + speedOffset);
         //
         //     // X and Z use polar coordinates to orbit. Y uses a sine wave to bob up and down
-        //     around. lightPositions[i].x = cosf(currentAngle) * lightOrbitOffsets[i].x;
+        //     lightPositions[i].x = cosf(currentAngle) * lightOrbitOffsets[i].x;
         //     lightPositions[i].z = sinf(currentAngle) * lightOrbitOffsets[i].x;
         //     lightPositions[i].y =
         //         lightOrbitOffsets[i].y +
@@ -364,11 +384,12 @@ int main() {
             // -----------------------------------------------------------------------------------
 
             // FBO Off-Screen rendering
-            rlEnableFramebuffer(FboId); // Redirect GPU output to custom FBO
-            rlActiveDrawBuffers(3);     // Activate all 3 G-Buffer color attachments simultaneously
+            rlEnableFramebuffer(FboId);                  // Redirect GPU output to custom FBO
+            rlViewport(0, 0, renderWidth, renderHeight); // Force camera to render at set resolution
+            rlActiveDrawBuffers(3); // Activate all 3 G-Buffer color attachments simultaneously
             ClearBackground(BLANK);
             rlClearScreenBuffers(); // Manually clear the FBOs color and depth buffers
-            rlDisableColorBlend();  // to prevent autoi blending
+            rlDisableColorBlend();  // prevent auto blending
 
             // Draw models
             BeginMode3D(camera);
@@ -378,8 +399,10 @@ int main() {
                 SetShaderValueMatrix(geometryPassShader, normalMatLoc, MatrixIdentity());
 
                 // reset styleID for all objects not being stylized
-                float styleId = 1;
-                SetShaderValue(geometryPassShader, styleIdLoc, &styleId, SHADER_UNIFORM_FLOAT);
+                float generalStyleId =
+                    showDebugMode ? 0 : 1; // on debug-view floors and light should be excluded
+                SetShaderValue(geometryPassShader, styleIdLoc, &generalStyleId,
+                               SHADER_UNIFORM_FLOAT);
 
                 // Draw static models
                 DrawModel(floorModel, {0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
@@ -394,16 +417,15 @@ int main() {
                 SetShaderValue(geometryPassShader, isLightLoc, &isLight, SHADER_UNIFORM_INT);
 
                 // Draw obstacles
-                for (const auto &obs : obstacles) {
+                for (const auto &[model, normalMatrix, styleId] : obstacles) {
                     // Set vertex uniforms with pre-calculated matrices
-                    SetShaderValueMatrix(geometryPassShader, modelMatLoc, obs.model.transform);
-                    SetShaderValueMatrix(geometryPassShader, normalMatLoc, obs.normalMatrix);
+                    SetShaderValueMatrix(geometryPassShader, modelMatLoc, model.transform);
+                    SetShaderValueMatrix(geometryPassShader, normalMatLoc, normalMatrix);
 
                     // Set randomized styleID
-                    SetShaderValue(geometryPassShader, styleIdLoc, &obs.styleId,
-                                   SHADER_UNIFORM_FLOAT);
+                    SetShaderValue(geometryPassShader, styleIdLoc, &styleId, SHADER_UNIFORM_FLOAT);
 
-                    DrawModel(obs.model, {0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
+                    DrawModel(model, {0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
                 }
 
                 // debug grid for floor
@@ -414,48 +436,117 @@ int main() {
             // Restore GPU output back to the default screen buffer
             rlEnableColorBlend();
             rlDisableFramebuffer();
+            rlViewport(
+                0, 0, static_cast<int>(currentWidth),
+                static_cast<int>(currentHeight)); // Restore the viewport to actual window size
 
-            // LIGHTING PASS
-            // -----------------------------------------------------------------------------------
+            if (showDebugMode) {
+                // Debug Splitscreen
+                // --------------------------------------------------------------------------------
 
-            BeginTextureMode(litSceneTarget);
-            ClearBackground(BLANK);
-            BeginShaderMode(lightingPassShader);
-            {
-                // Pass lighting arrays, camera and screen position
-                SetShaderValue(lightingPassShader, LightingResolutionLoc, res, SHADER_UNIFORM_VEC2);
-                SetShaderValueV(lightingPassShader, lightPosArrayLoc, lightPositions,
-                                SHADER_UNIFORM_VEC3, activeLightCount);
-                SetShaderValueV(lightingPassShader, lightColorArrayLoc, lightColors,
-                                SHADER_UNIFORM_VEC3, activeLightCount);
-                SetShaderValue(lightingPassShader, postViewPosLoc, &camera.position,
-                               SHADER_UNIFORM_VEC3);
+                ClearBackground(BLACK);
+                float halfW = currentWidth / 2.0f;
+                float halfH = currentHeight / 2.0f;
 
-                // Bind G-Buffer textures
-                SetShaderValueTexture(lightingPassShader, normalTexLoc, gNormal);
-                SetShaderValueTexture(lightingPassShader, positionTexLoc, gPosition);
+                // Top-Left: Albedo
+                int mode = 0;
+                SetShaderValue(debugShader, debugViewModeLoc, &mode, SHADER_UNIFORM_INT);
+                BeginShaderMode(debugShader);
+                DrawTexturePro(gAlbedo, sourceRec, {0, 0, halfW, halfH}, {0, 0}, 0.0f, WHITE);
+                EndShaderMode();
+                auto textAL = "ALBEDO";
+                DrawText(textAL, (static_cast<int>(halfW) - MeasureText(textAL, fontSize)) / 2, 20,
+                         fontSize, RAYWHITE);
 
-                // Draw the G-Buffer Albedo to lighting shader
-                DrawTexturePro(gAlbedo, sourceRec, destRec, {0, 0}, 0.0f, WHITE);
+                // Top-Right: Normals
+                mode = 1;
+                SetShaderValue(debugShader, debugViewModeLoc, &mode, SHADER_UNIFORM_INT);
+                BeginShaderMode(debugShader);
+                DrawTexturePro(gNormal, sourceRec, {halfW, 0, halfW, halfH}, {0, 0}, 0.0f, WHITE);
+                EndShaderMode();
+                auto textNM = "NORMALS";
+                DrawText(textNM,
+                         static_cast<int>(halfW) +
+                             (static_cast<int>(halfW) - MeasureText(textNM, fontSize)) / 2,
+                         20, fontSize, RAYWHITE);
+
+                // Bottom-Left: Position
+                mode = 2;
+                SetShaderValue(debugShader, debugViewModeLoc, &mode, SHADER_UNIFORM_INT);
+                BeginShaderMode(debugShader);
+                DrawTexturePro(gPosition, sourceRec, {0, halfH, halfW, halfH}, {0, 0}, 0.0f, WHITE);
+                EndShaderMode();
+                auto textWP = "WORLD POSITION";
+                DrawText(textWP, (static_cast<int>(halfW) - MeasureText(textWP, fontSize)) / 2,
+                         static_cast<int>(halfH) + 20, fontSize, RAYWHITE);
+
+                // Bottom-Right: Style-ID
+                mode = 3;
+                SetShaderValue(debugShader, debugViewModeLoc, &mode, SHADER_UNIFORM_INT);
+                BeginShaderMode(debugShader);
+                DrawTexturePro(gPosition, sourceRec, {halfW, halfH, halfW, halfH}, {0, 0}, 0.0f,
+                               WHITE);
+                EndShaderMode();
+                auto textID = "STYLE-ID";
+                DrawText(textID,
+                         static_cast<int>(halfW) +
+                             (static_cast<int>(halfW) - MeasureText(textID, fontSize)) / 2,
+                         static_cast<int>(halfH) + 20, fontSize, RAYWHITE);
+
+                // Text overlay
+                DrawText("G-BUFFER DEBUG VIEW", 10, 10, fontSize / 2, RAYWHITE);
+
+            } else {
+                // LIGHTING PASS
+                // --------------------------------------------------------------------------------
+
+                BeginTextureMode(litSceneTarget);
+                ClearBackground(BLANK);
+                BeginShaderMode(lightingPassShader);
+                {
+                    // Pass lighting arrays, camera and screen position
+                    SetShaderValue(lightingPassShader, LightingResolutionLoc, internalRes,
+                                   SHADER_UNIFORM_VEC2);
+                    SetShaderValueV(lightingPassShader, lightPosArrayLoc, lightPositions,
+                                    SHADER_UNIFORM_VEC3, activeLightCount);
+                    SetShaderValueV(lightingPassShader, lightColorArrayLoc, lightColors,
+                                    SHADER_UNIFORM_VEC3, activeLightCount);
+                    SetShaderValue(lightingPassShader, postViewPosLoc, &camera.position,
+                                   SHADER_UNIFORM_VEC3);
+
+                    // Bind G-Buffer textures
+                    SetShaderValueTexture(lightingPassShader, normalTexLoc, gNormal);
+                    SetShaderValueTexture(lightingPassShader, positionTexLoc, gPosition);
+
+                    // Draw the G-Buffer Albedo to lighting shader
+                    DrawTexturePro(gAlbedo, sourceRec, fboDestRec, {0, 0}, 0.0f, WHITE);
+                }
+                EndShaderMode();
+                EndTextureMode();
+
+                // POST-PROCESSING PASS
+                // -----------------------------------------------------------------------------------
+
+                ClearBackground(BLACK);
+
+                BeginShaderMode(postShader);
+                {
+                    // Pass Uniforms
+                    SetShaderValue(postShader, postResolutionLoc, dynamicRes, SHADER_UNIFORM_VEC2);
+
+                    // Draw finished Scene into post-Processing shader
+                    DrawTexturePro(litSceneTarget.texture, sourceRec, screenDestRec, {0, 0}, 0.0f,
+                                   WHITE);
+                }
+                EndShaderMode();
+
+                // Text overlay
+                DrawText("Standard HyDra Scene (Press \"TAB\" to enter Debug-View)", 10, 10,
+                         fontSize / 2, RAYWHITE);
             }
-            EndShaderMode();
-            EndTextureMode();
-
-            // POST-PROCESSING PASS
-            // -----------------------------------------------------------------------------------
-
-            BeginShaderMode(postShader);
-            {
-                // Pass Uniforms
-                SetShaderValue(postShader, postResolutionLoc, res, SHADER_UNIFORM_VEC2);
-
-                // Draw finished Scene into post-Processing shader
-                DrawTexturePro(litSceneTarget.texture, sourceRec, destRec, {0, 0}, 0.0f, WHITE);
-            }
-            EndShaderMode();
 
             // Draw UI
-            DrawFPS(10, 10);
+            DrawFPS(static_cast<int>(currentWidth) - 100, 10);
         }
         EndDrawing();
     }
@@ -472,6 +563,7 @@ int main() {
     UnloadShader(geometryPassShader);
     UnloadShader(lightingPassShader);
     UnloadShader(postShader);
+    UnloadShader(debugShader);
     for (Obstacle &obs : obstacles) {
         UnloadModel(obs.model);
     }
