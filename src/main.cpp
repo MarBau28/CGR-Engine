@@ -1,6 +1,7 @@
 #include "../include/Config.h"
 #include "algorithm"
 #include "filesystem"
+#include "format"
 #include "raylib.h"
 #include "raymath.h"
 #include "rlgl.h"
@@ -49,6 +50,7 @@ std::vector<BoundingVolume> occupiedVolumes;
 bool showDebugMode          = false;
 bool setFrameLimit          = false;
 bool useMultipleLightColors = false;
+bool enableStyleSplit       = true;
 
 int main() {
     // BASIC SETUP
@@ -167,7 +169,7 @@ int main() {
             // Build Object
             Obstacle obs{};
             obs.model   = LoadModelFromMesh(baseMesh);
-            obs.styleId = static_cast<float>(GetRandomValue(1, 2));
+            obs.styleId = enableStyleSplit ? static_cast<float>(GetRandomValue(1, 2)) : 1;
 
             // Materials
             obs.model.materials[0].shader                            = geometryPassShader;
@@ -550,6 +552,10 @@ int main() {
 
                 // Text overlay
                 DrawText("Standard HyDra Scene (Press \"TAB\" to enter Debug-View)", 10, 10,
+                         fontSize / 2, RAYWHITE);
+                DrawText(std::format("Light-Count: {}", activeLightCount).c_str(), 10, 40,
+                         fontSize / 2, RAYWHITE);
+                DrawText(std::format("Obstacle-Count: {}", obstacleCount).c_str(), 10, 70,
                          fontSize / 2, RAYWHITE);
             }
 
