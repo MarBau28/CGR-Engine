@@ -61,9 +61,6 @@ int main() {
                                       static_cast<float>(renderHeight)};
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_MAXIMIZED);
     InitWindow(renderWidth, renderHeight, "HyDra");
-    if (setFrameLimit) {
-        SetTargetFPS(Config::EngineSettings::TargetFPS);
-    }
 
     // Camera Setup
     Camera3D camera   = {0};
@@ -345,6 +342,8 @@ int main() {
     constexpr Rectangle fboDestRec = {0.0f, 0.0f, static_cast<float>(renderWidth),
                                       static_cast<float>(renderHeight)};
 
+    bool frameLimitUpdated = false;
+
     while (!WindowShouldClose()) {
         // Update Camera and Screen
         UpdateCamera(&camera, cameraMode);
@@ -353,12 +352,21 @@ int main() {
         float dynamicRes[2] = {currentWidth, currentHeight};
         int fontSize        = static_cast<int>(currentHeight) / 30;
 
+        if (frameLimitUpdated) {
+            SetTargetFPS(setFrameLimit ? Config::EngineSettings::TargetFPS : 0);
+            frameLimitUpdated = false;
+        }
+
         // Screen Target. Forces final image to fill the window
         const Rectangle screenDestRec = {0.0f, 0.0f, currentWidth, currentHeight};
 
         // Key Bindings
         if (IsKeyPressed(KEY_TAB)) {
             showDebugMode = !showDebugMode;
+        }
+        if (IsKeyPressed(KEY_F)) {
+            setFrameLimit     = !setFrameLimit;
+            frameLimitUpdated = true;
         }
 
         // move the lights
