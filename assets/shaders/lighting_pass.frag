@@ -23,9 +23,12 @@ uniform float attenuationLinear = 0.09;
 uniform float attenuationQuadratic = 0.032;
 
 // G-Buffer
-uniform sampler2D texture0;
-uniform sampler2D gNormalTex;
-uniform sampler2D gPositionTex;
+uniform sampler2D texture0;    // Albedo
+uniform sampler2D gNormalTex;  // Normal (RGB) + StyleID (Alpha)
+uniform sampler2D gDepthTex;   // Hardware Depth buffer
+
+// Matrix for Position Reconstruction
+uniform mat4 invViewProj;
 
 // MRT Light Arrays
 #define MAX_LIGHTS 500
@@ -37,27 +40,44 @@ void main()
     // Extract data from G-Buffer
     vec4 albedoData = texture(texture0, fragTexCoord);
     vec3 albedo = albedoData.rgb;
-    vec3 rawNormal = texture(gNormalTex, fragTexCoord).rgb;
-    vec3 fragPosition = texture(gPositionTex, fragTexCoord).rgb;
-    int styleID = int(round(texture(gPositionTex, fragTexCoord).a));
+
+    // Extract Normal and unpack StyleID from the alpha channel
+    vec4 normalData = texture(gNormalTex, fragTexCoord);
+    vec3 rawNormal = normalData.rgb;
+    int styleID = int(round(normalData.a));
+
+    // Reconstruct Worls Position from Depth
+    float depth = texture(gDepthTex, fragTexCoord).r;
+
+    // Map UV and Depth to Normalized Device Coordinates [-1, 1]
+    vec4 ndc = vec4(
+    fragTexCoord.x * 2.0 - 1.0,
+    fragTexCoord.y * 2.0 - 1.0,
+    depth * 2.0 - 1.0,
+    1.0
+    );
+
+    // Unproject back to World Space
+    vec4 worldPos = invViewProj * ndc;
+    vec3 fragPosition = worldPos.xyz / worldPos.w;
+
+    // Masking check (for light sources and sky box)
+    if (length(rawNormal) < 0.1) {
+        // If empty space draw backgroundColor
+        if (albedoData.a == 0.0) {
+            finalColor = vec4(backgroundColor, 1.0);
+        }
+        // If Alpha is > 0.0, it's normal object that should not be shaded (Light source)
+        else {
+            finalColor = vec4(albedo, 1.0);
+        }
+        return;
+    }
 
     if (styleID == 1) {
 
         // BLINN-PHONG LIGHTING
         // -----------------------------------------------------------------------
-
-        // Masking check (for light sources and sky box)
-        if (length(rawNormal) < 0.1) {
-            // If empty space draw backgroundColor
-            if (albedoData.a == 0.0) {
-                finalColor = vec4(backgroundColor, 1.0);
-            }
-            // If Alpha is > 0.0, it's normal object that should not be shaded
-            else {
-                finalColor = vec4(albedo, 1.0);
-            }
-            return;
-        }
 
         // normalize the rawNormal for further lightning calcs
         vec3 normal = normalize(rawNormal);
@@ -90,9 +110,11 @@ void main()
             float attenuation = 1.0 /
             (attenuationConstant + attenuationLinear * lightDistance
             + attenuationQuadratic * (lightDistance * lightDistance));
+
             float distanceRatio = lightDistance / maxLightRadius;
             float distanceRatioQuad = distanceRatio * distanceRatio
             * distanceRatio * distanceRatio;
+
             float windowing = clamp(1.0 - distanceRatioQuad, 0.0, 1.0);
             attenuation *= windowing;
 
@@ -143,12 +165,14 @@ void main()
             float distanceRatio = lightDistance / maxLightRadius;
             float distanceRatioQuad = distanceRatio * distanceRatio * distanceRatio
             * distanceRatio;
-            attenuation *= clamp(1.0 - distanceRatioQuad, 0.0, 1.0);
 
+            attenuation *= clamp(1.0 - distanceRatioQuad, 0.0, 1.0);
             totalLighting += (goochDiffuse + specular) * attenuation * lightIntensity;
+
         }
 
         finalColor = vec4(totalLighting, albedoData.a);
+
     }
     else if (styleID == 3) {
 
@@ -189,9 +213,13 @@ void main()
         for (int i = 0; i < 9; i++) {
             // Sampling of neigboring normals from G-Buffer
             vec2 offsetUV = fragTexCoord + offsets[i] * (texelSize * adaptiveThickness);
-
             vec3 sampleNormal = texture(gNormalTex, offsetUV).rgb;
-            vec3 neighborPos = texture(gPositionTex, offsetUV).rgb;
+
+            // Reconstruct neighbor position from Depth Buffer for edge detection
+            float neighborDepth = texture(gDepthTex, offsetUV).r;
+            vec4 neighborNdc = vec4(offsetUV.x * 2.0 - 1.0, offsetUV.y * 2.0 - 1.0, neighborDepth * 2.0 - 1.0, 1.0);
+            vec4 neighborWorldPos = invViewProj * neighborNdc;
+            vec3 neighborPos = neighborWorldPos.xyz / neighborWorldPos.w;
 
             float neighborDist = distance(viewPos, neighborPos);
 
@@ -213,6 +241,7 @@ void main()
 
         if (edge > edgeThreshold) {
             finalColor = vec4(0.0, 0.0, 0.0, 1.0);
+
         } else {
 
             // TOON SHADING
@@ -238,7 +267,6 @@ void main()
                 // Quantization (Banding)
                 float level = floor(diff * levels);
                 diff = level / levels;
-
                 vec3 diffuse = diff * lightColors[i] * lightIntensity;
 
                 // Attenuation
@@ -248,8 +276,8 @@ void main()
                 float distanceRatio = lightDistance / maxLightRadius;
                 float distanceRatioQuad = distanceRatio * distanceRatio
                 * distanceRatio * distanceRatio;
-                attenuation *= clamp(1.0 - distanceRatioQuad, 0.0, 1.0);
 
+                attenuation *= clamp(1.0 - distanceRatioQuad, 0.0, 1.0);
                 totalToonLighting += diffuse * attenuation;
             }
 
@@ -291,6 +319,7 @@ void main()
                 for (int x = 0; x <= radius; x++) {
                     vec2 offset = vec2(float(x) * offsets[i].x, float(y)
                     * offsets[i].y);
+
                     vec3 col = texture(texture0, fragTexCoord + offset
                     * texelSize).rgb;
 
@@ -300,6 +329,7 @@ void main()
             }
 
             means[i] = sum / samples;
+
             // Variance = E[X^2] - (E[X])^2
             variances[i] = abs(sumSq / samples - means[i] * means[i]);
         }
@@ -311,6 +341,7 @@ void main()
         for (int i = 0; i < 4; i++) {
             // Simple sum of RGB variances
             float v = variances[i].r + variances[i].g + variances[i].b;
+
             if (v < minVar) {
                 minVar = v;
                 finalAlbedo = means[i];
@@ -319,6 +350,7 @@ void main()
 
         // Saturationa dn Tint Boost for painting look
         float luma = dot(finalAlbedo, vec3(0.299, 0.587, 0.114));
+
         finalAlbedo = mix(vec3(luma), finalAlbedo, 1.8);
         finalAlbedo *= vec3(1.1, 1.0, 0.9);
 
@@ -328,30 +360,32 @@ void main()
         vec3 totalLighting = vec3(1.0) * ambientLightStrength;
 
         for (int i = 0; i < activeLights; i++) {
+
             vec3 lightVector = lightPositions[i] - fragPosition;
             float lightDistance = length(lightVector);
             if (lightDistance > maxLightRadius) continue;
-
             vec3 lightDir = normalize(lightVector);
             float diff = max(dot(normal, lightDir), 0.0);
             vec3 diffuse = diff * lightColors[i] * lightIntensity;
-
             vec3 reflectDir = reflect(-lightDir, normal);
             float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
             vec3 specular = specularStrength * spec * lightColors[i]
             * lightIntensity;
-
             float attenuation = 1.0 / (attenuationConstant + attenuationLinear
             * lightDistance + attenuationQuadratic
             * (lightDistance * lightDistance));
             float distanceRatio = lightDistance / maxLightRadius;
             float distanceRatioQuad = distanceRatio * distanceRatio
             * distanceRatio * distanceRatio;
-            attenuation *= clamp(1.0 - distanceRatioQuad, 0.0, 1.0);
 
+            attenuation *= clamp(1.0 - distanceRatioQuad, 0.0, 1.0);
             totalLighting += (diffuse + specular) * attenuation;
         }
 
         finalColor = vec4(totalLighting * finalAlbedo, 1.0);
+    }
+    else {
+        // Fallback for Debug
+        finalColor = vec4(backgroundColor, 1.0);
     }
 }

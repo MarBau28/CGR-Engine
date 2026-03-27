@@ -8,13 +8,11 @@ in vec3 fragPosition;
 // MRT Outputs
 layout (location = 0) out vec4 gAlbedo;
 layout (location = 1) out vec4 gNormal;
-layout (location = 2) out vec4 gPosition;
 
 // uniforms
 uniform sampler2D texture0;
 uniform vec4 colDiffuse;
 uniform int isLightSource; // to identify unlit objects
-
 uniform float styleId; // Main Style ID for NPR Shader
 
 void main()
@@ -27,9 +25,6 @@ void main()
         // If it's light source, force empty normals to trigger the post-process mask
         gNormal = vec4(0.0, 0.0, 0.0, 1.0);
     } else {
-        gNormal = vec4(normalize(fragNormal), 1.0);
+        gNormal = vec4(normalize(fragNormal), styleId);
     }
-
-    // Position dadta with the StyleId on the unused variable
-    gPosition = vec4(fragPosition, styleId);
 }

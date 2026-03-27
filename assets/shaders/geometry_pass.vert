@@ -13,7 +13,6 @@ uniform mat4 normalMat; // transforamtion matrix for normals to world space
 // Output to fragment shader
 out vec2 fragTexCoord;
 out vec3 fragNormal;
-out vec3 fragPosition;
 
 void main()
 {
@@ -22,9 +21,6 @@ void main()
 
     // Transform normal to world space using specialized normal matrix
     fragNormal = mat3(normalMat) * vertexNormal;
-
-    // Calculate world position for lighting calculations
-    fragPosition = vec3(modelMat * vec4(vertexPosition, 1.0));
 
     // Multiply the local vertex by the MVP matrix to place it on screen
     gl_Position = mvp * vec4(vertexPosition, 1.0);
