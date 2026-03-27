@@ -17,7 +17,7 @@ namespace Config::EngineSettings {
     inline constexpr float CameraFOV             = 45.0f;
     inline constexpr Vector3 CameraOrientation   = {0.0f, 1.0f, 0.0f};
     inline constexpr Vector3 CameraViewDirection = {0.0f, 0.0f, 0.0f};
-    inline constexpr Vector3 CameraPosition      = {55.0f, 55.0f, 55.0f};
+    inline constexpr Vector3 CameraPosition      = {100.0f, 100.0f, 100.0f};
 
     // Light settings
     inline constexpr Vector3 MainLightColor     = {255.0f, 242.0f, 217.0f};

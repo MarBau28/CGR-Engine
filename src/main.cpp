@@ -19,9 +19,9 @@ inline constexpr std::string_view instancedFragmentShaderName = "geometry_pass_i
 inline constexpr float modelScalar                            = 1.0f;
 inline constexpr float modelRotation                          = 1.5f;
 inline constexpr int cameraMode                               = CAMERA_ORBITAL;
-inline constexpr int obstacleCount                            = 500;
-inline constexpr float ObjectSphereRadius                     = 75.0f; // obstacle cloud size
-inline constexpr int activeLightCount                         = 100;
+inline constexpr int obstacleCount                            = 1000;
+inline constexpr float ObjectSphereRadius                     = 100.0f; // obstacle cloud size
+inline constexpr int activeLightCount                         = 250;
 inline constexpr float minLightThreshold                      = 0.03f;
 inline constexpr float specularStrength                       = 1.0f;
 inline constexpr int generalMaterialShininess                 = 48;
@@ -92,7 +92,7 @@ int main() {
     const Texture2D obstacleTexture = LoadTexture(texturePath.c_str());
 
     // floor Mesh Setup with Texture
-    Mesh floorMesh   = GenMeshPlane(500.0f, 500.0f, 100, 100);
+    Mesh floorMesh   = GenMeshPlane(1000.0f, 1000.0f, 100, 100);
     Model floorModel = LoadModelFromMesh(floorMesh);
     const std::string woodTexPath =
         std::string(Config::Paths::Textures) + std::string(woodTextureName);
@@ -132,10 +132,10 @@ int main() {
         float radius = sqrtf(u) * ObjectSphereRadius;
         float angle  = static_cast<float>(GetRandomValue(0, 360)) * DEG2RAD;
 
-        float minHeight = scale;
-        float maxHeight = 20.0f;
-        float height    = static_cast<float>(GetRandomValue(static_cast<int>(minHeight) * 10,
-                                                            static_cast<int>(maxHeight) * 10)) /
+        float minHeight           = scale;
+        constexpr float maxHeight = ObjectSphereRadius / 2;
+        float height = static_cast<float>(GetRandomValue(static_cast<int>(minHeight) * 10,
+                                                         static_cast<int>(maxHeight) * 10)) /
                        10.0f;
 
         Vector3 pos = {cosf(angle) * radius, height, sinf(angle) * radius};
@@ -164,9 +164,9 @@ int main() {
     auto TryFindEmptyLightSpace = [&](const float radiusToClear, const float minHeight,
                                       const float maxHeight, Vector3 &outPos) -> bool {
         for (int attempts = 0; attempts < 50; attempts++) {
-            const float radius =
-                static_cast<float>(GetRandomValue(0, ObjectSphereRadius * 10)) / 10.0f;
-            const float angle = static_cast<float>(GetRandomValue(0, 360)) * DEG2RAD;
+            const float u = static_cast<float>(GetRandomValue(0, 10000)) / 10000.0f; // 0.0 to 1.0
+            const float radius = sqrtf(u) * ObjectSphereRadius;
+            const float angle  = static_cast<float>(GetRandomValue(0, 360)) * DEG2RAD;
             const float height =
                 static_cast<float>(GetRandomValue(static_cast<int>(minHeight) * 10,
                                                   static_cast<int>(maxHeight) * 10)) /
@@ -192,7 +192,8 @@ int main() {
     while (lightsGenerated < activeLightCount && overallAttempts < 10000) {
         overallAttempts++;
 
-        if (Vector3 validPos; TryFindEmptyLightSpace(0.5f, 2.0f, 15.0f, validPos)) {
+        constexpr float maxHeight = ObjectSphereRadius / 2;
+        if (Vector3 validPos; TryFindEmptyLightSpace(0.5f, 2.0f, maxHeight, validPos)) {
             // set color and position
             lightColors[lightsGenerated]    = {Config::EngineSettings::MainLightColor.x / 255.0f,
                                                Config::EngineSettings::MainLightColor.y / 255.0f,
@@ -350,7 +351,8 @@ int main() {
     // set static shader values for postProcessingShader
     SetShaderValue(lightingPassShader, postBackgroundColorLoc, &BackgroundColor,
                    SHADER_UNIFORM_VEC3);
-    SetShaderValue(lightingPassShader, activeLightsLoc, &activeLightCount, SHADER_UNIFORM_INT);
+    int safeLightCount = std::min(activeLightCount, 500);
+    SetShaderValue(lightingPassShader, activeLightsLoc, &safeLightCount, SHADER_UNIFORM_INT);
     SetShaderValue(lightingPassShader, maxLightRadiusLoc, &maxRadius, SHADER_UNIFORM_FLOAT);
     SetShaderValue(lightingPassShader, attenuationConstantLoc, &attenuationConstant,
                    SHADER_UNIFORM_FLOAT);
@@ -498,8 +500,6 @@ int main() {
             EndShaderMode();
 
             // Text overlay
-            DrawText("Standard HyDra Scene (Press \"TAB\" to enter Debug-View)", 10, 10,
-                     fontSize / 2, RAYWHITE);
             DrawText(std::format("Light-Count: {}", activeLightCount).c_str(), 10, 40, fontSize / 2,
                      RAYWHITE);
             DrawText(std::format("Obstacle-Count: {}", obstacleCount).c_str(), 10, 70, fontSize / 2,
