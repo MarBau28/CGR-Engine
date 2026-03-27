@@ -43,6 +43,9 @@ void main()
 
     if (styleID == 1) {
 
+        // BLINN-PHONG LIGHTING
+        // -----------------------------------------------------------------------
+
         // Masking check (for light sources and sky box)
         if (length(rawNormal) < 0.1) {
             // If empty space draw backgroundColor
@@ -88,8 +91,8 @@ void main()
             (attenuationConstant + attenuationLinear * lightDistance
             + attenuationQuadratic * (lightDistance * lightDistance));
             float distanceRatio = lightDistance / maxLightRadius;
-            float distanceRatioQuad = distanceRatio * distanceRatio * distanceRatio
-            * distanceRatio;
+            float distanceRatioQuad = distanceRatio * distanceRatio
+            * distanceRatio * distanceRatio;
             float windowing = clamp(1.0 - distanceRatioQuad, 0.0, 1.0);
             attenuation *= windowing;
 
@@ -105,6 +108,250 @@ void main()
 
     } else if (styleID == 2) {
 
-        finalColor = vec4(fragPosition * 0.05, 1.0);
+        // GOOCH SHADING
+        // -----------------------------------------------------------------------
+
+        vec3 normal = normalize(rawNormal);
+        vec3 viewDir = normalize(viewPos - fragPosition);
+        vec3 totalLighting = vec3(0.0);
+
+        // Gooch Base Colors
+        vec3 surfaceColor = vec3(0.8, 0.4, 0.1);;
+        vec3 coolColor = vec3(0.0, 0.0, 0.6) + 0.2 * surfaceColor;
+        vec3 warmColor = vec3(0.6, 0.6, 0.0) + 0.6 * surfaceColor;
+
+        for (int i = 0; i < activeLights; i++) {
+            vec3 lightVector = lightPositions[i] - fragPosition;
+            float lightDistance = length(lightVector);
+
+            if (lightDistance > maxLightRadius) continue;
+
+            vec3 lightDir = normalize(lightVector);
+
+            // Gooch Diffuse Interpolation
+            float t = (dot(normal, lightDir) + 1.0) / 2.0;
+            vec3 goochDiffuse = mix(coolColor, warmColor, t);
+
+            // Specular
+            vec3 reflectDir = reflect(-lightDir, normal);
+            float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess * 4.0);
+            vec3 specular = vec3(1.0) * spec;
+
+            // Attenuation
+            float attenuation = 1.0 / (attenuationConstant + attenuationLinear
+            * lightDistance + attenuationQuadratic * (lightDistance * lightDistance));
+            float distanceRatio = lightDistance / maxLightRadius;
+            float distanceRatioQuad = distanceRatio * distanceRatio * distanceRatio
+            * distanceRatio;
+            attenuation *= clamp(1.0 - distanceRatioQuad, 0.0, 1.0);
+
+            totalLighting += (goochDiffuse + specular) * attenuation * lightIntensity;
+        }
+
+        finalColor = vec4(totalLighting, albedoData.a);
+    }
+    else if (styleID == 3) {
+
+        // SELECTIVE SOBEL OUTLINING
+        // -------------------------------------------------------------------------
+
+        vec2 texelSize = 1.0 / resolution;
+        float edgeThickness = 2.0;
+
+        // calculate dynamic outline thickness adjustments
+        float dist = distance(viewPos, fragPosition);
+        float maxFalloffDistance = 150.0;
+        float distanceFactor = clamp(dist / maxFalloffDistance, 0.0, 1.0);
+        float adaptiveThickness = mix(edgeThickness, 1.0, distanceFactor);
+
+        // Sobel Kernel for X und Y
+        float kernelX[9] = float[](
+        1.0, 0.0, -1.0,
+        2.0, 0.0, -2.0,
+        1.0, 0.0, -1.0
+        );
+
+        float kernelY[9] = float[](
+        1.0, 2.0, 1.0,
+        0.0, 0.0, 0.0,
+        -1.0, -2.0, -1.0
+        );
+
+        vec2 offsets[9] = vec2[](
+        vec2(-1.0, 1.0), vec2(0.0, 1.0), vec2(1.0, 1.0),
+        vec2(-1.0, 0.0), vec2(0.0, 0.0), vec2(1.0, 0.0),
+        vec2(-1.0, -1.0), vec2(0.0, -1.0), vec2(1.0, -1.0)
+        );
+
+        vec3 normalEdgeX = vec3(0.0);
+        vec3 normalEdgeY = vec3(0.0);
+
+        for (int i = 0; i < 9; i++) {
+            // Sampling of neigboring normals from G-Buffer
+            vec2 offsetUV = fragTexCoord + offsets[i] * (texelSize * adaptiveThickness);
+
+            vec3 sampleNormal = texture(gNormalTex, offsetUV).rgb;
+            vec3 neighborPos = texture(gPositionTex, offsetUV).rgb;
+
+            float neighborDist = distance(viewPos, neighborPos);
+
+            // Depth Masking (for overlaping objects)
+            if (neighborDist < dist - 0.1) {
+                sampleNormal = rawNormal;
+            }
+
+            normalEdgeX += sampleNormal * kernelX[i];
+            normalEdgeY += sampleNormal * kernelY[i];
+        }
+
+        // Calculate Gradient Magnitude
+        float edge = sqrt(dot(normalEdgeX, normalEdgeX)
+                          + dot(normalEdgeY, normalEdgeY));
+
+        // Thresholding for edges
+        float edgeThreshold = 0.1;
+
+        if (edge > edgeThreshold) {
+            finalColor = vec4(0.0, 0.0, 0.0, 1.0);
+        } else {
+
+            // TOON SHADING
+            // -------------------------------------------------------------------
+
+            vec3 normal = normalize(rawNormal);
+            vec3 viewDir = normalize(viewPos - fragPosition);
+            vec3 totalToonLighting = vec3(0.0);
+            vec3 toonBaseColor = vec3(1.0, 0.275, 0.333);
+            float levels = 8.0;
+
+            for (int i = 0; i < activeLights; i++) {
+                vec3 lightVector = lightPositions[i] - fragPosition;
+                float lightDistance = length(lightVector);
+
+                if (lightDistance > maxLightRadius) continue;
+
+                vec3 lightDir = normalize(lightVector);
+
+                // Diffuse
+                float diff = max(dot(normal, lightDir), 0.0);
+
+                // Quantization (Banding)
+                float level = floor(diff * levels);
+                diff = level / levels;
+
+                vec3 diffuse = diff * lightColors[i] * lightIntensity;
+
+                // Attenuation
+                float attenuation = 1.0 / (attenuationConstant + attenuationLinear
+                * lightDistance + attenuationQuadratic
+                * (lightDistance * lightDistance));
+                float distanceRatio = lightDistance / maxLightRadius;
+                float distanceRatioQuad = distanceRatio * distanceRatio
+                * distanceRatio * distanceRatio;
+                attenuation *= clamp(1.0 - distanceRatioQuad, 0.0, 1.0);
+
+                totalToonLighting += diffuse * attenuation;
+            }
+
+            // Apply ambient and toon lighting
+            vec3 ambient = ambientLightStrength * toonBaseColor;
+            finalColor = vec4(ambient + (totalToonLighting * toonBaseColor), 1.0);
+        }
+    }
+    else if (styleID == 4) {
+
+        // KUWAHARA FILTER
+        // -----------------------------------------------------------------------
+
+        int radius = 4;
+        vec2 texelSize = 1.0 / resolution;
+
+        vec3 means[4];
+        vec3 variances[4];
+
+        for (int i = 0; i < 4; i++) {
+            means[i] = vec3(0.0);
+            variances[i] = vec3(0.0);
+        }
+
+        float samples = float((radius + 1) * (radius + 1));
+
+        // Quadrant Offsets: Top-Left, Top-Right, Bottom-Left, Bottom-Right
+        vec2 offsets[4] = vec2[](
+        vec2(-1.0, -1.0), vec2(1.0, -1.0),
+        vec2(-1.0, 1.0), vec2(1.0, 1.0)
+        );
+
+        // Calculate Mean and Variance for all 4 quadrants
+        for (int i = 0; i < 4; i++) {
+            vec3 sum = vec3(0.0);
+            vec3 sumSq = vec3(0.0);
+
+            for (int y = 0; y <= radius; y++) {
+                for (int x = 0; x <= radius; x++) {
+                    vec2 offset = vec2(float(x) * offsets[i].x, float(y)
+                    * offsets[i].y);
+                    vec3 col = texture(texture0, fragTexCoord + offset
+                    * texelSize).rgb;
+
+                    sum += col;
+                    sumSq += col * col;
+                }
+            }
+
+            means[i] = sum / samples;
+            // Variance = E[X^2] - (E[X])^2
+            variances[i] = abs(sumSq / samples - means[i] * means[i]);
+        }
+
+        // Find quadrant with the minimum variance
+        float minVar = 1e6;
+        vec3 finalAlbedo = vec3(0.0);
+
+        for (int i = 0; i < 4; i++) {
+            // Simple sum of RGB variances
+            float v = variances[i].r + variances[i].g + variances[i].b;
+            if (v < minVar) {
+                minVar = v;
+                finalAlbedo = means[i];
+            }
+        }
+
+        // Saturationa dn Tint Boost for painting look
+        float luma = dot(finalAlbedo, vec3(0.299, 0.587, 0.114));
+        finalAlbedo = mix(vec3(luma), finalAlbedo, 1.8);
+        finalAlbedo *= vec3(1.1, 1.0, 0.9);
+
+        // Apply Standard Lighting to the abstracted "painterly" Albedo
+        vec3 normal = normalize(rawNormal);
+        vec3 viewDir = normalize(viewPos - fragPosition);
+        vec3 totalLighting = vec3(1.0) * ambientLightStrength;
+
+        for (int i = 0; i < activeLights; i++) {
+            vec3 lightVector = lightPositions[i] - fragPosition;
+            float lightDistance = length(lightVector);
+            if (lightDistance > maxLightRadius) continue;
+
+            vec3 lightDir = normalize(lightVector);
+            float diff = max(dot(normal, lightDir), 0.0);
+            vec3 diffuse = diff * lightColors[i] * lightIntensity;
+
+            vec3 reflectDir = reflect(-lightDir, normal);
+            float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+            vec3 specular = specularStrength * spec * lightColors[i]
+            * lightIntensity;
+
+            float attenuation = 1.0 / (attenuationConstant + attenuationLinear
+            * lightDistance + attenuationQuadratic
+            * (lightDistance * lightDistance));
+            float distanceRatio = lightDistance / maxLightRadius;
+            float distanceRatioQuad = distanceRatio * distanceRatio
+            * distanceRatio * distanceRatio;
+            attenuation *= clamp(1.0 - distanceRatioQuad, 0.0, 1.0);
+
+            totalLighting += (diffuse + specular) * attenuation;
+        }
+
+        finalColor = vec4(totalLighting * finalAlbedo, 1.0);
     }
 }

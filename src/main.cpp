@@ -30,7 +30,7 @@ inline constexpr std::string_view postFragmentShaderName     = "postprocess.frag
 inline constexpr std::string_view debugFragmentShaderName    = "debug_view.frag";
 inline constexpr float modelScalar                           = 1.0f;
 inline constexpr float modelRotation                         = 1.5f;
-inline constexpr int cameraMode                              = CAMERA_ORBITAL;
+inline constexpr int cameraMode                              = CAMERA_FREE;
 inline constexpr int obstacleCount                           = 500;
 inline constexpr float ObjectSphereRadius                    = 75.0f; // obstacle cloud size
 inline constexpr int activeLightCount                        = 100;
@@ -40,6 +40,7 @@ inline constexpr int generalMaterialShininess                = 48;
 inline constexpr float attenuationConstant                   = 1.0f;
 inline constexpr float attenuationLinear                     = 0.09f;
 inline constexpr float attenuationQuadratic                  = 0.032f;
+inline constexpr uint numberOfStyles                         = 4;
 
 // global variables
 Vector3 lightPositions[activeLightCount];
@@ -48,7 +49,7 @@ Color lightMeshColors[activeLightCount];
 Vector3 lightOrbitOffsets[activeLightCount];
 std::vector<BoundingVolume> occupiedVolumes;
 bool showDebugMode          = false;
-bool setFrameLimit          = false;
+bool setFrameLimit          = true;
 bool useMultipleLightColors = false;
 bool enableStyleSplit       = true;
 
@@ -168,8 +169,9 @@ int main() {
         if (Vector3 validPos; TryFindEmptySpace(scale, scale, 20.0f, validPos)) {
             // Build Object
             Obstacle obs{};
-            obs.model   = LoadModelFromMesh(baseMesh);
-            obs.styleId = enableStyleSplit ? static_cast<float>(GetRandomValue(1, 2)) : 1;
+            obs.model = LoadModelFromMesh(baseMesh);
+            obs.styleId =
+                enableStyleSplit ? static_cast<float>(GetRandomValue(1, numberOfStyles)) : 1;
 
             // Materials
             obs.model.materials[0].shader                            = geometryPassShader;

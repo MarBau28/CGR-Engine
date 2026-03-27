@@ -26,5 +26,5 @@ namespace Config::EngineSettings {
 
     // Misc
     inline constexpr Vector3 BackgroundColor = {36.0f, 39.0f, 58.0f};
-    inline constexpr int TargetFPS           = 144;
+    inline constexpr int TargetFPS           = 30;
 }
