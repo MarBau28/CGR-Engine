@@ -14,8 +14,6 @@ uniform vec3 viewPos;
 uniform vec3 backgroundColor;
 uniform float lightIntensity;
 uniform float ambientLightStrength;
-uniform float specularStrength;
-uniform int shininess;
 uniform int activeLights;
 uniform float maxLightRadius;
 uniform float attenuationConstant = 1.0;
@@ -34,6 +32,10 @@ uniform mat4 invViewProj;
 #define MAX_LIGHTS 500
 uniform vec3 lightPositions[MAX_LIGHTS];
 uniform vec3 lightColor;
+
+// global constants
+const float specularStrength = 1.0;
+const int shininess = 48;
 
 void main()
 {
@@ -168,7 +170,6 @@ void main()
 
             attenuation *= clamp(1.0 - distanceRatioQuad, 0.0, 1.0);
             totalLighting += (goochDiffuse + specular) * attenuation * lightIntensity;
-
         }
 
         finalColor = vec4(totalLighting, albedoData.a);
@@ -194,7 +195,6 @@ void main()
         2.0, 0.0, -2.0,
         1.0, 0.0, -1.0
         );
-
         float kernelY[9] = float[](
         1.0, 2.0, 1.0,
         0.0, 0.0, 0.0,
@@ -220,7 +220,6 @@ void main()
             vec4 neighborNdc = vec4(offsetUV.x * 2.0 - 1.0, offsetUV.y * 2.0 - 1.0, neighborDepth * 2.0 - 1.0, 1.0);
             vec4 neighborWorldPos = invViewProj * neighborNdc;
             vec3 neighborPos = neighborWorldPos.xyz / neighborWorldPos.w;
-
             float neighborDist = distance(viewPos, neighborPos);
 
             // Depth Masking (for overlaping objects)
@@ -235,13 +234,10 @@ void main()
         // Calculate Gradient Magnitude
         float edge = sqrt(dot(normalEdgeX, normalEdgeX)
                           + dot(normalEdgeY, normalEdgeY));
-
-        // Thresholding for edges
-        float edgeThreshold = 0.1;
+        float edgeThreshold = 0.1; // Thresholding for edges
 
         if (edge > edgeThreshold) {
             finalColor = vec4(0.0, 0.0, 0.0, 1.0);
-
         } else {
 
             // TOON SHADING
@@ -339,7 +335,7 @@ void main()
         vec3 finalAlbedo = vec3(0.0);
 
         for (int i = 0; i < 4; i++) {
-            // Simple sum of RGB variances
+            // Sum of RGB variances
             float v = variances[i].r + variances[i].g + variances[i].b;
 
             if (v < minVar) {
@@ -377,7 +373,6 @@ void main()
             float distanceRatio = lightDistance / maxLightRadius;
             float distanceRatioQuad = distanceRatio * distanceRatio
             * distanceRatio * distanceRatio;
-
             attenuation *= clamp(1.0 - distanceRatioQuad, 0.0, 1.0);
             totalLighting += (diffuse + specular) * attenuation;
         }

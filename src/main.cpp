@@ -85,27 +85,28 @@ struct Frustum {
 // Global Constants
 // -------------------------------------------------------------------------------------------------
 
-inline constexpr std::string_view obstacleTextureName         = "starry-galaxy_tex.png";
-inline constexpr std::string_view woodTextureName             = "wood_tex.png";
-inline constexpr std::string_view geometryVertexShaderName    = "geometry_pass.vert";
-inline constexpr std::string_view geometryFragmentShaderName  = "geometry_pass.frag";
-inline constexpr std::string_view lightingFragmentShaderName  = "lighting_pass.frag";
-inline constexpr std::string_view postFragmentShaderName      = "postprocess.frag";
-inline constexpr std::string_view instancedVertexShaderName   = "geometry_pass_instanced.vert";
-inline constexpr std::string_view instancedFragmentShaderName = "geometry_pass_instanced.frag";
-inline constexpr float modelScalar                            = 1.0f;
-inline constexpr float modelRotation                          = 1.5f;
-inline constexpr int cameraMode                               = CAMERA_ORBITAL;
-inline constexpr int obstacleCount                            = 5000;
-inline constexpr float ObjectSphereRadius                     = 100.0f; // obstacle cloud size
-inline constexpr int activeLightCount                         = 500;
-inline constexpr float minLightThreshold                      = 0.03f;
-inline constexpr float specularStrength                       = 1.0f;
-inline constexpr int generalMaterialShininess                 = 48;
-inline constexpr float attenuationConstant                    = 1.0f;
-inline constexpr float attenuationLinear                      = 0.09f;
-inline constexpr float attenuationQuadratic                   = 0.032f;
-inline constexpr uint numberOfStyles                          = 4;
+inline constexpr std::string_view obstacleTextureName           = "starry-galaxy_tex.png";
+inline constexpr std::string_view woodTextureName               = "wood_tex.png";
+inline constexpr std::string_view geometryVertexShaderName      = "geometry_pass.vert";
+inline constexpr std::string_view geometryFragmentShaderName    = "geometry_pass.frag";
+inline constexpr std::string_view lightingFragmentShaderName    = "lighting_pass.frag";
+inline constexpr std::string_view postFragmentShaderName        = "postprocess.frag";
+inline constexpr std::string_view instancedVertexShaderName     = "geometry_pass_instanced.vert";
+inline constexpr std::string_view instancedFragmentShaderName   = "geometry_pass_instanced.frag";
+inline constexpr std::string_view lightVolumeVertexShaderName   = "light_volume.vert";
+inline constexpr std::string_view lightVolumeFragmentShaderName = "light_volume.frag";
+inline constexpr std::string_view nprResolveFragmentShaderName  = "npr_resolve.frag";
+inline constexpr float modelScalar                              = 1.0f;
+inline constexpr float modelRotation                            = 1.5f;
+inline constexpr int cameraMode                                 = CAMERA_PERSPECTIVE;
+inline constexpr int obstacleCount                              = 5000;
+inline constexpr float ObjectSphereRadius                       = 200.0f; // obstacle cloud size
+inline constexpr int activeLightCount                           = 1000;
+inline constexpr float minLightThreshold                        = 0.03f;
+inline constexpr float attenuationConstant                      = 1.0f;
+inline constexpr float attenuationLinear                        = 0.09f;
+inline constexpr float attenuationQuadratic                     = 0.032f;
+inline constexpr uint numberOfStyles                            = 4;
 
 // Global variables
 // -------------------------------------------------------------------------------------------------
@@ -116,15 +117,17 @@ std::vector<Vector3> occupiedLightPositions;
 std::vector<Matrix> masterObstacleTransforms;
 std::vector<float> masterObstacleStyleIds;
 std::vector<BoundingSphere> masterObstacleSpheres;
-std::vector<Matrix> masterLightTransforms;
+std::vector<Matrix> masterLightProxyTransforms;  // Tiny spheres for visuals
+std::vector<Matrix> masterLightVolumeTransforms; // Massive spheres for lighting math
 
 // Render object Data (Uploaded/Updated in GPU every frame)
 std::vector<Matrix> visibleObstacleTransforms;
 std::vector<float> visibleObstacleStyleIds;
 
 // Settings
-bool setFrameLimit    = true;
-bool enableStyleSplit = true;
+bool setFrameLimit           = true;
+bool enableStyleSplit        = true;
+bool useDeferredLightVolumes = true;
 
 int main() {
     // BASIC SETUP
@@ -159,12 +162,28 @@ int main() {
         std::string(Config::Paths::Shaders) + std::string(instancedVertexShaderName);
     const std::string instancedFragPath =
         std::string(Config::Paths::Shaders) + std::string(instancedFragmentShaderName);
+    const std::string lightVolumeVertPath =
+        std::string(Config::Paths::Shaders) + std::string(lightVolumeVertexShaderName);
+    const std::string lightVolumeFragPath =
+        std::string(Config::Paths::Shaders) + std::string(lightVolumeFragmentShaderName);
+    const std::string nprResolveFragPath =
+        std::string(Config::Paths::Shaders) + std::string(nprResolveFragmentShaderName);
 
     const Shader geometryPassShader =
         LoadShader(geometryVertPath.c_str(), geometryFragPath.c_str());
     const Shader instancedShader = LoadShader(instancedVertPath.c_str(), instancedFragPath.c_str());
     const Shader lightingPassShader = LoadShader(nullptr, lightingFragPath.c_str());
     const Shader postShader         = LoadShader(nullptr, postFragPath.c_str());
+    const Shader lightVolumeShader =
+        LoadShader(lightVolumeVertPath.c_str(), lightVolumeFragPath.c_str());
+    const Shader nprResolveShader = LoadShader(nullptr, nprResolveFragPath.c_str());
+
+    // calculate maximum lightRadius based on light intensity to safe shader calcs
+    constexpr float c =
+        attenuationConstant - (Config::EngineSettings::LightIntensity / minLightThreshold);
+    const float maxRadius = (-attenuationLinear + std::sqrt(attenuationLinear * attenuationLinear -
+                                                            (4.0f * attenuationQuadratic * c))) /
+                            (2.0f * attenuationQuadratic);
 
     // OBJECT GENERATION
     // ---------------------------------------------------------------------------------------------
@@ -208,8 +227,9 @@ int main() {
     masterObstacleSpheres.reserve(obstacleCount);
     visibleObstacleTransforms.reserve(obstacleCount);
     visibleObstacleStyleIds.reserve(obstacleCount);
-    masterLightTransforms.reserve(activeLightCount);
     occupiedLightPositions.reserve(activeLightCount);
+    masterLightProxyTransforms.reserve(activeLightCount);
+    masterLightVolumeTransforms.reserve(activeLightCount);
 
     // Obstacle generation
     for (int i = 0; i < obstacleCount; i++) {
@@ -279,17 +299,24 @@ int main() {
     int overallAttempts = 0;
     while (lightsGenerated < activeLightCount && overallAttempts < 10000) {
         overallAttempts++;
-
         constexpr float maxHeight = ObjectSphereRadius / 2;
+
         if (Vector3 validPos; TryFindEmptyLightSpace(0.5f, 2.0f, maxHeight, validPos)) {
-            // set position
+            // set position (Needed for Uber-Shader comparison)
             lightPositions[lightsGenerated] = validPos;
 
-            // Generate physical debug sphere transform for DrawMeshInstanced
-            Matrix transform = MatrixMultiply(MatrixScale(1.5f, 1.5f, 1.5f),
-                                              MatrixTranslate(validPos.x, validPos.y, validPos.z));
+            // Generate physical debug sphere transform
+            Matrix proxyTransform = MatrixMultiply(
+                MatrixScale(1.5f, 1.5f, 1.5f), MatrixTranslate(validPos.x, validPos.y, validPos.z));
 
-            masterLightTransforms.push_back(transform);
+            // Generate invisible light volume transform (Scale maxRadius)
+            Matrix volumeTransform =
+                MatrixMultiply(MatrixScale(-maxRadius * 2.0f, -maxRadius * 2.0f, -maxRadius * 2.0f),
+                               MatrixTranslate(validPos.x, validPos.y, validPos.z));
+
+            masterLightProxyTransforms.push_back(proxyTransform);
+            masterLightVolumeTransforms.push_back(volumeTransform);
+
             occupiedLightPositions.push_back(validPos);
             lightsGenerated++;
         }
@@ -383,23 +410,45 @@ int main() {
     Texture2D gDepth  = {depthTexId, renderWidth, renderHeight, 1,
                          PIXELFORMAT_UNCOMPRESSED_GRAYSCALE};
 
-    // Canvas for Pass 2 (Lighting) to draw onto for post-processing effects
+    // Canvas for Pass 2 to draw onto (Either Uber-Shader or Light Volume accumulation)
     RenderTexture2D litSceneTarget = LoadRenderTexture(renderWidth, renderHeight);
+
+    // Canvas for Pass 3 to draw onto (NPR Resolve pass, before final post-processing)
+    RenderTexture2D resolveTarget = LoadRenderTexture(renderWidth, renderHeight);
+
+    // Material for drawing the instanced light volumes
+    Material lightVolumeMaterial = LoadMaterialDefault();
+    lightVolumeMaterial.shader   = lightVolumeShader;
+
+    // Bind the G-Buffer textures into the Material slots
+    lightVolumeMaterial.maps[MATERIAL_MAP_ALBEDO].texture    = gAlbedo;
+    lightVolumeMaterial.maps[MATERIAL_MAP_NORMAL].texture    = gNormal;
+    lightVolumeMaterial.maps[MATERIAL_MAP_ROUGHNESS].texture = gDepth;
+
+    // Route the Material slots to shader uniform names
+    lightVolumeShader.locs[SHADER_LOC_MAP_ALBEDO] =
+        GetShaderLocation(lightVolumeShader, "texture0");
+    lightVolumeShader.locs[SHADER_LOC_MAP_NORMAL] =
+        GetShaderLocation(lightVolumeShader, "gNormalTex");
+    lightVolumeShader.locs[SHADER_LOC_MAP_ROUGHNESS] =
+        GetShaderLocation(lightVolumeShader, "gDepthTex");
 
     // SHADER LOCATION AND UNIFORM SETUP
     // ---------------------------------------------------------------------------------------------
 
-    // define uniform location variables (geometry vertex)
-    int modelMatLoc  = GetShaderLocation(geometryPassShader, "modelMat");
-    int normalMatLoc = GetShaderLocation(geometryPassShader, "normalMat");
+    // shared constants
+    constexpr Vector3 BackgroundColor = {Config::EngineSettings::BackgroundColor.x / 255.0f,
+                                         Config::EngineSettings::BackgroundColor.y / 255.0f,
+                                         Config::EngineSettings::BackgroundColor.z / 255.0f};
+    constexpr int safeLightCount      = std::min(activeLightCount, 500);
 
-    // define uniform locations variable (geometry fragment)
-    int styleIdLoc = GetShaderLocation(geometryPassShader, "styleId");
-
-    // define uniform location variables (instance geometry shaders)
+    // geometry and instanced passes
+    int modelMatLoc         = GetShaderLocation(geometryPassShader, "modelMat");
+    int normalMatLoc        = GetShaderLocation(geometryPassShader, "normalMat");
+    int styleIdLoc          = GetShaderLocation(geometryPassShader, "styleId");
     int isLightLocInstanced = GetShaderLocation(instancedShader, "isLightSource");
 
-    // define uniform location variables (lighting fragment)
+    // lighting pass
     int lightPosArrayLoc        = GetShaderLocation(lightingPassShader, "lightPositions");
     int lightColorLoc           = GetShaderLocation(lightingPassShader, "lightColor");
     int LightingResolutionLoc   = GetShaderLocation(lightingPassShader, "resolution");
@@ -410,32 +459,14 @@ int main() {
     int postBackgroundColorLoc  = GetShaderLocation(lightingPassShader, "backgroundColor");
     int intensityLoc            = GetShaderLocation(lightingPassShader, "lightIntensity");
     int ambientLoc              = GetShaderLocation(lightingPassShader, "ambientLightStrength");
-    int specularLoc             = GetShaderLocation(lightingPassShader, "specularStrength");
-    int shininessLoc            = GetShaderLocation(lightingPassShader, "shininess");
     int activeLightsLoc         = GetShaderLocation(lightingPassShader, "activeLights");
     int maxLightRadiusLoc       = GetShaderLocation(lightingPassShader, "maxLightRadius");
     int attenuationConstantLoc  = GetShaderLocation(lightingPassShader, "attenuationConstant");
     int attenuationLinearLoc    = GetShaderLocation(lightingPassShader, "attenuationLinear");
     int attenuationQuadraticLoc = GetShaderLocation(lightingPassShader, "attenuationQuadratic");
 
-    // define uniform location variables (post-process fragment)
-    int postResolutionLoc = GetShaderLocation(postShader, "resolution");
-
-    // calculate maximum lightRadius based on light intensity to safe shader calcs
-    constexpr float c =
-        attenuationConstant - (Config::EngineSettings::LightIntensity / minLightThreshold);
-    const float maxRadius = (-attenuationLinear + std::sqrt(attenuationLinear * attenuationLinear -
-                                                            4.0f * attenuationQuadratic * c)) /
-                            (2.0f * attenuationQuadratic);
-
-    constexpr Vector3 BackgroundColor = {Config::EngineSettings::BackgroundColor.x / 255.0f,
-                                         Config::EngineSettings::BackgroundColor.y / 255.0f,
-                                         Config::EngineSettings::BackgroundColor.z / 255.0f};
-
-    // set static shader values for postProcessingShader
     SetShaderValue(lightingPassShader, postBackgroundColorLoc, &BackgroundColor,
                    SHADER_UNIFORM_VEC3);
-    int safeLightCount = std::min(activeLightCount, 500);
     SetShaderValue(lightingPassShader, activeLightsLoc, &safeLightCount, SHADER_UNIFORM_INT);
     SetShaderValue(lightingPassShader, maxLightRadiusLoc, &maxRadius, SHADER_UNIFORM_FLOAT);
     SetShaderValue(lightingPassShader, attenuationConstantLoc, &attenuationConstant,
@@ -448,8 +479,52 @@ int main() {
                    SHADER_UNIFORM_FLOAT);
     SetShaderValue(lightingPassShader, ambientLoc, &Config::EngineSettings::AmbientLightStrength,
                    SHADER_UNIFORM_FLOAT);
-    SetShaderValue(lightingPassShader, specularLoc, &specularStrength, SHADER_UNIFORM_FLOAT);
-    SetShaderValue(lightingPassShader, shininessLoc, &generalMaterialShininess, SHADER_UNIFORM_INT);
+
+    // light volume pass
+    int lvResolutionLoc        = GetShaderLocation(lightVolumeShader, "resolution");
+    int lvViewPosLoc           = GetShaderLocation(lightVolumeShader, "viewPos");
+    int lvLightColorLoc        = GetShaderLocation(lightVolumeShader, "lightColor");
+    int lvIntensityLoc         = GetShaderLocation(lightVolumeShader, "lightIntensity");
+    int lvMaxRadiusLoc         = GetShaderLocation(lightVolumeShader, "maxLightRadius");
+    int lvAttenuationConstLoc  = GetShaderLocation(lightVolumeShader, "attenuationConstant");
+    int lvAttenuationLinearLoc = GetShaderLocation(lightVolumeShader, "attenuationLinear");
+    int lvAttenuationQuadLoc   = GetShaderLocation(lightVolumeShader, "attenuationQuadratic");
+    int lvInvViewProjLoc       = GetShaderLocation(lightVolumeShader, "invViewProj");
+    int lvAlbedoTexLoc         = GetShaderLocation(lightVolumeShader, "texture0");
+    int lvNormalTexLoc         = GetShaderLocation(lightVolumeShader, "gNormalTex");
+    int lvDepthTexLoc          = GetShaderLocation(lightVolumeShader, "gDepthTex");
+
+    SetShaderValue(lightVolumeShader, lvMaxRadiusLoc, &maxRadius, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(lightVolumeShader, lvAttenuationConstLoc, &attenuationConstant,
+                   SHADER_UNIFORM_FLOAT);
+    SetShaderValue(lightVolumeShader, lvAttenuationLinearLoc, &attenuationLinear,
+                   SHADER_UNIFORM_FLOAT);
+    SetShaderValue(lightVolumeShader, lvAttenuationQuadLoc, &attenuationQuadratic,
+                   SHADER_UNIFORM_FLOAT);
+    SetShaderValue(lightVolumeShader, lvIntensityLoc, &Config::EngineSettings::LightIntensity,
+                   SHADER_UNIFORM_FLOAT);
+
+    // Tell the shader to locate the instance matrix attribute for the light volumes
+    lightVolumeShader.locs[SHADER_LOC_MATRIX_MODEL] =
+        GetShaderLocationAttrib(lightVolumeShader, "instanceTransform");
+
+    // npr resolve pass
+    int nprResolutionLoc  = GetShaderLocation(nprResolveShader, "resolution");
+    int nprViewPosLoc     = GetShaderLocation(nprResolveShader, "viewPos");
+    int nprBgColorLoc     = GetShaderLocation(nprResolveShader, "backgroundColor");
+    int nprAmbientLoc     = GetShaderLocation(nprResolveShader, "ambientLightStrength");
+    int nprInvViewProjLoc = GetShaderLocation(nprResolveShader, "invViewProj");
+    int nprLitSceneTexLoc = GetShaderLocation(nprResolveShader, "litSceneTex");
+    int nprAlbedoTexLoc   = GetShaderLocation(nprResolveShader, "texture0");
+    int nprNormalTexLoc   = GetShaderLocation(nprResolveShader, "gNormalTex");
+    int nprDepthTexLoc    = GetShaderLocation(nprResolveShader, "gDepthTex");
+
+    SetShaderValue(nprResolveShader, nprBgColorLoc, &BackgroundColor, SHADER_UNIFORM_VEC3);
+    SetShaderValue(nprResolveShader, nprAmbientLoc, &Config::EngineSettings::AmbientLightStrength,
+                   SHADER_UNIFORM_FLOAT);
+
+    // post-process pass
+    int postResolutionLoc = GetShaderLocation(postShader, "resolution");
 
     // MAIN GAME LOOP
     // ---------------------------------------------------------------------------------------------
@@ -484,6 +559,9 @@ int main() {
         if (IsKeyPressed(KEY_F)) {
             setFrameLimit     = !setFrameLimit;
             frameLimitUpdated = true;
+        }
+        if (IsKeyPressed(KEY_TAB)) {
+            useDeferredLightVolumes = !useDeferredLightVolumes;
         }
 
         // CULLING MATH & MATRIX SETUP
@@ -544,11 +622,12 @@ int main() {
                                SHADER_UNIFORM_FLOAT);
                 DrawModel(floorModel, {0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
 
-                // Draw Lights using instanced shader
+                // Draw Lights proxies using instanced shader
                 int isLight = 1;
                 SetShaderValue(instancedShader, isLightLocInstanced, &isLight, SHADER_UNIFORM_INT);
                 DrawMeshInstanced(lightningSphereMesh, instancedLightMaterial,
-                                  masterLightTransforms.data(), activeLightCount);
+                                  masterLightProxyTransforms.data(),
+                                  useDeferredLightVolumes ? activeLightCount : safeLightCount);
 
                 // draw obstacles using instanced shader
                 isLight = 0;
@@ -567,32 +646,99 @@ int main() {
                 0, 0, static_cast<int>(currentWidth),
                 static_cast<int>(currentHeight)); // Restore the viewport to actual window size
 
-            // LIGHTING PASS
+            // LIGHTING PASS & RESOLVE
             // -------------------------------------------------------------------------------------
 
-            BeginTextureMode(litSceneTarget);
-            ClearBackground(BLANK);
-            BeginShaderMode(lightingPassShader);
-            {
-                // Pass lighting arrays, camera and screen position
-                SetShaderValue(lightingPassShader, LightingResolutionLoc, internalRes,
-                               SHADER_UNIFORM_VEC2);
-                SetShaderValueV(lightingPassShader, lightPosArrayLoc, lightPositions,
-                                SHADER_UNIFORM_VEC3, activeLightCount);
-                SetShaderValue(lightingPassShader, lightColorLoc, &lightColor, SHADER_UNIFORM_VEC3);
-                SetShaderValue(lightingPassShader, postViewPosLoc, &camera.position,
-                               SHADER_UNIFORM_VEC3);
-                SetShaderValueMatrix(lightingPassShader, invViewProjLoc, invViewProj);
+            if (!useDeferredLightVolumes) {
+                // ARCHITECTURE A: UBER-SHADER
 
-                // Bind G-Buffer textures
-                SetShaderValueTexture(lightingPassShader, normalTexLoc, gNormal);
-                SetShaderValueTexture(lightingPassShader, depthTexLoc, gDepth);
+                BeginTextureMode(litSceneTarget);
+                ClearBackground(BLANK);
+                BeginShaderMode(lightingPassShader);
+                {
+                    // Pass lighting arrays, camera and screen position
+                    SetShaderValue(lightingPassShader, LightingResolutionLoc, internalRes,
+                                   SHADER_UNIFORM_VEC2);
+                    SetShaderValueV(lightingPassShader, lightPosArrayLoc, lightPositions,
+                                    SHADER_UNIFORM_VEC3, safeLightCount);
+                    SetShaderValue(lightingPassShader, lightColorLoc, &lightColor,
+                                   SHADER_UNIFORM_VEC3);
+                    SetShaderValue(lightingPassShader, postViewPosLoc, &camera.position,
+                                   SHADER_UNIFORM_VEC3);
+                    SetShaderValueMatrix(lightingPassShader, invViewProjLoc, invViewProj);
 
-                // Draw the G-Buffer Albedo to lighting shader
-                DrawTexturePro(gAlbedo, sourceRec, fboDestRec, {0, 0}, 0.0f, WHITE);
+                    // Bind G-Buffer textures
+                    SetShaderValueTexture(lightingPassShader, normalTexLoc, gNormal);
+                    SetShaderValueTexture(lightingPassShader, depthTexLoc, gDepth);
+
+                    // Draw the G-Buffer Albedo to lighting shader
+                    DrawTexturePro(gAlbedo, sourceRec, fboDestRec, {0, 0}, 0.0f, WHITE);
+                }
+                EndShaderMode();
+                EndTextureMode();
+
+            } else {
+                // ARCHITECTURE B: MULTI-PASS DEFERRED
+
+                // Pass 2: Light Volume Accumulation
+                BeginTextureMode(litSceneTarget);
+                ClearBackground(BLANK);         // Clear canvas to black
+                BeginBlendMode(BLEND_ADDITIVE); // Enable hardware light accumulation
+                rlDisableDepthMask();           // Prevent spheres from occluding each other
+
+                BeginMode3D(camera);
+                {
+                    BeginShaderMode(lightVolumeShader);
+                    {
+                        SetShaderValue(lightVolumeShader, lvResolutionLoc, internalRes,
+                                       SHADER_UNIFORM_VEC2);
+                        SetShaderValue(lightVolumeShader, lvViewPosLoc, &camera.position,
+                                       SHADER_UNIFORM_VEC3);
+                        SetShaderValue(lightVolumeShader, lvLightColorLoc, &lightColor,
+                                       SHADER_UNIFORM_VEC3);
+                        SetShaderValueMatrix(lightVolumeShader, lvInvViewProjLoc, invViewProj);
+
+                        SetShaderValueTexture(lightVolumeShader, lvAlbedoTexLoc, gAlbedo);
+                        SetShaderValueTexture(lightVolumeShader, lvNormalTexLoc, gNormal);
+                        SetShaderValueTexture(lightVolumeShader, lvDepthTexLoc, gDepth);
+
+                        // Draw all 500 big light volumes for additive blending
+                        DrawMeshInstanced(lightningSphereMesh, lightVolumeMaterial,
+                                          masterLightVolumeTransforms.data(), activeLightCount);
+                    }
+                    EndShaderMode();
+                }
+                EndMode3D();
+
+                // Restore hardware states
+                rlEnableDepthMask();
+                EndBlendMode();
+                EndTextureMode();
+
+                // Pass 3: NPR Resolve (Spatial Filters)
+                BeginTextureMode(resolveTarget);
+                ClearBackground(BLANK);
+                BeginShaderMode(nprResolveShader);
+                {
+                    SetShaderValue(nprResolveShader, nprResolutionLoc, internalRes,
+                                   SHADER_UNIFORM_VEC2);
+                    SetShaderValue(nprResolveShader, nprViewPosLoc, &camera.position,
+                                   SHADER_UNIFORM_VEC3);
+                    SetShaderValueMatrix(nprResolveShader, nprInvViewProjLoc, invViewProj);
+
+                    // Bind the accumulated lighting canvas and the G-Buffer
+                    SetShaderValueTexture(nprResolveShader, nprLitSceneTexLoc,
+                                          litSceneTarget.texture);
+                    SetShaderValueTexture(nprResolveShader, nprAlbedoTexLoc, gAlbedo);
+                    SetShaderValueTexture(nprResolveShader, nprNormalTexLoc, gNormal);
+                    SetShaderValueTexture(nprResolveShader, nprDepthTexLoc, gDepth);
+
+                    // Draw full-screen quad to execute resolve
+                    DrawTexturePro(gAlbedo, sourceRec, fboDestRec, {0, 0}, 0.0f, WHITE);
+                }
+                EndShaderMode();
+                EndTextureMode();
             }
-            EndShaderMode();
-            EndTextureMode();
 
             // POST-PROCESSING PASS
             // -------------------------------------------------------------------------------------
@@ -604,21 +750,30 @@ int main() {
                 // Pass Uniforms
                 SetShaderValue(postShader, postResolutionLoc, dynamicRes, SHADER_UNIFORM_VEC2);
 
+                // Dynamically route the correct texture to the final output
+                Texture2D finalRender =
+                    useDeferredLightVolumes ? resolveTarget.texture : litSceneTarget.texture;
+
                 // Draw finished Scene into post-Processing shader
-                DrawTexturePro(litSceneTarget.texture, sourceRec, screenDestRec, {0, 0}, 0.0f,
-                               WHITE);
+                DrawTexturePro(finalRender, sourceRec, screenDestRec, {0, 0}, 0.0f, WHITE);
             }
             EndShaderMode();
 
             // Text overlay
-            // Text overlay
             DrawText("Standard HyDra Scene", 10, 10, fontSize / 2, RAYWHITE);
-            DrawText(std::format("Light-Count: {}", activeLightCount).c_str(), 10, 40, fontSize / 2,
-                     RAYWHITE);
+            DrawText(std::format("Render-Mode: {}", useDeferredLightVolumes
+                                                        ? "Deferred (Multi-Pass with Light Volumes)"
+                                                        : "Deferred (Uber-Shader)")
+                         .c_str(),
+                     10, 40, fontSize / 2, RAYWHITE);
+            DrawText(std::format("Light-Count: {}",
+                                 useDeferredLightVolumes ? activeLightCount : safeLightCount)
+                         .c_str(),
+                     10, 70, fontSize / 2, RAYWHITE);
             DrawText(
                 std::format("Obstacle-Count: {} / {} (Culled)", actualVisibleCount, obstacleCount)
                     .c_str(),
-                10, 70, fontSize / 2, RAYWHITE);
+                10, 100, fontSize / 2, RAYWHITE);
 
             // Draw UI
             DrawFPS(static_cast<int>(currentWidth) - 100, 10);
@@ -633,16 +788,20 @@ int main() {
     rlUnloadVertexBuffer(styleIdVboId);
     rlUnloadVertexBuffer(lightStyleIdVboId);
 
+    // Unload FBOs and associated Textures
     rlUnloadFramebuffer(FboId);
     rlUnloadTexture(albedoTexId);
     rlUnloadTexture(normalTexId);
     rlUnloadTexture(depthTexId);
     UnloadRenderTexture(litSceneTarget);
+    UnloadRenderTexture(resolveTarget);
 
     // Unload Shaders
     UnloadShader(geometryPassShader);
     UnloadShader(instancedShader);
     UnloadShader(lightingPassShader);
+    UnloadShader(lightVolumeShader);
+    UnloadShader(nprResolveShader);
     UnloadShader(postShader);
 
     // Standard unloads
