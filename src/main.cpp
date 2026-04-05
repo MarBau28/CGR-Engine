@@ -7,7 +7,84 @@
 #include "rlgl.h"
 #include "vector"
 
-// global constants
+// Structs
+// -------------------------------------------------------------------------------------------------
+
+struct BoundingSphere {
+    Vector3 center;
+    float radius;
+};
+
+struct FrustumPlane {
+    Vector3 normal;
+    float distance;
+
+    void Normalize() {
+        const float length = Vector3Length(normal);
+        normal             = Vector3Scale(normal, 1.0f / length);
+        distance /= length;
+    }
+};
+
+struct Frustum {
+    FrustumPlane planes[6];
+
+    // Extract the 6 planes from the combined View-Projection matrix
+    void Extract(const Matrix &vp) {
+        // Left Plane
+        planes[0].normal.x = vp.m3 + vp.m0;
+        planes[0].normal.y = vp.m7 + vp.m4;
+        planes[0].normal.z = vp.m11 + vp.m8;
+        planes[0].distance = vp.m15 + vp.m12;
+
+        // Right Plane
+        planes[1].normal.x = vp.m3 - vp.m0;
+        planes[1].normal.y = vp.m7 - vp.m4;
+        planes[1].normal.z = vp.m11 - vp.m8;
+        planes[1].distance = vp.m15 - vp.m12;
+
+        // Bottom Plane
+        planes[2].normal.x = vp.m3 + vp.m1;
+        planes[2].normal.y = vp.m7 + vp.m5;
+        planes[2].normal.z = vp.m11 + vp.m9;
+        planes[2].distance = vp.m15 + vp.m13;
+
+        // Top Plane
+        planes[3].normal.x = vp.m3 - vp.m1;
+        planes[3].normal.y = vp.m7 - vp.m5;
+        planes[3].normal.z = vp.m11 - vp.m9;
+        planes[3].distance = vp.m15 - vp.m13;
+
+        // Near Plane
+        planes[4].normal.x = vp.m3 + vp.m2;
+        planes[4].normal.y = vp.m7 + vp.m6;
+        planes[4].normal.z = vp.m11 + vp.m10;
+        planes[4].distance = vp.m15 + vp.m14;
+
+        // Far Plane
+        planes[5].normal.x = vp.m3 - vp.m2;
+        planes[5].normal.y = vp.m7 - vp.m6;
+        planes[5].normal.z = vp.m11 - vp.m10;
+        planes[5].distance = vp.m15 - vp.m14;
+
+        for (auto &plane : planes) {
+            plane.Normalize();
+        }
+    }
+
+    // Evaluates if a sphere is completely behind any of the 6 planes
+    [[nodiscard]] bool IsSphereVisible(const BoundingSphere &sphere) const {
+        return std::ranges::all_of(planes, [&](const FrustumPlane &plane) {
+            const float dist = Vector3DotProduct(plane.normal, sphere.center) + plane.distance;
+            // If the negative distance exceeds the radius, the sphere is completely outside
+            return dist >= -sphere.radius;
+        });
+    }
+};
+
+// Global Constants
+// -------------------------------------------------------------------------------------------------
+
 inline constexpr std::string_view obstacleTextureName         = "starry-galaxy_tex.png";
 inline constexpr std::string_view woodTextureName             = "wood_tex.png";
 inline constexpr std::string_view geometryVertexShaderName    = "geometry_pass.vert";
@@ -19,9 +96,9 @@ inline constexpr std::string_view instancedFragmentShaderName = "geometry_pass_i
 inline constexpr float modelScalar                            = 1.0f;
 inline constexpr float modelRotation                          = 1.5f;
 inline constexpr int cameraMode                               = CAMERA_ORBITAL;
-inline constexpr int obstacleCount                            = 1000;
+inline constexpr int obstacleCount                            = 5000;
 inline constexpr float ObjectSphereRadius                     = 100.0f; // obstacle cloud size
-inline constexpr int activeLightCount                         = 250;
+inline constexpr int activeLightCount                         = 500;
 inline constexpr float minLightThreshold                      = 0.03f;
 inline constexpr float specularStrength                       = 1.0f;
 inline constexpr int generalMaterialShininess                 = 48;
@@ -30,20 +107,28 @@ inline constexpr float attenuationLinear                      = 0.09f;
 inline constexpr float attenuationQuadratic                   = 0.032f;
 inline constexpr uint numberOfStyles                          = 4;
 
-// global variables
+// Global variables
+// -------------------------------------------------------------------------------------------------
+
+// Immutable object Data
 Vector3 lightPositions[activeLightCount];
-Vector3 lightColors[activeLightCount];
-std::vector<Matrix> instancedTransforms;
-std::vector<float> instancedStyleIds;
-std::vector<Matrix> instancedLightTransforms;
 std::vector<Vector3> occupiedLightPositions;
-bool setFrameLimit          = true;
-bool useMultipleLightColors = false;
-bool enableStyleSplit       = true;
+std::vector<Matrix> masterObstacleTransforms;
+std::vector<float> masterObstacleStyleIds;
+std::vector<BoundingSphere> masterObstacleSpheres;
+std::vector<Matrix> masterLightTransforms;
+
+// Render object Data (Uploaded/Updated in GPU every frame)
+std::vector<Matrix> visibleObstacleTransforms;
+std::vector<float> visibleObstacleStyleIds;
+
+// Settings
+bool setFrameLimit    = true;
+bool enableStyleSplit = true;
 
 int main() {
     // BASIC SETUP
-    // -------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
 
     // Context & Window Creation
     constexpr int renderWidth      = Config::EngineSettings::ScreenWidth;
@@ -82,7 +167,7 @@ int main() {
     const Shader postShader         = LoadShader(nullptr, postFragPath.c_str());
 
     // OBJECT GENERATION
-    // -------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
 
     // Generate obstacle base Meshes with Texture
     Mesh baseMesh = GenMeshCube(0.75f, 0.75f, 0.75f);
@@ -117,15 +202,19 @@ int main() {
     Model lightningSourceModel               = LoadModelFromMesh(lightningSphereMesh);
     lightningSourceModel.materials[0].shader = geometryPassShader;
 
-    // reserve obstacle and light mesh arrays
-    instancedTransforms.reserve(obstacleCount);
-    instancedStyleIds.reserve(obstacleCount);
-    instancedLightTransforms.reserve(activeLightCount);
+    // reserve and pre-allocate obstacle and light mesh arrays
+    masterObstacleTransforms.reserve(obstacleCount);
+    masterObstacleStyleIds.reserve(obstacleCount);
+    masterObstacleSpheres.reserve(obstacleCount);
+    visibleObstacleTransforms.reserve(obstacleCount);
+    visibleObstacleStyleIds.reserve(obstacleCount);
+    masterLightTransforms.reserve(activeLightCount);
     occupiedLightPositions.reserve(activeLightCount);
 
     // Obstacle generation
     for (int i = 0; i < obstacleCount; i++) {
-        float scale = static_cast<float>(GetRandomValue(10, 30)) / 10.0f;
+        constexpr float baseRadius = 0.6495f;
+        float scale                = static_cast<float>(GetRandomValue(10, 30)) / 10.0f;
 
         // Uniform Circular Distribution Math
         float u      = static_cast<float>(GetRandomValue(0, 10000)) / 10000.0f; // 0.0 to 1.0
@@ -153,12 +242,11 @@ int main() {
                                                          MatrixRotate(rotAxis, rotAngle * DEG2RAD)),
                                           MatrixTranslate(pos.x, pos.y, pos.z));
 
-        // Push directly to contiguous arrays
-        instancedTransforms.push_back(transform);
-        instancedStyleIds.push_back(styleId);
+        // Push directly to obstacle arrays
+        masterObstacleTransforms.push_back(transform);
+        masterObstacleStyleIds.push_back(styleId);
+        masterObstacleSpheres.push_back({pos, baseRadius * scale});
     }
-
-    int actualObstacleCount = static_cast<int>(std::ssize(instancedTransforms));
 
     // Light generation
     auto TryFindEmptyLightSpace = [&](const float radiusToClear, const float minHeight,
@@ -194,45 +282,42 @@ int main() {
 
         constexpr float maxHeight = ObjectSphereRadius / 2;
         if (Vector3 validPos; TryFindEmptyLightSpace(0.5f, 2.0f, maxHeight, validPos)) {
-            // set color and position
-            lightColors[lightsGenerated]    = {Config::EngineSettings::MainLightColor.x / 255.0f,
-                                               Config::EngineSettings::MainLightColor.y / 255.0f,
-                                               Config::EngineSettings::MainLightColor.z / 255.0f};
+            // set position
             lightPositions[lightsGenerated] = validPos;
 
             // Generate physical debug sphere transform for DrawMeshInstanced
             Matrix transform = MatrixMultiply(MatrixScale(1.5f, 1.5f, 1.5f),
                                               MatrixTranslate(validPos.x, validPos.y, validPos.z));
 
-            instancedLightTransforms.push_back(transform);
+            masterLightTransforms.push_back(transform);
             occupiedLightPositions.push_back(validPos);
             lightsGenerated++;
         }
     }
 
+    // set light color
+    Vector3 lightColor = {Config::EngineSettings::MainLightColor.x / 255.0f,
+                          Config::EngineSettings::MainLightColor.y / 255.0f,
+                          Config::EngineSettings::MainLightColor.z / 255.0f};
+
     // INSTANCING: VAO & VBO SETUP
-    // -------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
 
     // Tell Raylib where the instance matrix attribute is located
     instancedShader.locs[SHADER_LOC_MATRIX_MODEL] =
         GetShaderLocationAttrib(instancedShader, "instanceTransform");
 
-    // Upload the Style ID array to the GPU V-RAM as a VBO
-    unsigned int styleIdVboId = rlLoadVertexBuffer(
-        instancedStyleIds.data(), static_cast<int>(actualObstacleCount * sizeof(float)), false);
+    // Upload the Style ID array to the GPU V-RAM as a dynamic VBO
+    unsigned int styleIdVboId =
+        rlLoadVertexBuffer(masterObstacleStyleIds.data(), obstacleCount * sizeof(float), true);
 
     // Bind VBO to the baseMesh's VAO
     rlEnableVertexArray(baseMesh.vaoId);
     {
         rlEnableVertexBuffer(styleIdVboId);
-
-        // Define data format
-        rlSetVertexAttribute(10, 1, RL_FLOAT, false, 0, 0);
+        rlSetVertexAttribute(10, 1, RL_FLOAT, false, 0, 0); // Define data format
         rlEnableVertexAttribute(10);
-
-        // attribute advances per instance
         rlSetVertexAttributeDivisor(10, 1);
-
         rlDisableVertexBuffer();
     }
     rlDisableVertexArray();
@@ -243,14 +328,14 @@ int main() {
     instancedMaterial.maps[MATERIAL_MAP_ALBEDO].texture = obstacleTexture;
 
     // Light VBO Setup
-    std::vector instancedLightStyleIds(activeLightCount, 0.0f); // 0.0f = Debug style
+    std::vector instancedLightStyleIds(activeLightCount, 0.0f); // 0.0f = No style
     unsigned int lightStyleIdVboId =
         rlLoadVertexBuffer(instancedLightStyleIds.data(), activeLightCount * sizeof(float), false);
 
     rlEnableVertexArray(lightningSphereMesh.vaoId);
     {
         rlEnableVertexBuffer(lightStyleIdVboId);
-        rlSetVertexAttribute(10, 1, RL_FLOAT, false, 0, 0);
+        rlSetVertexAttribute(10, 1, RL_FLOAT, false, 0, 0); // Define data format
         rlEnableVertexAttribute(10);
         rlSetVertexAttributeDivisor(10, 1);
         rlDisableVertexBuffer();
@@ -262,7 +347,7 @@ int main() {
     instancedLightMaterial.shader   = instancedShader;
 
     // G-BUFFER INITIALIZATION
-    // -------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
 
     unsigned int FboId = rlLoadFramebuffer();
     if (FboId == 0)
@@ -302,7 +387,7 @@ int main() {
     RenderTexture2D litSceneTarget = LoadRenderTexture(renderWidth, renderHeight);
 
     // SHADER LOCATION AND UNIFORM SETUP
-    // -------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
 
     // define uniform location variables (geometry vertex)
     int modelMatLoc  = GetShaderLocation(geometryPassShader, "modelMat");
@@ -315,14 +400,13 @@ int main() {
     int isLightLocInstanced = GetShaderLocation(instancedShader, "isLightSource");
 
     // define uniform location variables (lighting fragment)
-    int lightPosArrayLoc      = GetShaderLocation(lightingPassShader, "lightPositions");
-    int lightColorArrayLoc    = GetShaderLocation(lightingPassShader, "lightColors");
-    int LightingResolutionLoc = GetShaderLocation(lightingPassShader, "resolution");
-    int normalTexLoc          = GetShaderLocation(lightingPassShader, "gNormalTex");
-    int depthTexLoc =
-        GetShaderLocation(lightingPassShader, "gDepthTex"); // Replaced Position with Depth
-    int invViewProjLoc = GetShaderLocation(lightingPassShader, "invViewProj"); // New matrix uniform
-    int postViewPosLoc = GetShaderLocation(lightingPassShader, "viewPos");
+    int lightPosArrayLoc        = GetShaderLocation(lightingPassShader, "lightPositions");
+    int lightColorLoc           = GetShaderLocation(lightingPassShader, "lightColor");
+    int LightingResolutionLoc   = GetShaderLocation(lightingPassShader, "resolution");
+    int normalTexLoc            = GetShaderLocation(lightingPassShader, "gNormalTex");
+    int depthTexLoc             = GetShaderLocation(lightingPassShader, "gDepthTex");
+    int invViewProjLoc          = GetShaderLocation(lightingPassShader, "invViewProj");
+    int postViewPosLoc          = GetShaderLocation(lightingPassShader, "viewPos");
     int postBackgroundColorLoc  = GetShaderLocation(lightingPassShader, "backgroundColor");
     int intensityLoc            = GetShaderLocation(lightingPassShader, "lightIntensity");
     int ambientLoc              = GetShaderLocation(lightingPassShader, "ambientLightStrength");
@@ -368,7 +452,7 @@ int main() {
     SetShaderValue(lightingPassShader, shininessLoc, &generalMaterialShininess, SHADER_UNIFORM_INT);
 
     // MAIN GAME LOOP
-    // -------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
 
     // Define source and destination rectangles for FBO
     constexpr Rectangle sourceRec = {0.0f, 0.0f, static_cast<float>(renderWidth),
@@ -402,11 +486,44 @@ int main() {
             frameLimitUpdated = true;
         }
 
+        // CULLING MATH & MATRIX SETUP
+        // -----------------------------------------------------------------------------------------
+
+        // Calculate the Inverse View-Projection Matrix
+        double aspect      = static_cast<double>(currentWidth) / static_cast<double>(currentHeight);
+        Matrix proj        = MatrixPerspective(camera.fovy * DEG2RAD, aspect, 0.01, 1000.0);
+        Matrix view        = GetCameraMatrix(camera);
+        Matrix viewProj    = MatrixMultiply(view, proj);
+        Matrix invViewProj = MatrixInvert(viewProj); // Calculated now, used in lighting pass
+
+        // Extract Frustum Planes
+        Frustum cameraFrustum{};
+        cameraFrustum.Extract(viewProj);
+
+        // Execute CPU Culling
+        visibleObstacleTransforms.clear();
+        visibleObstacleStyleIds.clear();
+
+        for (int i = 0; i < obstacleCount; i++) {
+            if (cameraFrustum.IsSphereVisible(masterObstacleSpheres[i])) {
+                visibleObstacleTransforms.push_back(masterObstacleTransforms[i]);
+                visibleObstacleStyleIds.push_back(masterObstacleStyleIds[i]);
+            }
+        }
+
+        int actualVisibleCount = static_cast<int>(std::ssize(visibleObstacleTransforms));
+
+        // Stream Custom Attributes to GPU
+        if (actualVisibleCount > 0) {
+            rlUpdateVertexBuffer(styleIdVboId, visibleObstacleStyleIds.data(),
+                                 actualVisibleCount * static_cast<int>(sizeof(float)), 0);
+        }
+
         // Draw
         BeginDrawing();
         {
             // GEOMETRY PASS
-            // -----------------------------------------------------------------------------------
+            // -------------------------------------------------------------------------------------
 
             // FBO Off-Screen rendering
             rlEnableFramebuffer(FboId);                  // Redirect GPU output to custom FBO
@@ -431,13 +548,15 @@ int main() {
                 int isLight = 1;
                 SetShaderValue(instancedShader, isLightLocInstanced, &isLight, SHADER_UNIFORM_INT);
                 DrawMeshInstanced(lightningSphereMesh, instancedLightMaterial,
-                                  instancedLightTransforms.data(), activeLightCount);
+                                  masterLightTransforms.data(), activeLightCount);
 
                 // draw obstacles using instanced shader
                 isLight = 0;
                 SetShaderValue(instancedShader, isLightLocInstanced, &isLight, SHADER_UNIFORM_INT);
-                DrawMeshInstanced(baseMesh, instancedMaterial, instancedTransforms.data(),
-                                  actualObstacleCount);
+                if (actualVisibleCount > 0) {
+                    DrawMeshInstanced(baseMesh, instancedMaterial, visibleObstacleTransforms.data(),
+                                      actualVisibleCount);
+                }
             }
             EndMode3D(); // stop applying 3D math
 
@@ -449,14 +568,7 @@ int main() {
                 static_cast<int>(currentHeight)); // Restore the viewport to actual window size
 
             // LIGHTING PASS
-            // --------------------------------------------------------------------------------
-
-            // Calculate the Inverse View-Projection Matrix
-            double aspect   = static_cast<double>(renderWidth) / static_cast<double>(renderHeight);
-            Matrix proj     = MatrixPerspective(camera.fovy * DEG2RAD, aspect, 0.01, 1000.0);
-            Matrix view     = GetCameraMatrix(camera);
-            Matrix viewProj = MatrixMultiply(view, proj);
-            Matrix invViewProj = MatrixInvert(viewProj);
+            // -------------------------------------------------------------------------------------
 
             BeginTextureMode(litSceneTarget);
             ClearBackground(BLANK);
@@ -467,8 +579,7 @@ int main() {
                                SHADER_UNIFORM_VEC2);
                 SetShaderValueV(lightingPassShader, lightPosArrayLoc, lightPositions,
                                 SHADER_UNIFORM_VEC3, activeLightCount);
-                SetShaderValueV(lightingPassShader, lightColorArrayLoc, lightColors,
-                                SHADER_UNIFORM_VEC3, activeLightCount);
+                SetShaderValue(lightingPassShader, lightColorLoc, &lightColor, SHADER_UNIFORM_VEC3);
                 SetShaderValue(lightingPassShader, postViewPosLoc, &camera.position,
                                SHADER_UNIFORM_VEC3);
                 SetShaderValueMatrix(lightingPassShader, invViewProjLoc, invViewProj);
@@ -484,7 +595,7 @@ int main() {
             EndTextureMode();
 
             // POST-PROCESSING PASS
-            // -----------------------------------------------------------------------------------
+            // -------------------------------------------------------------------------------------
 
             ClearBackground(BLACK);
 
@@ -500,10 +611,14 @@ int main() {
             EndShaderMode();
 
             // Text overlay
+            // Text overlay
+            DrawText("Standard HyDra Scene", 10, 10, fontSize / 2, RAYWHITE);
             DrawText(std::format("Light-Count: {}", activeLightCount).c_str(), 10, 40, fontSize / 2,
                      RAYWHITE);
-            DrawText(std::format("Obstacle-Count: {}", obstacleCount).c_str(), 10, 70, fontSize / 2,
-                     RAYWHITE);
+            DrawText(
+                std::format("Obstacle-Count: {} / {} (Culled)", actualVisibleCount, obstacleCount)
+                    .c_str(),
+                10, 70, fontSize / 2, RAYWHITE);
 
             // Draw UI
             DrawFPS(static_cast<int>(currentWidth) - 100, 10);
@@ -512,9 +627,9 @@ int main() {
     }
 
     // CLEANUP
-    // -------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------------
 
-    // Unload Custom VBOs from GPU Memory
+    // Unload Custom VBOs
     rlUnloadVertexBuffer(styleIdVboId);
     rlUnloadVertexBuffer(lightStyleIdVboId);
 

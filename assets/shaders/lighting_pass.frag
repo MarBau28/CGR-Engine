@@ -30,10 +30,10 @@ uniform sampler2D gDepthTex;   // Hardware Depth buffer
 // Matrix for Position Reconstruction
 uniform mat4 invViewProj;
 
-// MRT Light Arrays
+// MRT Light Settings and Arrays
 #define MAX_LIGHTS 500
 uniform vec3 lightPositions[MAX_LIGHTS];
-uniform vec3 lightColors[MAX_LIGHTS];
+uniform vec3 lightColor;
 
 void main()
 {
@@ -88,7 +88,7 @@ void main()
 
         for (int i = 0; i < activeLights; i++) {
 
-            vec3 currentEffectiveLight = lightColors[i] * lightIntensity;
+            vec3 currentEffectiveLight = lightColor * lightIntensity;
             vec3 lightVector = lightPositions[i] - fragPosition;
             float lightDistance = length(lightVector);
 
@@ -267,7 +267,7 @@ void main()
                 // Quantization (Banding)
                 float level = floor(diff * levels);
                 diff = level / levels;
-                vec3 diffuse = diff * lightColors[i] * lightIntensity;
+                vec3 diffuse = diff * lightColor * lightIntensity;
 
                 // Attenuation
                 float attenuation = 1.0 / (attenuationConstant + attenuationLinear
@@ -348,7 +348,7 @@ void main()
             }
         }
 
-        // Saturationa dn Tint Boost for painting look
+        // Saturation adn Tint boost for painting look
         float luma = dot(finalAlbedo, vec3(0.299, 0.587, 0.114));
 
         finalAlbedo = mix(vec3(luma), finalAlbedo, 1.8);
@@ -366,10 +366,10 @@ void main()
             if (lightDistance > maxLightRadius) continue;
             vec3 lightDir = normalize(lightVector);
             float diff = max(dot(normal, lightDir), 0.0);
-            vec3 diffuse = diff * lightColors[i] * lightIntensity;
+            vec3 diffuse = diff * lightColor * lightIntensity;
             vec3 reflectDir = reflect(-lightDir, normal);
             float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
-            vec3 specular = specularStrength * spec * lightColors[i]
+            vec3 specular = specularStrength * spec * lightColor
             * lightIntensity;
             float attenuation = 1.0 / (attenuationConstant + attenuationLinear
             * lightDistance + attenuationQuadratic

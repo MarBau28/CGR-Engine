@@ -13,7 +13,7 @@ uniform int isLightSource;
 
 void main()
 {
-    // If it's a light sphere, render it white/unlit and bypass normal calculations
+    // If light sphere, render it white/unlit and bypass normal calculations
     if (isLightSource == 1) {
         gAlbedo = vec4(1.0);
         gNormal = vec4(0.0);
