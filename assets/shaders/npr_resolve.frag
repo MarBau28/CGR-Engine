@@ -54,14 +54,22 @@ void main()
     // RESOLVE PASS EVALUATION
     // -----------------------------------------------------------------------
 
-    if (styleID == 1 || styleID == 2) {
+    if (styleID == 1) {
 
-        // STANDARD & GOOCH RESOLVE
+        // STANDARD BLINN-PHONG
         // ----------------------------------------------------------------------
 
         // Add Ambient Light to the accumulated Light Volume output
         vec3 ambient = albedo * ambientLightStrength;
         finalColor = vec4(litColor + ambient, albedoData.a);
+
+    } else if (styleID == 2) {
+
+        // GOOCH
+        // ----------------------------------------------------------------------
+
+        // no ambient for the Gooch shader
+        finalColor = vec4(litColor, albedoData.a);
 
     } else if (styleID == 3) {
 
