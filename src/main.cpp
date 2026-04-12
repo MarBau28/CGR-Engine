@@ -112,7 +112,7 @@ inline constexpr uint numberOfStyles                            = 4;
 // -------------------------------------------------------------------------------------------------
 
 // Immutable object Data
-Vector3 lightPositions[activeLightCount];
+Vector3 masterLightPositions[activeLightCount];
 std::vector<Vector3> occupiedLightPositions;
 std::vector<Matrix> masterObstacleTransforms;
 std::vector<float> masterObstacleStyleIds;
@@ -123,6 +123,9 @@ std::vector<Matrix> masterLightVolumeTransforms; // Massive spheres for lighting
 // Render object Data (Uploaded/Updated in GPU every frame)
 std::vector<Matrix> visibleObstacleTransforms;
 std::vector<float> visibleObstacleStyleIds;
+std::vector<Matrix> visibleLightProxyTransforms;
+std::vector<Matrix> visibleLightVolumeTransforms;
+std::vector<Vector3> visibleLightPositions;
 
 // Settings
 bool setFrameLimit           = true;
@@ -230,6 +233,9 @@ int main() {
     occupiedLightPositions.reserve(activeLightCount);
     masterLightProxyTransforms.reserve(activeLightCount);
     masterLightVolumeTransforms.reserve(activeLightCount);
+    visibleLightProxyTransforms.reserve(activeLightCount);
+    visibleLightPositions.reserve(activeLightCount);
+    visibleLightVolumeTransforms.reserve(activeLightCount);
 
     // Obstacle generation
     for (int i = 0; i < obstacleCount; i++) {
@@ -303,7 +309,7 @@ int main() {
 
         if (Vector3 validPos; TryFindEmptyLightSpace(0.5f, 2.0f, maxHeight, validPos)) {
             // set position (Needed for Uber-Shader comparison)
-            lightPositions[lightsGenerated] = validPos;
+            masterLightPositions[lightsGenerated] = validPos;
 
             // Generate physical debug sphere transform
             Matrix proxyTransform = MatrixMultiply(
@@ -413,6 +419,16 @@ int main() {
     // Canvas for Pass 2 to draw onto (Either Uber-Shader or Light Volume accumulation)
     RenderTexture2D litSceneTarget = LoadRenderTexture(renderWidth, renderHeight);
 
+    // HDR Accumulation (Required for parity with Uber-Shader float math)
+    rlUnloadTexture(litSceneTarget.texture.id);
+    litSceneTarget.texture.id =
+        rlLoadTexture(nullptr, renderWidth, renderHeight, PIXELFORMAT_UNCOMPRESSED_R16G16B16A16, 1);
+    litSceneTarget.texture.format = PIXELFORMAT_UNCOMPRESSED_R16G16B16A16;
+    rlEnableFramebuffer(litSceneTarget.id);
+    rlFramebufferAttach(litSceneTarget.id, litSceneTarget.texture.id, RL_ATTACHMENT_COLOR_CHANNEL0,
+                        RL_ATTACHMENT_TEXTURE2D, 0);
+    rlDisableFramebuffer();
+
     // Canvas for Pass 3 to draw onto (NPR Resolve pass, before final post-processing)
     RenderTexture2D resolveTarget = LoadRenderTexture(renderWidth, renderHeight);
 
@@ -440,7 +456,6 @@ int main() {
     constexpr Vector3 BackgroundColor = {Config::EngineSettings::BackgroundColor.x / 255.0f,
                                          Config::EngineSettings::BackgroundColor.y / 255.0f,
                                          Config::EngineSettings::BackgroundColor.z / 255.0f};
-    constexpr int safeLightCount      = std::min(activeLightCount, 500);
 
     // geometry and instanced passes
     int modelMatLoc         = GetShaderLocation(geometryPassShader, "modelMat");
@@ -467,7 +482,6 @@ int main() {
 
     SetShaderValue(lightingPassShader, postBackgroundColorLoc, &BackgroundColor,
                    SHADER_UNIFORM_VEC3);
-    SetShaderValue(lightingPassShader, activeLightsLoc, &safeLightCount, SHADER_UNIFORM_INT);
     SetShaderValue(lightingPassShader, maxLightRadiusLoc, &maxRadius, SHADER_UNIFORM_FLOAT);
     SetShaderValue(lightingPassShader, attenuationConstantLoc, &attenuationConstant,
                    SHADER_UNIFORM_FLOAT);
@@ -578,7 +592,7 @@ int main() {
         Frustum cameraFrustum{};
         cameraFrustum.Extract(viewProj);
 
-        // Execute CPU Culling
+        // Execute CPU Culling for obstacles
         visibleObstacleTransforms.clear();
         visibleObstacleStyleIds.clear();
 
@@ -596,6 +610,29 @@ int main() {
             rlUpdateVertexBuffer(styleIdVboId, visibleObstacleStyleIds.data(),
                                  actualVisibleCount * static_cast<int>(sizeof(float)), 0);
         }
+
+        // Execute CPU Culling for Lights
+        visibleLightProxyTransforms.clear();
+        visibleLightVolumeTransforms.clear();
+        visibleLightPositions.clear();
+
+        for (int i = 0; i < activeLightCount; i++) {
+            // Cull the light Volumes
+            if (BoundingSphere volumeSphere = {masterLightPositions[i], maxRadius};
+                cameraFrustum.IsSphereVisible(volumeSphere)) {
+                visibleLightVolumeTransforms.push_back(masterLightVolumeTransforms[i]);
+                visibleLightPositions.push_back(masterLightPositions[i]);
+            }
+
+            // Cull the light proxy bulbs
+            if (BoundingSphere proxySphere = {masterLightPositions[i], 0.75f};
+                cameraFrustum.IsSphereVisible(proxySphere)) {
+                visibleLightProxyTransforms.push_back(masterLightProxyTransforms[i]);
+            }
+        }
+
+        int actualVisibleVolumeCount = static_cast<int>(visibleLightVolumeTransforms.size());
+        int actualVisibleProxyCount  = static_cast<int>(visibleLightProxyTransforms.size());
 
         // Draw
         BeginDrawing();
@@ -622,12 +659,14 @@ int main() {
                                SHADER_UNIFORM_FLOAT);
                 DrawModel(floorModel, {0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
 
-                // Draw Lights proxies using instanced shader
+                // Draw Lights proxies using instanced shader (+ culled)
                 int isLight = 1;
                 SetShaderValue(instancedShader, isLightLocInstanced, &isLight, SHADER_UNIFORM_INT);
-                DrawMeshInstanced(lightningSphereMesh, instancedLightMaterial,
-                                  masterLightProxyTransforms.data(),
-                                  useDeferredLightVolumes ? activeLightCount : safeLightCount);
+                if (actualVisibleProxyCount > 0) {
+                    DrawMeshInstanced(lightningSphereMesh, instancedLightMaterial,
+                                      visibleLightProxyTransforms.data(),
+                                      std::min(actualVisibleProxyCount, 500));
+                }
 
                 // draw obstacles using instanced shader
                 isLight = 0;
@@ -657,10 +696,14 @@ int main() {
                 BeginShaderMode(lightingPassShader);
                 {
                     // Pass lighting arrays, camera and screen position
+                    int safeVisibleLightCount = std::min(actualVisibleVolumeCount, 500);
                     SetShaderValue(lightingPassShader, LightingResolutionLoc, internalRes,
                                    SHADER_UNIFORM_VEC2);
-                    SetShaderValueV(lightingPassShader, lightPosArrayLoc, lightPositions,
-                                    SHADER_UNIFORM_VEC3, safeLightCount);
+                    SetShaderValue(lightingPassShader, activeLightsLoc, &safeVisibleLightCount,
+                                   SHADER_UNIFORM_INT);
+                    SetShaderValueV(lightingPassShader, lightPosArrayLoc,
+                                    visibleLightPositions.data(), SHADER_UNIFORM_VEC3,
+                                    safeVisibleLightCount);
                     SetShaderValue(lightingPassShader, lightColorLoc, &lightColor,
                                    SHADER_UNIFORM_VEC3);
                     SetShaderValue(lightingPassShader, postViewPosLoc, &camera.position,
@@ -702,9 +745,12 @@ int main() {
                         SetShaderValueTexture(lightVolumeShader, lvNormalTexLoc, gNormal);
                         SetShaderValueTexture(lightVolumeShader, lvDepthTexLoc, gDepth);
 
-                        // Draw all 500 big light volumes for additive blending
-                        DrawMeshInstanced(lightningSphereMesh, lightVolumeMaterial,
-                                          masterLightVolumeTransforms.data(), activeLightCount);
+                        // Draw all light volumes for additive blending
+                        if (actualVisibleVolumeCount > 0) {
+                            DrawMeshInstanced(lightningSphereMesh, lightVolumeMaterial,
+                                              visibleLightVolumeTransforms.data(),
+                                              actualVisibleVolumeCount);
+                        }
                     }
                     EndShaderMode();
                 }
@@ -766,10 +812,18 @@ int main() {
                                                         : "Deferred (Uber-Shader)")
                          .c_str(),
                      10, 40, fontSize / 2, RAYWHITE);
-            DrawText(std::format("Light-Count: {}",
-                                 useDeferredLightVolumes ? activeLightCount : safeLightCount)
-                         .c_str(),
-                     10, 70, fontSize / 2, RAYWHITE);
+            if (useDeferredLightVolumes) {
+                DrawText(std::format("Lights: {} Volumes | {} Proxies (Visible)",
+                                     actualVisibleVolumeCount, actualVisibleProxyCount)
+                             .c_str(),
+                         10, 70, fontSize / 2, RAYWHITE);
+            } else {
+                int evaluatedLights = std::min(actualVisibleVolumeCount, 500);
+                DrawText(std::format("Lights: {} Proxies (Visible) | {} Evaluated (Uber-Shader)",
+                                     actualVisibleProxyCount, evaluatedLights)
+                             .c_str(),
+                         10, 70, fontSize / 2, RAYWHITE);
+            }
             DrawText(
                 std::format("Obstacle-Count: {} / {} (Culled)", actualVisibleCount, obstacleCount)
                     .c_str(),
