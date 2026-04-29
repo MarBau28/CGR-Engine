@@ -1,4 +1,5 @@
 #include "../include/Config.h"
+#include "../include/InputHandler.h"
 #include "raylib.h"
 #include "raymath.h"
 #include "rlgl.h"
@@ -107,8 +108,8 @@ inline constexpr float attenuationConstant                      = 1.0f;
 inline constexpr float attenuationLinear                        = 0.09f;
 inline constexpr float attenuationQuadratic                     = 0.032f;
 inline constexpr uint numberOfStyles                            = 4;
-inline constexpr int MAX_OBSTACLES                              = 20000;
-inline constexpr int MAX_LIGHTS                                 = 1000;
+inline constexpr int MAX_OBSTACLES                              = 30000;
+inline constexpr int MAX_LIGHTS                                 = 5000;
 inline constexpr float UiScale                                  = 0.8f;
 
 // Global variables
@@ -577,6 +578,12 @@ int main() {
 
     bool frameLimitUpdated = false;
 
+    // initialize the key binding controllers for continuous inputs
+    ContinuousInput<int> obsInput;
+    ContinuousInput<int> lightInput;
+    ContinuousInput<float> intensityInput;
+    ContinuousInput<float> ambientInput;
+
     while (!WindowShouldClose()) {
         // Update Camera and Screen
         UpdateCamera(&camera, cameraMode);
@@ -635,42 +642,24 @@ int main() {
                      use16BitHDR ? "16-Bit HDR" : "8-Bit LDR");
         }
 
-        // Light Count (+/- 10)
-        if (IsKeyPressed(KEY_UP)) {
-            activeLightCount = std::min(activeLightCount + 10, actualGeneratedLights);
-        }
-        if (IsKeyPressed(KEY_DOWN)) {
-            activeLightCount = std::max(activeLightCount - 10, 1); // Keep at least 1 light
-        }
-
-        // Light Intensity (+/- 0.1)
-        if (IsKeyPressed(KEY_RIGHT)) {
-            lightIntensity += 0.1f;
-        }
-        if (IsKeyPressed(KEY_LEFT)) {
-            lightIntensity = std::max(lightIntensity - 0.1f, 0.0f); // Prevent negative light
-        }
-
-        // Ambient Light Strength (+/- 0.05)
-        if (IsKeyPressed(KEY_PAGE_UP)) {
-            ambientLightStrength += 0.05f;
-        }
-        if (IsKeyPressed(KEY_PAGE_DOWN)) {
-            ambientLightStrength = std::max(ambientLightStrength - 0.05f, 0.0f);
-        }
-
-        // Obstacle Count (+/- 100)
-        if (IsKeyPressed(KEY_W)) {
-            activeObstacleCount = std::min(activeObstacleCount + 100, MAX_OBSTACLES);
-        }
-        if (IsKeyPressed(KEY_S)) {
-            activeObstacleCount = std::max(activeObstacleCount - 100, 1);
-        }
-
         // Screenshot Hook
         if (IsKeyPressed(KEY_P)) {
             requestScreenshot = true;
         }
+
+        // Adjust Obstacles: Tap: +/- 100 | Hold: +/- 1000 per second
+        obsInput.Update(KEY_D, KEY_A, activeObstacleCount, 100, 1000.0f, 1, MAX_OBSTACLES);
+
+        // Adjust Lights: Tap: +/- 10  | Hold: +/- 100 per second
+        lightInput.Update(KEY_W, KEY_S, activeLightCount, 10, 100.0f, 1, actualGeneratedLights);
+
+        // Adjust Light Intensity: Tap: +/- 0.1 | Hold: +/- 2.0 per second
+        intensityInput.Update(KEY_UP, KEY_DOWN, lightIntensity, 0.1f, 2.0f, 0.0f,
+                              std::numeric_limits<float>::max());
+
+        // Adjust Ambient Strength: Tap: +/- 0.05 | Hold: +/- 1.0 per second
+        ambientInput.Update(KEY_RIGHT, KEY_LEFT, ambientLightStrength, 0.05f, 1.0f, 0.0f,
+                            std::numeric_limits<float>::max());
 
         // CULLING MATH & MATRIX SETUP
         // -----------------------------------------------------------------------------------------
@@ -1029,32 +1018,32 @@ int main() {
             DrawText("CONTROLS", textX, textY, fontSm, colMuted);
             textY += static_cast<int>(18 * uiScale);
 
-            DrawText("Adjust Obstacles", textX, textY, fontMd, colText);
-            DrawText("[W / S]", valueX, textY, fontMd, colAction);
-            textY += spacing;
-
-            DrawText("Adjust Lights", textX, textY, fontMd, colText);
-            DrawText("[Up / Down]", valueX, textY, fontMd, colAction);
-            textY += spacing;
-
-            DrawText("Adjust Intensity", textX, textY, fontMd, colText);
-            DrawText("[L / R]", valueX, textY, fontMd, colAction);
-            textY += spacing;
-
-            DrawText("Adjust Ambient", textX, textY, fontMd, colText);
-            DrawText("[PgUp / PgDn]", valueX, textY, fontMd, colAction);
-            textY += spacing;
-
-            DrawText("Capture Screen", textX, textY, fontMd, colText);
-            DrawText("[P]", valueX, textY, fontMd, colAction);
+            DrawText("Toggle Pipeline", textX, textY, fontMd, colText);
+            DrawText("[TAB]", valueX, textY, fontMd, colAction);
             textY += spacing;
 
             DrawText("Toggle HDR/LDR", textX, textY, fontMd, colText);
             DrawText("[H]", valueX, textY, fontMd, colAction);
             textY += spacing;
 
-            DrawText("Toggle Pipeline", textX, textY, fontMd, colText);
-            DrawText("[TAB]", valueX, textY, fontMd, colAction);
+            DrawText("Adjust Obstacles", textX, textY, fontMd, colText);
+            DrawText("[A / D]", valueX, textY, fontMd, colAction);
+            textY += spacing;
+
+            DrawText("Adjust Lights", textX, textY, fontMd, colText);
+            DrawText("[S / W]", valueX, textY, fontMd, colAction);
+            textY += spacing;
+
+            DrawText("Adjust Intensity", textX, textY, fontMd, colText);
+            DrawText("[Down / Up]", valueX, textY, fontMd, colAction);
+            textY += spacing;
+
+            DrawText("Adjust Ambient", textX, textY, fontMd, colText);
+            DrawText("[Left / Right]", valueX, textY, fontMd, colAction);
+            textY += spacing;
+
+            DrawText("Capture Screen", textX, textY, fontMd, colText);
+            DrawText("[P]", valueX, textY, fontMd, colAction);
 
             // screenshot execution
             if (requestScreenshot) {

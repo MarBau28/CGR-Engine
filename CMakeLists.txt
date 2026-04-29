@@ -23,7 +23,8 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
 add_executable(CGR-Engine ${SOURCES}
         old/old_Texture.cpp
         old/old_Texture.h
-        include/Config.h)
+        include/Config.h
+        include/InputHandler.h)
 
 # Include directories
 target_include_directories(CGR-Engine PRIVATE
