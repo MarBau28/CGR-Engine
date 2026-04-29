@@ -72,6 +72,9 @@ void main()
     //        color += sampleTex[i] * kernel[i];
     //    }
 
+    // Artificial Dimming for Light-Volume clamping test
+    //    color = color * 0.05;
+
     // Output
     finalColor = vec4(color, pixColor.a);
 }

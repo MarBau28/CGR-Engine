@@ -374,3 +374,6 @@ FodyWeavers.xsd
 
 # the idea files (CLio/Jetbrains specific)
 .idea/
+
+# Outputs & Runtime Data
+/outputs/

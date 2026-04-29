@@ -1,11 +1,12 @@
 #include "../include/Config.h"
-#include "algorithm"
-#include "filesystem"
-#include "format"
 #include "raylib.h"
 #include "raymath.h"
 #include "rlgl.h"
-#include "vector"
+#include <algorithm>
+#include <chrono>
+#include <filesystem>
+#include <format>
+#include <vector>
 
 // Structs
 // -------------------------------------------------------------------------------------------------
@@ -101,24 +102,25 @@ inline constexpr float modelRotation                            = 1.5f;
 inline constexpr int cameraMode                                 = CAMERA_ORBITAL;
 inline constexpr int obstacleCount                              = 5000;
 inline constexpr float ObjectSphereRadius                       = 200.0f; // obstacle cloud size
-inline constexpr int activeLightCount                           = 500;
-inline constexpr float minLightThreshold                        = 0.03f;
+inline constexpr float minLightThreshold                        = 0.05f;
 inline constexpr float attenuationConstant                      = 1.0f;
 inline constexpr float attenuationLinear                        = 0.09f;
 inline constexpr float attenuationQuadratic                     = 0.032f;
 inline constexpr uint numberOfStyles                            = 4;
+inline constexpr int MAX_OBSTACLES                              = 20000;
+inline constexpr int MAX_LIGHTS                                 = 1000;
+inline constexpr float UiScale                                  = 0.8f;
 
 // Global variables
 // -------------------------------------------------------------------------------------------------
 
 // Immutable object Data
-Vector3 masterLightPositions[activeLightCount];
+Vector3 masterLightPositions[MAX_LIGHTS];
 std::vector<Vector3> occupiedLightPositions;
 std::vector<Matrix> masterObstacleTransforms;
 std::vector<float> masterObstacleStyleIds;
 std::vector<BoundingSphere> masterObstacleSpheres;
-std::vector<Matrix> masterLightProxyTransforms;  // Tiny spheres for visuals
-std::vector<Matrix> masterLightVolumeTransforms; // Massive spheres for lighting math
+std::vector<Matrix> masterLightProxyTransforms; // Tiny spheres for visuals
 
 // Render object Data (Uploaded/Updated in GPU every frame)
 std::vector<Matrix> visibleObstacleTransforms;
@@ -131,6 +133,13 @@ std::vector<Vector3> visibleLightPositions;
 bool setFrameLimit           = true;
 bool enableStyleSplit        = true;
 bool useDeferredLightVolumes = true;
+bool use16BitHDR             = true;
+int activeObstacleCount      = 5000;
+int activeLightCount         = 500;
+int actualGeneratedLights    = 0;
+float lightIntensity         = Config::EngineSettings::LightIntensity;
+float ambientLightStrength   = Config::EngineSettings::AmbientLightStrength;
+bool requestScreenshot       = false;
 
 int main() {
     // BASIC SETUP
@@ -181,13 +190,6 @@ int main() {
         LoadShader(lightVolumeVertPath.c_str(), lightVolumeFragPath.c_str());
     const Shader nprResolveShader = LoadShader(nullptr, nprResolveFragPath.c_str());
 
-    // calculate maximum lightRadius based on light intensity to safe shader calcs
-    constexpr float c =
-        attenuationConstant - (Config::EngineSettings::LightIntensity / minLightThreshold);
-    const float maxRadius = (-attenuationLinear + std::sqrt(attenuationLinear * attenuationLinear -
-                                                            (4.0f * attenuationQuadratic * c))) /
-                            (2.0f * attenuationQuadratic);
-
     // OBJECT GENERATION
     // ---------------------------------------------------------------------------------------------
 
@@ -225,20 +227,19 @@ int main() {
     lightningSourceModel.materials[0].shader = geometryPassShader;
 
     // reserve and pre-allocate obstacle and light mesh arrays
-    masterObstacleTransforms.reserve(obstacleCount);
-    masterObstacleStyleIds.reserve(obstacleCount);
-    masterObstacleSpheres.reserve(obstacleCount);
-    visibleObstacleTransforms.reserve(obstacleCount);
-    visibleObstacleStyleIds.reserve(obstacleCount);
-    occupiedLightPositions.reserve(activeLightCount);
-    masterLightProxyTransforms.reserve(activeLightCount);
-    masterLightVolumeTransforms.reserve(activeLightCount);
-    visibleLightProxyTransforms.reserve(activeLightCount);
-    visibleLightPositions.reserve(activeLightCount);
-    visibleLightVolumeTransforms.reserve(activeLightCount);
+    masterObstacleTransforms.reserve(MAX_OBSTACLES);
+    masterObstacleStyleIds.reserve(MAX_OBSTACLES);
+    masterObstacleSpheres.reserve(MAX_OBSTACLES);
+    visibleObstacleTransforms.reserve(MAX_OBSTACLES);
+    visibleObstacleStyleIds.reserve(MAX_OBSTACLES);
+    occupiedLightPositions.reserve(MAX_LIGHTS);
+    masterLightProxyTransforms.reserve(MAX_LIGHTS);
+    visibleLightProxyTransforms.reserve(MAX_LIGHTS);
+    visibleLightPositions.reserve(MAX_LIGHTS);
+    visibleLightVolumeTransforms.reserve(MAX_LIGHTS);
 
     // Obstacle generation
-    for (int i = 0; i < obstacleCount; i++) {
+    for (int i = 0; i < MAX_OBSTACLES; i++) {
         constexpr float baseRadius = 0.6495f;
         float scale                = static_cast<float>(GetRandomValue(10, 30)) / 10.0f;
 
@@ -303,7 +304,7 @@ int main() {
 
     int lightsGenerated = 0;
     int overallAttempts = 0;
-    while (lightsGenerated < activeLightCount && overallAttempts < 10000) {
+    while (lightsGenerated < MAX_LIGHTS && overallAttempts < 10000) {
         overallAttempts++;
         constexpr float maxHeight = ObjectSphereRadius / 2;
 
@@ -315,18 +316,32 @@ int main() {
             Matrix proxyTransform = MatrixMultiply(
                 MatrixScale(1.5f, 1.5f, 1.5f), MatrixTranslate(validPos.x, validPos.y, validPos.z));
 
-            // Generate invisible light volume transform (Scale maxRadius)
-            Matrix volumeTransform =
-                MatrixMultiply(MatrixScale(-maxRadius * 2.0f, -maxRadius * 2.0f, -maxRadius * 2.0f),
-                               MatrixTranslate(validPos.x, validPos.y, validPos.z));
-
             masterLightProxyTransforms.push_back(proxyTransform);
-            masterLightVolumeTransforms.push_back(volumeTransform);
-
             occupiedLightPositions.push_back(validPos);
             lightsGenerated++;
         }
     }
+
+    // stacking 50 lights on top of each other for Light-Volume clamping test
+    // while (lightsGenerated < 50) {
+    //     Vector3 stackedPos = {0.0f, 5.0f, 0.0f};
+    //     // use 50 lights for this test
+    //     masterLightPositions[lightsGenerated] = stackedPos;
+    //     Matrix proxyTransform =
+    //         MatrixMultiply(MatrixScale(1.5f, 1.5f, 1.5f),
+    //                        MatrixTranslate(stackedPos.x, stackedPos.y, stackedPos.z));
+    //     Matrix volumeTransform =
+    //         MatrixMultiply(MatrixScale(-maxRadius * 2.0f, -maxRadius * 2.0f, -maxRadius * 2.0f),
+    //                        MatrixTranslate(stackedPos.x, stackedPos.y, stackedPos.z));
+    //
+    //     masterLightProxyTransforms.push_back(proxyTransform);
+    //     masterLightVolumeTransforms.push_back(volumeTransform);
+    //
+    //     lightsGenerated++;
+    // }
+
+    actualGeneratedLights = lightsGenerated;
+    activeLightCount      = std::min(activeLightCount, actualGeneratedLights);
 
     // set light color
     Vector3 lightColor = {Config::EngineSettings::MainLightColor.x / 255.0f,
@@ -342,7 +357,7 @@ int main() {
 
     // Upload the Style ID array to the GPU V-RAM as a dynamic VBO
     unsigned int styleIdVboId =
-        rlLoadVertexBuffer(masterObstacleStyleIds.data(), obstacleCount * sizeof(float), true);
+        rlLoadVertexBuffer(masterObstacleStyleIds.data(), MAX_OBSTACLES * sizeof(float), true);
 
     // Bind VBO to the baseMesh's VAO
     rlEnableVertexArray(baseMesh.vaoId);
@@ -361,9 +376,9 @@ int main() {
     instancedMaterial.maps[MATERIAL_MAP_ALBEDO].texture = obstacleTexture;
 
     // Light VBO Setup
-    std::vector instancedLightStyleIds(activeLightCount, 0.0f); // 0.0f = No style
+    std::vector instancedLightStyleIds(MAX_LIGHTS, 0.0f); // 0.0f = No style
     unsigned int lightStyleIdVboId =
-        rlLoadVertexBuffer(instancedLightStyleIds.data(), activeLightCount * sizeof(float), false);
+        rlLoadVertexBuffer(instancedLightStyleIds.data(), MAX_LIGHTS * sizeof(float), false);
 
     rlEnableVertexArray(lightningSphereMesh.vaoId);
     {
@@ -386,13 +401,13 @@ int main() {
     if (FboId == 0)
         TraceLog(LOG_ERROR, "Failed to create FBO");
 
-    // Allocate Texture Memory block Target 0: Albedo (8-bit RGBA)
+    // Target 0: Albedo (8-bit RGBA)
     unsigned int albedoTexId =
         rlLoadTexture(nullptr, renderWidth, renderHeight, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, 1);
-    // Allocate Texture Memory blocks Target 2: Normal (32-bit Float RGBA)
+    // Target 1: Normal + StyleID (16-bit Float RGBA)
     unsigned int normalTexId =
-        rlLoadTexture(nullptr, renderWidth, renderHeight, PIXELFORMAT_UNCOMPRESSED_R32G32B32A32, 1);
-    // Depth texture for Z-sorting (and position reconstruction)
+        rlLoadTexture(nullptr, renderWidth, renderHeight, PIXELFORMAT_UNCOMPRESSED_R16G16B16A16, 1);
+    // Target 2: Depth
     unsigned int depthTexId = rlLoadTextureDepth(renderWidth, renderHeight, false);
 
     // Bind FBO and attach all textures
@@ -412,14 +427,16 @@ int main() {
     Texture2D gAlbedo = {albedoTexId, renderWidth, renderHeight, 1,
                          PIXELFORMAT_UNCOMPRESSED_R8G8B8A8};
     Texture2D gNormal = {normalTexId, renderWidth, renderHeight, 1,
-                         PIXELFORMAT_UNCOMPRESSED_R32G32B32A32};
+                         PIXELFORMAT_UNCOMPRESSED_R16G16B16A16};
     Texture2D gDepth  = {depthTexId, renderWidth, renderHeight, 1,
                          PIXELFORMAT_UNCOMPRESSED_GRAYSCALE};
 
-    // Canvas for Pass 2 to draw onto (Either Uber-Shader or Light Volume accumulation)
-    RenderTexture2D litSceneTarget = LoadRenderTexture(renderWidth, renderHeight);
+    SetTextureFilter(gAlbedo, TEXTURE_FILTER_POINT);
+    SetTextureFilter(gNormal, TEXTURE_FILTER_POINT);
+    SetTextureFilter(gDepth, TEXTURE_FILTER_POINT);
 
-    // HDR Accumulation (Required for parity with Uber-Shader float math)
+    // Canvas for Pass 2: Light Volume accumulation (16-bit HDR Float)
+    RenderTexture2D litSceneTarget = LoadRenderTexture(renderWidth, renderHeight);
     rlUnloadTexture(litSceneTarget.texture.id);
     litSceneTarget.texture.id =
         rlLoadTexture(nullptr, renderWidth, renderHeight, PIXELFORMAT_UNCOMPRESSED_R16G16B16A16, 1);
@@ -429,8 +446,17 @@ int main() {
                         RL_ATTACHMENT_TEXTURE2D, 0);
     rlDisableFramebuffer();
 
-    // Canvas for Pass 3 to draw onto (NPR Resolve pass, before final post-processing)
+    // Canvas for Pass 3: NPR Resolve (16-bit HDR Float)
     RenderTexture2D resolveTarget = LoadRenderTexture(renderWidth, renderHeight);
+    rlUnloadTexture(resolveTarget.texture.id);
+    resolveTarget.texture.id =
+        rlLoadTexture(nullptr, renderWidth, renderHeight, PIXELFORMAT_UNCOMPRESSED_R16G16B16A16, 1);
+    resolveTarget.texture.format = PIXELFORMAT_UNCOMPRESSED_R16G16B16A16;
+
+    rlEnableFramebuffer(resolveTarget.id);
+    rlFramebufferAttach(resolveTarget.id, resolveTarget.texture.id, RL_ATTACHMENT_COLOR_CHANNEL0,
+                        RL_ATTACHMENT_TEXTURE2D, 0);
+    rlDisableFramebuffer();
 
     // Material for drawing the instanced light volumes
     Material lightVolumeMaterial = LoadMaterialDefault();
@@ -482,7 +508,6 @@ int main() {
 
     SetShaderValue(lightingPassShader, postBackgroundColorLoc, &BackgroundColor,
                    SHADER_UNIFORM_VEC3);
-    SetShaderValue(lightingPassShader, maxLightRadiusLoc, &maxRadius, SHADER_UNIFORM_FLOAT);
     SetShaderValue(lightingPassShader, attenuationConstantLoc, &attenuationConstant,
                    SHADER_UNIFORM_FLOAT);
     SetShaderValue(lightingPassShader, attenuationLinearLoc, &attenuationLinear,
@@ -508,7 +533,6 @@ int main() {
     int lvNormalTexLoc         = GetShaderLocation(lightVolumeShader, "gNormalTex");
     int lvDepthTexLoc          = GetShaderLocation(lightVolumeShader, "gDepthTex");
 
-    SetShaderValue(lightVolumeShader, lvMaxRadiusLoc, &maxRadius, SHADER_UNIFORM_FLOAT);
     SetShaderValue(lightVolumeShader, lvAttenuationConstLoc, &attenuationConstant,
                    SHADER_UNIFORM_FLOAT);
     SetShaderValue(lightVolumeShader, lvAttenuationLinearLoc, &attenuationLinear,
@@ -569,13 +593,83 @@ int main() {
         // Screen Target. Forces final image to fill the window
         const Rectangle screenDestRec = {0.0f, 0.0f, currentWidth, currentHeight};
 
-        // Key Bindings
+        // KEY BINDINGS
+        // -----------------------------------------------------------------------------------------
+
         if (IsKeyPressed(KEY_F)) {
             setFrameLimit     = !setFrameLimit;
             frameLimitUpdated = true;
         }
         if (IsKeyPressed(KEY_TAB)) {
             useDeferredLightVolumes = !useDeferredLightVolumes;
+        }
+
+        // HDR to LDR Pipeline Toggle
+        if (IsKeyPressed(KEY_H)) {
+            use16BitHDR      = !use16BitHDR;
+            int targetFormat = use16BitHDR ? PIXELFORMAT_UNCOMPRESSED_R16G16B16A16
+                                           : PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+
+            // Rebuild the Accumulation Target
+            rlUnloadTexture(litSceneTarget.texture.id);
+            litSceneTarget.texture.id =
+                rlLoadTexture(nullptr, renderWidth, renderHeight, targetFormat, 1);
+            litSceneTarget.texture.format = targetFormat;
+            rlEnableFramebuffer(litSceneTarget.id);
+            rlFramebufferAttach(litSceneTarget.id, litSceneTarget.texture.id,
+                                RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
+            rlDisableFramebuffer();
+
+            // Rebuild the Resolve Target
+            rlUnloadTexture(resolveTarget.texture.id);
+            resolveTarget.texture.id =
+                rlLoadTexture(nullptr, renderWidth, renderHeight, targetFormat, 1);
+            resolveTarget.texture.format = targetFormat;
+
+            rlEnableFramebuffer(resolveTarget.id);
+            rlFramebufferAttach(resolveTarget.id, resolveTarget.texture.id,
+                                RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
+            rlDisableFramebuffer();
+
+            TraceLog(LOG_INFO, "PIPELINE BIT-DEPTH SWAPPED: %s",
+                     use16BitHDR ? "16-Bit HDR" : "8-Bit LDR");
+        }
+
+        // Light Count (+/- 10)
+        if (IsKeyPressed(KEY_UP)) {
+            activeLightCount = std::min(activeLightCount + 10, actualGeneratedLights);
+        }
+        if (IsKeyPressed(KEY_DOWN)) {
+            activeLightCount = std::max(activeLightCount - 10, 1); // Keep at least 1 light
+        }
+
+        // Light Intensity (+/- 0.1)
+        if (IsKeyPressed(KEY_RIGHT)) {
+            lightIntensity += 0.1f;
+        }
+        if (IsKeyPressed(KEY_LEFT)) {
+            lightIntensity = std::max(lightIntensity - 0.1f, 0.0f); // Prevent negative light
+        }
+
+        // Ambient Light Strength (+/- 0.05)
+        if (IsKeyPressed(KEY_PAGE_UP)) {
+            ambientLightStrength += 0.05f;
+        }
+        if (IsKeyPressed(KEY_PAGE_DOWN)) {
+            ambientLightStrength = std::max(ambientLightStrength - 0.05f, 0.0f);
+        }
+
+        // Obstacle Count (+/- 100)
+        if (IsKeyPressed(KEY_W)) {
+            activeObstacleCount = std::min(activeObstacleCount + 100, MAX_OBSTACLES);
+        }
+        if (IsKeyPressed(KEY_S)) {
+            activeObstacleCount = std::max(activeObstacleCount - 100, 1);
+        }
+
+        // Screenshot Hook
+        if (IsKeyPressed(KEY_P)) {
+            requestScreenshot = true;
         }
 
         // CULLING MATH & MATRIX SETUP
@@ -596,7 +690,7 @@ int main() {
         visibleObstacleTransforms.clear();
         visibleObstacleStyleIds.clear();
 
-        for (int i = 0; i < obstacleCount; i++) {
+        for (int i = 0; i < activeObstacleCount; i++) {
             if (cameraFrustum.IsSphereVisible(masterObstacleSpheres[i])) {
                 visibleObstacleTransforms.push_back(masterObstacleTransforms[i]);
                 visibleObstacleStyleIds.push_back(masterObstacleStyleIds[i]);
@@ -611,16 +705,32 @@ int main() {
                                  actualVisibleCount * static_cast<int>(sizeof(float)), 0);
         }
 
+        // calculate maximum lightRadius based on light intensity to safe shader calcs
+        float c                = attenuationConstant - (lightIntensity / minLightThreshold);
+        float dynamicMaxRadius = 0.0f;
+        if (lightIntensity > 0.0f) {
+            dynamicMaxRadius =
+                (-attenuationLinear + std::sqrt(attenuationLinear * attenuationLinear -
+                                                (4.0f * attenuationQuadratic * c))) /
+                (2.0f * attenuationQuadratic);
+        }
+
         // Execute CPU Culling for Lights
         visibleLightProxyTransforms.clear();
         visibleLightVolumeTransforms.clear();
         visibleLightPositions.clear();
 
         for (int i = 0; i < activeLightCount; i++) {
-            // Cull the light Volumes
-            if (BoundingSphere volumeSphere = {masterLightPositions[i], maxRadius};
+            // Cull the light Volumes against Frustum using dynamic radius
+            if (BoundingSphere volumeSphere = {masterLightPositions[i], dynamicMaxRadius};
                 cameraFrustum.IsSphereVisible(volumeSphere)) {
-                visibleLightVolumeTransforms.push_back(masterLightVolumeTransforms[i]);
+                Matrix volumeTransform = MatrixMultiply(
+                    MatrixScale(-dynamicMaxRadius * 2.0f, -dynamicMaxRadius * 2.0f,
+                                -dynamicMaxRadius * 2.0f),
+                    MatrixTranslate(masterLightPositions[i].x, masterLightPositions[i].y,
+                                    masterLightPositions[i].z));
+
+                visibleLightVolumeTransforms.push_back(volumeTransform);
                 visibleLightPositions.push_back(masterLightPositions[i]);
             }
 
@@ -651,6 +761,9 @@ int main() {
             // Draw models
             BeginMode3D(camera);
             {
+                // force back viewport to internal FBO resolution
+                rlViewport(0, 0, renderWidth, renderHeight);
+
                 // Draw Static Models (Floor) using standard shader
                 SetShaderValueMatrix(geometryPassShader, modelMatLoc, MatrixIdentity());
                 SetShaderValueMatrix(geometryPassShader, normalMatLoc, MatrixIdentity());
@@ -681,9 +794,9 @@ int main() {
             // Restore GPU output back to the default screen buffer
             rlEnableColorBlend();
             rlDisableFramebuffer();
-            rlViewport(
-                0, 0, static_cast<int>(currentWidth),
-                static_cast<int>(currentHeight)); // Restore the viewport to actual window size
+
+            // Restore the viewport to actual window size
+            rlViewport(0, 0, GetRenderWidth(), GetRenderHeight());
 
             // LIGHTING PASS & RESOLVE
             // -------------------------------------------------------------------------------------
@@ -695,6 +808,14 @@ int main() {
                 ClearBackground(BLANK);
                 BeginShaderMode(lightingPassShader);
                 {
+                    // set dynamic light data via uniforms
+                    SetShaderValue(lightingPassShader, intensityLoc, &lightIntensity,
+                                   SHADER_UNIFORM_FLOAT);
+                    SetShaderValue(lightingPassShader, ambientLoc, &ambientLightStrength,
+                                   SHADER_UNIFORM_FLOAT);
+                    SetShaderValue(lightingPassShader, maxLightRadiusLoc, &dynamicMaxRadius,
+                                   SHADER_UNIFORM_FLOAT);
+
                     // Pass lighting arrays, camera and screen position
                     int safeVisibleLightCount = std::min(actualVisibleVolumeCount, 500);
                     SetShaderValue(lightingPassShader, LightingResolutionLoc, internalRes,
@@ -733,6 +854,12 @@ int main() {
                 {
                     BeginShaderMode(lightVolumeShader);
                     {
+                        // set dynamic light values using uniforms
+                        SetShaderValue(lightVolumeShader, lvIntensityLoc, &lightIntensity,
+                                       SHADER_UNIFORM_FLOAT);
+                        SetShaderValue(lightVolumeShader, lvMaxRadiusLoc, &dynamicMaxRadius,
+                                       SHADER_UNIFORM_FLOAT);
+
                         SetShaderValue(lightVolumeShader, lvResolutionLoc, internalRes,
                                        SHADER_UNIFORM_VEC2);
                         SetShaderValue(lightVolumeShader, lvViewPosLoc, &camera.position,
@@ -745,7 +872,7 @@ int main() {
                         SetShaderValueTexture(lightVolumeShader, lvNormalTexLoc, gNormal);
                         SetShaderValueTexture(lightVolumeShader, lvDepthTexLoc, gDepth);
 
-                        // Draw all light volumes for additive blending
+                        // Draw all Lights safely via back-faces
                         if (actualVisibleVolumeCount > 0) {
                             DrawMeshInstanced(lightningSphereMesh, lightVolumeMaterial,
                                               visibleLightVolumeTransforms.data(),
@@ -766,6 +893,8 @@ int main() {
                 ClearBackground(BLANK);
                 BeginShaderMode(nprResolveShader);
                 {
+                    SetShaderValue(nprResolveShader, nprAmbientLoc, &ambientLightStrength,
+                                   SHADER_UNIFORM_FLOAT);
                     SetShaderValue(nprResolveShader, nprResolutionLoc, internalRes,
                                    SHADER_UNIFORM_VEC2);
                     SetShaderValue(nprResolveShader, nprViewPosLoc, &camera.position,
@@ -805,32 +934,172 @@ int main() {
             }
             EndShaderMode();
 
-            // Text overlay
-            DrawText("Standard HyDra Scene", 10, 10, fontSize / 2, RAYWHITE);
-            DrawText(std::format("Render-Mode: {}", useDeferredLightVolumes
-                                                        ? "Deferred (Multi-Pass with Light Volumes)"
-                                                        : "Deferred (Uber-Shader)")
-                         .c_str(),
-                     10, 40, fontSize / 2, RAYWHITE);
-            if (useDeferredLightVolumes) {
-                DrawText(std::format("Lights: {} Volumes | {} Proxies (Visible)",
-                                     actualVisibleVolumeCount, actualVisibleProxyCount)
-                             .c_str(),
-                         10, 70, fontSize / 2, RAYWHITE);
-            } else {
-                int evaluatedLights = std::min(actualVisibleVolumeCount, 500);
-                DrawText(std::format("Lights: {} Proxies (Visible) | {} Evaluated (Uber-Shader)",
-                                     actualVisibleProxyCount, evaluatedLights)
-                             .c_str(),
-                         10, 70, fontSize / 2, RAYWHITE);
-            }
-            DrawText(
-                std::format("Obstacle-Count: {} / {} (Culled)", actualVisibleCount, obstacleCount)
-                    .c_str(),
-                10, 100, fontSize / 2, RAYWHITE);
+            // TEXT OVERLAY & UI (Telemetry Dashboard)
+            // -------------------------------------------------------------------------------------
 
-            // Draw UI
-            DrawFPS(static_cast<int>(currentWidth) - 100, 10);
+            // Dynamic Scaling & Layout (Baseline 1080p)
+            float uiScale = (currentHeight / 1080.0f) * UiScale;
+            int fontLg    = static_cast<int>(24 * uiScale);
+            int fontMd    = static_cast<int>(18 * uiScale);
+            int fontSm    = static_cast<int>(14 * uiScale);
+            int pad       = static_cast<int>(20 * uiScale);
+            int spacing   = static_cast<int>(26 * uiScale);
+
+            int panelWidth  = static_cast<int>(440 * uiScale);
+            int panelHeight = static_cast<int>(530 * uiScale);
+            int panelX      = pad;
+            int panelY      = pad;
+
+            // UI Color-Palette
+            Color colBg     = {20, 24, 28, 245};    // Sleek dark slate
+            Color colBorder = {60, 65, 75, 255};    // Subtle border outline
+            Color colText   = {235, 235, 240, 255}; // Soft white
+            Color colMuted  = {150, 155, 165, 255}; // Muted gray for headers
+            Color colAccent = {170, 205, 250, 255}; // Pastel blue
+            Color colAction = {250, 215, 160, 255}; // Pastel gold/yellow
+            Color colGood   = {175, 235, 180, 255}; // Pastel green
+            Color colBad    = {245, 165, 165, 255}; // Pastel red
+
+            // Panel Background
+            DrawRectangle(panelX, panelY, panelWidth, panelHeight, colBg);
+            DrawRectangleLines(panelX, panelY, panelWidth, panelHeight, colBorder);
+
+            // Column Layout Coordinates
+            int textX = panelX + pad;
+            int valueX =
+                textX + static_cast<int>(170 * uiScale); // Hard vertical boundary for values
+            int textY = panelY + pad;
+
+            // Header
+            DrawText("HYDRA ENGINE TELEMETRY", textX, textY, fontLg, colAccent);
+            textY += spacing + pad;
+
+            // Pipeline Section
+            DrawText("ARCHITECTURE", textX, textY, fontSm, colMuted);
+            textY += static_cast<int>(18 * uiScale);
+
+            DrawText("Mode", textX, textY, fontMd, colText);
+            DrawText(useDeferredLightVolumes ? "Deferred (Light Volumes)"
+                                             : "Deferred (Uber-Shader)",
+                     valueX, textY, fontMd, colText);
+            textY += spacing;
+
+            DrawText("FBO Depth", textX, textY, fontMd, colText);
+            DrawText(use16BitHDR ? "16-Bit HDR (Float)" : "8-Bit LDR (Clamped)", valueX, textY,
+                     fontMd, use16BitHDR ? colGood : colBad);
+            textY += spacing + pad;
+
+            // Scene Data Section (State & Variables)
+            DrawText("SCENE DATA", textX, textY, fontSm, colMuted);
+            textY += static_cast<int>(18 * uiScale);
+
+            int currentFps = GetFPS();
+            Color fpsColor = currentFps >= 60 ? colGood : (currentFps >= 30 ? colAction : colBad);
+            DrawText("Framerate", textX, textY, fontMd, colText);
+            DrawText(TextFormat("%d FPS", currentFps), valueX, textY, fontMd, fpsColor);
+            textY += spacing;
+
+            DrawText("Obstacles", textX, textY, fontMd, colText);
+            DrawText(std::format("{} / {}", actualVisibleCount, activeObstacleCount).c_str(),
+                     valueX, textY, fontMd, colText);
+            textY += spacing;
+
+            int drawnLights = useDeferredLightVolumes ? actualVisibleVolumeCount
+                                                      : std::min(actualVisibleVolumeCount, 500);
+            DrawText("Lights Rendered", textX, textY, fontMd, colText);
+            DrawText(std::format("{} / {}", drawnLights, activeLightCount).c_str(), valueX, textY,
+                     fontMd, colText);
+            textY += spacing;
+
+            DrawText("Light Intensity", textX, textY, fontMd, colText);
+            DrawText(TextFormat("%.2f", lightIntensity), valueX, textY, fontMd, colText);
+            textY += spacing;
+
+            DrawText("Ambient Strength", textX, textY, fontMd, colText);
+            DrawText(TextFormat("%.2f", ambientLightStrength), valueX, textY, fontMd, colText);
+            textY += spacing;
+
+            if (!useDeferredLightVolumes && actualVisibleVolumeCount > 500) {
+                DrawText("WARNING: Uber-Shader Limit Exceeded!", textX, textY, fontSm, colBad);
+                textY += static_cast<int>(18 * uiScale);
+            }
+            textY += pad;
+
+            // Controls Section (Mutators & Input)
+            DrawText("CONTROLS", textX, textY, fontSm, colMuted);
+            textY += static_cast<int>(18 * uiScale);
+
+            DrawText("Adjust Obstacles", textX, textY, fontMd, colText);
+            DrawText("[W / S]", valueX, textY, fontMd, colAction);
+            textY += spacing;
+
+            DrawText("Adjust Lights", textX, textY, fontMd, colText);
+            DrawText("[Up / Down]", valueX, textY, fontMd, colAction);
+            textY += spacing;
+
+            DrawText("Adjust Intensity", textX, textY, fontMd, colText);
+            DrawText("[L / R]", valueX, textY, fontMd, colAction);
+            textY += spacing;
+
+            DrawText("Adjust Ambient", textX, textY, fontMd, colText);
+            DrawText("[PgUp / PgDn]", valueX, textY, fontMd, colAction);
+            textY += spacing;
+
+            DrawText("Capture Screen", textX, textY, fontMd, colText);
+            DrawText("[P]", valueX, textY, fontMd, colAction);
+            textY += spacing;
+
+            DrawText("Toggle HDR/LDR", textX, textY, fontMd, colText);
+            DrawText("[H]", valueX, textY, fontMd, colAction);
+            textY += spacing;
+
+            DrawText("Toggle Pipeline", textX, textY, fontMd, colText);
+            DrawText("[TAB]", valueX, textY, fontMd, colAction);
+
+            // screenshot execution
+            if (requestScreenshot) {
+                rlDrawRenderBatchActive();
+
+                namespace fs = std::filesystem;
+
+                // Dynamically escape CMake environment
+                fs::path currentPath = fs::current_path();
+                if (currentPath.filename().string().find("cmake-build") != std::string::npos) {
+                    currentPath = currentPath.parent_path(); // Step up to the project root
+                }
+
+                fs::path outputDir = currentPath / "outputs" / "screenshots";
+
+                if (!fs::exists(outputDir)) {
+                    std::error_code ec;
+                    fs::create_directories(outputDir, ec);
+                    if (ec)
+                        TraceLog(LOG_ERROR, "FAILED TO CREATE DIRECTORY: %s", ec.message().c_str());
+                }
+
+                auto now     = std::chrono::system_clock::now();
+                auto now_sec = std::chrono::floor<std::chrono::seconds>(now);
+                std::chrono::zoned_time local_time{std::chrono::current_zone(), now_sec};
+                std::string fileName =
+                    std::format("hydra_capture_{:%Y%m%d_%H%M%S}.png", local_time);
+                fs::path fullPath = outputDir / fileName;
+
+                // High-DPI Bypass: Read absolute physical pixels, ignoring OS logical scaling
+                int physWidth            = GetRenderWidth();
+                int physHeight           = GetRenderHeight();
+                unsigned char *rawPixels = rlReadScreenPixels(physWidth, physHeight);
+
+                // Construct a Raylib Image from the raw pixel buffer
+                Image capture = {rawPixels, physWidth, physHeight, 1,
+                                 PIXELFORMAT_UNCOMPRESSED_R8G8B8A8};
+
+                // Export and clean up memory
+                ExportImage(capture, fullPath.string().c_str());
+                UnloadImage(capture);
+                TraceLog(LOG_INFO, "SCREENSHOT SAVED SUCCESSFULLY TO: %s",
+                         fullPath.string().c_str());
+                requestScreenshot = false;
+            }
         }
         EndDrawing();
     }
