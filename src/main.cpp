@@ -173,12 +173,12 @@ void GenerateScene(const float sphereRadius) {
     occupiedLightPositions.clear();
     masterLightProxyTransforms.clear();
 
-    // Obstacle generation
+    // Obstacle Generation (O(N) Uniform Cylindrical Distribution)
     for (int i = 0; i < MAX_OBSTACLES; i++) {
         constexpr float baseRadius = 0.6495f;
         const float scale          = static_cast<float>(GetRandomValue(10, 30)) / 10.0f;
 
-        // Uniform Circular Distribution Math
+        // Uniform Disk Math
         const float u      = static_cast<float>(GetRandomValue(0, 10000)) / 10000.0f;
         const float radius = sqrtf(u) * sphereRadius;
         const float angle  = static_cast<float>(GetRandomValue(0, 360)) * DEG2RAD;
@@ -209,37 +209,10 @@ void GenerateScene(const float sphereRadius) {
         masterObstacleSpheres.push_back({pos, baseRadius * scale});
     }
 
-    // Light generation
-    auto TryFindEmptyLightSpace = [&](const float radiusToClear, const float minHeight,
-                                      const float maxHeight, Vector3 &outPos) -> bool {
-        for (int attempts = 0; attempts < 50; attempts++) {
-            const float u      = static_cast<float>(GetRandomValue(0, 10000)) / 10000.0f;
-            const float radius = sqrtf(u) * sphereRadius;
-            const float angle  = static_cast<float>(GetRandomValue(0, 360)) * DEG2RAD;
-            const float height =
-                static_cast<float>(GetRandomValue(static_cast<int>(minHeight) * 10,
-                                                  static_cast<int>(maxHeight) * 10)) /
-                10.0f;
-
-            Vector3 testPos = {cosf(angle) * radius, height, sinf(angle) * radius};
-
-            const bool isColliding =
-                std::ranges::any_of(occupiedLightPositions, [&](const auto &existingPos) {
-                    return Vector3Distance(testPos, existingPos) < (radiusToClear + 0.5f);
-                });
-
-            if (!isColliding) {
-                outPos = testPos;
-                return true;
-            }
-        }
-        return false;
-    };
-
+    // Light Generation
     int lightsGenerated = 0;
-    int overallAttempts = 0;
 
-    // Seed initial stacked lights
+    // Seed initial stacked lights (Center Cluster)
     while (lightsGenerated < 10) {
         constexpr Vector3 stackedPos          = {0.0f, 5.0f, 0.0f};
         masterLightPositions[lightsGenerated] = stackedPos;
@@ -247,22 +220,30 @@ void GenerateScene(const float sphereRadius) {
             MatrixMultiply(MatrixScale(1.5f, 1.5f, 1.5f),
                            MatrixTranslate(stackedPos.x, stackedPos.y, stackedPos.z));
         masterLightProxyTransforms.push_back(proxyTransform);
+        occupiedLightPositions.push_back(stackedPos);
         lightsGenerated++;
     }
 
     // Standard Light Generation
-    while (lightsGenerated < MAX_LIGHTS && overallAttempts < 10000) {
-        overallAttempts++;
-        const float maxHeight = sphereRadius / 2.0f;
+    while (lightsGenerated < MAX_LIGHTS) {
+        const float u             = static_cast<float>(GetRandomValue(0, 10000)) / 10000.0f;
+        const float radius        = sqrtf(u) * sphereRadius;
+        const float angle         = static_cast<float>(GetRandomValue(0, 360)) * DEG2RAD;
+        constexpr float minHeight = 2.0f;
+        const float maxHeight     = sphereRadius / 2.0f;
+        const float height = static_cast<float>(GetRandomValue(static_cast<int>(minHeight) * 10,
+                                                               static_cast<int>(maxHeight) * 10)) /
+                             10.0f;
 
-        if (Vector3 validPos; TryFindEmptyLightSpace(0.5f, 2.0f, maxHeight, validPos)) {
-            masterLightPositions[lightsGenerated] = validPos;
-            Matrix proxyTransform                 = MatrixMultiply(
-                MatrixScale(1.5f, 1.5f, 1.5f), MatrixTranslate(validPos.x, validPos.y, validPos.z));
-            masterLightProxyTransforms.push_back(proxyTransform);
-            occupiedLightPositions.push_back(validPos);
-            lightsGenerated++;
-        }
+        Vector3 validPos = {cosf(angle) * radius, height, sinf(angle) * radius};
+
+        masterLightPositions[lightsGenerated] = validPos;
+        Matrix proxyTransform                 = MatrixMultiply(MatrixScale(1.5f, 1.5f, 1.5f),
+                                                               MatrixTranslate(validPos.x, validPos.y, validPos.z));
+
+        masterLightProxyTransforms.push_back(proxyTransform);
+        occupiedLightPositions.push_back(validPos);
+        lightsGenerated++;
     }
 
     actualGeneratedLights = lightsGenerated;
@@ -1614,6 +1595,17 @@ int main() {
     // CLEANUP
     // ---------------------------------------------------------------------------------------------
 
+    // Unload Materials
+    UnloadMaterial(instancedMaterial);
+    UnloadMaterial(instancedLightMaterial);
+    UnloadMaterial(lightVolumeMaterial);
+    UnloadMaterial(fwdBlinnMaterial);
+    UnloadMaterial(fwdGoochMaterial);
+    UnloadMaterial(fwdToonMaterial);
+    UnloadMaterial(fwdOutlineMaterial);
+    UnloadMaterial(fwdFloorMaterial);
+    UnloadMaterial(fwdLightProxyMaterial);
+
     // Unload Custom VBOs
     rlUnloadVertexBuffer(styleIdVboId);
     rlUnloadVertexBuffer(lightStyleIdVboId);
@@ -1642,9 +1634,9 @@ int main() {
     // Standard unloads
     UnloadMesh(baseMesh);
     UnloadTexture(obstacleTexture);
+    UnloadTexture(floorTexture);
     UnloadModel(lightningSourceModel);
     UnloadModel(floorModel);
-    UnloadTexture(floorTexture);
 
     CloseWindow();
 
