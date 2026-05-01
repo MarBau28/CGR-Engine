@@ -15,6 +15,9 @@
 // Render Architecture Enum
 enum class RenderPath { DeferredUber, DeferredVolume, Forward };
 
+// Camera Architecture Enum
+enum class CameraState { Static, Orbital, Free };
+
 struct BoundingSphere {
     Vector3 center;
     float radius;
@@ -111,16 +114,10 @@ inline constexpr std::string_view forwardOutlineVertexShaderName     = "forward_
 inline constexpr std::string_view forwardOutlineFragmentShaderName   = "forward_outline.frag";
 
 // General settings
-inline constexpr int cameraMode             = CAMERA_ORBITAL;
-inline constexpr float modelScalar          = 1.0f;
-inline constexpr float modelRotation        = 1.5f;
-inline constexpr int obstacleCount          = 5000;
-inline constexpr float ObjectSphereRadius   = 200.0f; // obstacle cloud size
 inline constexpr float minLightThreshold    = 0.05f;
 inline constexpr float attenuationConstant  = 1.0f;
 inline constexpr float attenuationLinear    = 0.09f;
 inline constexpr float attenuationQuadratic = 0.032f;
-inline constexpr uint numberOfStyles        = 4;
 inline constexpr int MAX_OBSTACLES          = 30000;
 inline constexpr int MAX_LIGHTS             = 5000;
 inline constexpr float UiScale              = 0.8f;
@@ -147,10 +144,10 @@ std::vector<Vector3> visibleLightPositions;
 std::vector<Matrix> fwdTransformsBlinn;
 std::vector<Matrix> fwdTransformsGooch;
 std::vector<Matrix> fwdTransformsToon;
+std::vector<Matrix> fwdTransformsOutline;
 
 // Settings
 bool setFrameLimit         = true;
-bool enableStyleSplit      = true;
 bool use16BitHDR           = true;
 int activeObstacleCount    = 5000;
 int activeLightCount       = 100;
@@ -158,7 +155,119 @@ int actualGeneratedLights  = 0;
 float lightIntensity       = Config::EngineSettings::LightIntensity;
 float ambientLightStrength = Config::EngineSettings::AmbientLightStrength;
 bool requestScreenshot     = false;
-auto activeRenderPath      = RenderPath::DeferredVolume;
+auto activeRenderPath      = RenderPath::Forward;
+auto currentCameraState    = CameraState::Orbital;
+bool enableOutlines        = true;
+bool enableKuwahara        = true;
+bool enableGooch           = true;
+bool enableToon            = true;
+int kuwaharaRadius         = 4;
+float kuwaharaIntensity    = 4.0f;
+float objectSphereRadius   = 200.0f; // obstacle cloud size
+
+void GenerateScene(const float sphereRadius) {
+    // Zero-allocation clear
+    masterObstacleTransforms.clear();
+    masterObstacleStyleIds.clear();
+    masterObstacleSpheres.clear();
+    occupiedLightPositions.clear();
+    masterLightProxyTransforms.clear();
+
+    // Obstacle generation
+    for (int i = 0; i < MAX_OBSTACLES; i++) {
+        constexpr float baseRadius = 0.6495f;
+        const float scale          = static_cast<float>(GetRandomValue(10, 30)) / 10.0f;
+
+        // Uniform Circular Distribution Math
+        const float u      = static_cast<float>(GetRandomValue(0, 10000)) / 10000.0f;
+        const float radius = sqrtf(u) * sphereRadius;
+        const float angle  = static_cast<float>(GetRandomValue(0, 360)) * DEG2RAD;
+
+        const float minHeight = scale;
+        const float maxHeight = sphereRadius / 2.0f;
+        const float height    = static_cast<float>(GetRandomValue(static_cast<int>(minHeight) * 10,
+                                                                  static_cast<int>(maxHeight) * 10)) /
+                             10.0f;
+
+        const Vector3 pos = {cosf(angle) * radius, height, sinf(angle) * radius};
+
+        // Determine Style ID
+        auto styleId = static_cast<float>(GetRandomValue(1, 4));
+
+        // Calculate Transform Matrix
+        const Vector3 rotAxis = Vector3Normalize({static_cast<float>(GetRandomValue(0, 100)),
+                                                  static_cast<float>(GetRandomValue(0, 100)),
+                                                  static_cast<float>(GetRandomValue(0, 100))});
+        const auto rotAngle   = static_cast<float>(GetRandomValue(0, 360));
+
+        Matrix transform = MatrixMultiply(MatrixMultiply(MatrixScale(scale, scale, scale),
+                                                         MatrixRotate(rotAxis, rotAngle * DEG2RAD)),
+                                          MatrixTranslate(pos.x, pos.y, pos.z));
+
+        masterObstacleTransforms.push_back(transform);
+        masterObstacleStyleIds.push_back(styleId);
+        masterObstacleSpheres.push_back({pos, baseRadius * scale});
+    }
+
+    // Light generation
+    auto TryFindEmptyLightSpace = [&](const float radiusToClear, const float minHeight,
+                                      const float maxHeight, Vector3 &outPos) -> bool {
+        for (int attempts = 0; attempts < 50; attempts++) {
+            const float u      = static_cast<float>(GetRandomValue(0, 10000)) / 10000.0f;
+            const float radius = sqrtf(u) * sphereRadius;
+            const float angle  = static_cast<float>(GetRandomValue(0, 360)) * DEG2RAD;
+            const float height =
+                static_cast<float>(GetRandomValue(static_cast<int>(minHeight) * 10,
+                                                  static_cast<int>(maxHeight) * 10)) /
+                10.0f;
+
+            Vector3 testPos = {cosf(angle) * radius, height, sinf(angle) * radius};
+
+            const bool isColliding =
+                std::ranges::any_of(occupiedLightPositions, [&](const auto &existingPos) {
+                    return Vector3Distance(testPos, existingPos) < (radiusToClear + 0.5f);
+                });
+
+            if (!isColliding) {
+                outPos = testPos;
+                return true;
+            }
+        }
+        return false;
+    };
+
+    int lightsGenerated = 0;
+    int overallAttempts = 0;
+
+    // Seed initial stacked lights
+    while (lightsGenerated < 10) {
+        constexpr Vector3 stackedPos          = {0.0f, 5.0f, 0.0f};
+        masterLightPositions[lightsGenerated] = stackedPos;
+        Matrix proxyTransform =
+            MatrixMultiply(MatrixScale(1.5f, 1.5f, 1.5f),
+                           MatrixTranslate(stackedPos.x, stackedPos.y, stackedPos.z));
+        masterLightProxyTransforms.push_back(proxyTransform);
+        lightsGenerated++;
+    }
+
+    // Standard Light Generation
+    while (lightsGenerated < MAX_LIGHTS && overallAttempts < 10000) {
+        overallAttempts++;
+        const float maxHeight = sphereRadius / 2.0f;
+
+        if (Vector3 validPos; TryFindEmptyLightSpace(0.5f, 2.0f, maxHeight, validPos)) {
+            masterLightPositions[lightsGenerated] = validPos;
+            Matrix proxyTransform                 = MatrixMultiply(
+                MatrixScale(1.5f, 1.5f, 1.5f), MatrixTranslate(validPos.x, validPos.y, validPos.z));
+            masterLightProxyTransforms.push_back(proxyTransform);
+            occupiedLightPositions.push_back(validPos);
+            lightsGenerated++;
+        }
+    }
+
+    actualGeneratedLights = lightsGenerated;
+    activeLightCount      = std::min(activeLightCount, actualGeneratedLights);
+}
 
 int main() {
     // BASIC SETUP
@@ -264,6 +373,7 @@ int main() {
         std::string(Config::Paths::Textures) + std::string(woodTextureName);
     Texture2D floorTexture = LoadTexture(woodTexPath.c_str());
     SetTextureWrap(floorTexture, TEXTURE_WRAP_REPEAT); // Force the texture repeat
+
     // Scale UV coordinates of the mesh so the texture tiles 100 times
     for (int i = 0; i < floorMesh.vertexCount; i++) {
         floorMesh.texcoords[i * 2] *= 100.0f;     // Scale U
@@ -271,6 +381,7 @@ int main() {
     }
     UpdateMeshBuffer(floorMesh, 1, floorMesh.texcoords,
                      floorMesh.vertexCount * static_cast<int>(2 * sizeof(float)), 0);
+
     // apply texture to floor
     for (int i = 0; i < floorModel.materialCount; i++) {
         floorModel.materials[i].shader                            = geometryPassShader;
@@ -295,107 +406,8 @@ int main() {
     visibleLightPositions.reserve(MAX_LIGHTS);
     visibleLightVolumeTransforms.reserve(MAX_LIGHTS);
 
-    // Obstacle generation
-    for (int i = 0; i < MAX_OBSTACLES; i++) {
-        constexpr float baseRadius = 0.6495f;
-        float scale                = static_cast<float>(GetRandomValue(10, 30)) / 10.0f;
-
-        // Uniform Circular Distribution Math
-        float u      = static_cast<float>(GetRandomValue(0, 10000)) / 10000.0f; // 0.0 to 1.0
-        float radius = sqrtf(u) * ObjectSphereRadius;
-        float angle  = static_cast<float>(GetRandomValue(0, 360)) * DEG2RAD;
-
-        float minHeight           = scale;
-        constexpr float maxHeight = ObjectSphereRadius / 2;
-        float height = static_cast<float>(GetRandomValue(static_cast<int>(minHeight) * 10,
-                                                         static_cast<int>(maxHeight) * 10)) /
-                       10.0f;
-
-        Vector3 pos = {cosf(angle) * radius, height, sinf(angle) * radius};
-
-        // Determine Style ID
-        float styleId = enableStyleSplit ? static_cast<float>(GetRandomValue(1, 3)) : 1.0f;
-
-        // Calculate Transform Matrix
-        Vector3 rotAxis = Vector3Normalize({static_cast<float>(GetRandomValue(0, 100)),
-                                            static_cast<float>(GetRandomValue(0, 100)),
-                                            static_cast<float>(GetRandomValue(0, 100))});
-        auto rotAngle   = static_cast<float>(GetRandomValue(0, 360));
-
-        Matrix transform = MatrixMultiply(MatrixMultiply(MatrixScale(scale, scale, scale),
-                                                         MatrixRotate(rotAxis, rotAngle * DEG2RAD)),
-                                          MatrixTranslate(pos.x, pos.y, pos.z));
-
-        // Push directly to obstacle arrays
-        masterObstacleTransforms.push_back(transform);
-        masterObstacleStyleIds.push_back(styleId);
-        masterObstacleSpheres.push_back({pos, baseRadius * scale});
-    }
-
-    // Light generation
-    auto TryFindEmptyLightSpace = [&](const float radiusToClear, const float minHeight,
-                                      const float maxHeight, Vector3 &outPos) -> bool {
-        for (int attempts = 0; attempts < 50; attempts++) {
-            const float u = static_cast<float>(GetRandomValue(0, 10000)) / 10000.0f; // 0.0 to 1.0
-            const float radius = sqrtf(u) * ObjectSphereRadius;
-            const float angle  = static_cast<float>(GetRandomValue(0, 360)) * DEG2RAD;
-            const float height =
-                static_cast<float>(GetRandomValue(static_cast<int>(minHeight) * 10,
-                                                  static_cast<int>(maxHeight) * 10)) /
-                10.0f;
-
-            Vector3 testPos = {cosf(angle) * radius, height, sinf(angle) * radius};
-
-            const bool isColliding =
-                std::ranges::any_of(occupiedLightPositions, [&](const auto &existingPos) {
-                    return Vector3Distance(testPos, existingPos) < (radiusToClear + 0.5f);
-                });
-
-            if (!isColliding) {
-                outPos = testPos;
-                return true;
-            }
-        }
-        return false;
-    };
-
-    int lightsGenerated = 0;
-    int overallAttempts = 0;
-
-    while (lightsGenerated < 10) {
-        Vector3 stackedPos                    = {0.0f, 5.0f, 0.0f};
-        masterLightPositions[lightsGenerated] = stackedPos;
-
-        // Generate physical debug sphere transform
-        Matrix proxyTransform =
-            MatrixMultiply(MatrixScale(1.5f, 1.5f, 1.5f),
-                           MatrixTranslate(stackedPos.x, stackedPos.y, stackedPos.z));
-
-        masterLightProxyTransforms.push_back(proxyTransform);
-        lightsGenerated++;
-    }
-
-    // Standard Light Generation
-    while (lightsGenerated < MAX_LIGHTS && overallAttempts < 10000) {
-        overallAttempts++;
-        constexpr float maxHeight = ObjectSphereRadius / 2;
-
-        if (Vector3 validPos; TryFindEmptyLightSpace(0.5f, 2.0f, maxHeight, validPos)) {
-            // set position (Needed for Uber-Shader comparison)
-            masterLightPositions[lightsGenerated] = validPos;
-
-            // Generate physical debug sphere transform
-            Matrix proxyTransform = MatrixMultiply(
-                MatrixScale(1.5f, 1.5f, 1.5f), MatrixTranslate(validPos.x, validPos.y, validPos.z));
-
-            masterLightProxyTransforms.push_back(proxyTransform);
-            occupiedLightPositions.push_back(validPos);
-            lightsGenerated++;
-        }
-    }
-
-    actualGeneratedLights = lightsGenerated;
-    activeLightCount      = std::min(activeLightCount, actualGeneratedLights);
+    // Bootstrap initial scene generation
+    GenerateScene(objectSphereRadius);
 
     // set light color
     Vector3 lightColor = {Config::EngineSettings::MainLightColor.x / 255.0f,
@@ -543,22 +555,28 @@ int main() {
     int styleIdLoc          = GetShaderLocation(geometryPassShader, "styleId");
     int isLightLocInstanced = GetShaderLocation(instancedShader, "isLightSource");
 
-    // lighting pass
-    int lightPosArrayLoc        = GetShaderLocation(lightingPassShader, "lightPositions");
-    int lightColorLoc           = GetShaderLocation(lightingPassShader, "lightColor");
-    int LightingResolutionLoc   = GetShaderLocation(lightingPassShader, "resolution");
-    int normalTexLoc            = GetShaderLocation(lightingPassShader, "gNormalTex");
-    int depthTexLoc             = GetShaderLocation(lightingPassShader, "gDepthTex");
-    int invViewProjLoc          = GetShaderLocation(lightingPassShader, "invViewProj");
-    int postViewPosLoc          = GetShaderLocation(lightingPassShader, "viewPos");
-    int postBackgroundColorLoc  = GetShaderLocation(lightingPassShader, "backgroundColor");
-    int intensityLoc            = GetShaderLocation(lightingPassShader, "lightIntensity");
-    int ambientLoc              = GetShaderLocation(lightingPassShader, "ambientLightStrength");
-    int activeLightsLoc         = GetShaderLocation(lightingPassShader, "activeLights");
-    int maxLightRadiusLoc       = GetShaderLocation(lightingPassShader, "maxLightRadius");
-    int attenuationConstantLoc  = GetShaderLocation(lightingPassShader, "attenuationConstant");
-    int attenuationLinearLoc    = GetShaderLocation(lightingPassShader, "attenuationLinear");
-    int attenuationQuadraticLoc = GetShaderLocation(lightingPassShader, "attenuationQuadratic");
+    // uber shader pass
+    int lightPosArrayLoc         = GetShaderLocation(lightingPassShader, "lightPositions");
+    int lightColorLoc            = GetShaderLocation(lightingPassShader, "lightColor");
+    int LightingResolutionLoc    = GetShaderLocation(lightingPassShader, "resolution");
+    int normalTexLoc             = GetShaderLocation(lightingPassShader, "gNormalTex");
+    int depthTexLoc              = GetShaderLocation(lightingPassShader, "gDepthTex");
+    int invViewProjLoc           = GetShaderLocation(lightingPassShader, "invViewProj");
+    int postViewPosLoc           = GetShaderLocation(lightingPassShader, "viewPos");
+    int postBackgroundColorLoc   = GetShaderLocation(lightingPassShader, "backgroundColor");
+    int intensityLoc             = GetShaderLocation(lightingPassShader, "lightIntensity");
+    int ambientLoc               = GetShaderLocation(lightingPassShader, "ambientLightStrength");
+    int activeLightsLoc          = GetShaderLocation(lightingPassShader, "activeLights");
+    int maxLightRadiusLoc        = GetShaderLocation(lightingPassShader, "maxLightRadius");
+    int attenuationConstantLoc   = GetShaderLocation(lightingPassShader, "attenuationConstant");
+    int attenuationLinearLoc     = GetShaderLocation(lightingPassShader, "attenuationLinear");
+    int attenuationQuadraticLoc  = GetShaderLocation(lightingPassShader, "attenuationQuadratic");
+    int uberEnableOutlinesLoc    = GetShaderLocation(lightingPassShader, "enableOutlines");
+    int uberEnableKuwaharaLoc    = GetShaderLocation(lightingPassShader, "enableKuwahara");
+    int uberEnableGoochLoc       = GetShaderLocation(lightingPassShader, "enableGooch");
+    int uberEnableToonLoc        = GetShaderLocation(lightingPassShader, "enableToon");
+    int uberKuwaharaRadiusLoc    = GetShaderLocation(lightingPassShader, "kuwaharaRadius");
+    int uberKuwaharaIntensityLoc = GetShaderLocation(lightingPassShader, "kuwaharaIntensity");
 
     SetShaderValue(lightingPassShader, postBackgroundColorLoc, &BackgroundColor,
                    SHADER_UNIFORM_VEC3);
@@ -586,6 +604,8 @@ int main() {
     int lvAlbedoTexLoc         = GetShaderLocation(lightVolumeShader, "texture0");
     int lvNormalTexLoc         = GetShaderLocation(lightVolumeShader, "gNormalTex");
     int lvDepthTexLoc          = GetShaderLocation(lightVolumeShader, "gDepthTex");
+    int lvEnableGoochLoc       = GetShaderLocation(lightVolumeShader, "enableGooch");
+    int lvEnableToonLoc        = GetShaderLocation(lightVolumeShader, "enableToon");
 
     SetShaderValue(lightVolumeShader, lvAttenuationConstLoc, &attenuationConstant,
                    SHADER_UNIFORM_FLOAT);
@@ -600,16 +620,22 @@ int main() {
     lightVolumeShader.locs[SHADER_LOC_MATRIX_MODEL] =
         GetShaderLocationAttrib(lightVolumeShader, "instanceTransform");
 
-    // npr resolve pass
-    int nprResolutionLoc  = GetShaderLocation(nprResolveShader, "resolution");
-    int nprViewPosLoc     = GetShaderLocation(nprResolveShader, "viewPos");
-    int nprBgColorLoc     = GetShaderLocation(nprResolveShader, "backgroundColor");
-    int nprAmbientLoc     = GetShaderLocation(nprResolveShader, "ambientLightStrength");
-    int nprInvViewProjLoc = GetShaderLocation(nprResolveShader, "invViewProj");
-    int nprLitSceneTexLoc = GetShaderLocation(nprResolveShader, "litSceneTex");
-    int nprAlbedoTexLoc   = GetShaderLocation(nprResolveShader, "texture0");
-    int nprNormalTexLoc   = GetShaderLocation(nprResolveShader, "gNormalTex");
-    int nprDepthTexLoc    = GetShaderLocation(nprResolveShader, "gDepthTex");
+    // deferred volume resolve pass
+    int nprResolutionLoc        = GetShaderLocation(nprResolveShader, "resolution");
+    int nprViewPosLoc           = GetShaderLocation(nprResolveShader, "viewPos");
+    int nprBgColorLoc           = GetShaderLocation(nprResolveShader, "backgroundColor");
+    int nprAmbientLoc           = GetShaderLocation(nprResolveShader, "ambientLightStrength");
+    int nprInvViewProjLoc       = GetShaderLocation(nprResolveShader, "invViewProj");
+    int nprLitSceneTexLoc       = GetShaderLocation(nprResolveShader, "litSceneTex");
+    int nprAlbedoTexLoc         = GetShaderLocation(nprResolveShader, "texture0");
+    int nprNormalTexLoc         = GetShaderLocation(nprResolveShader, "gNormalTex");
+    int nprDepthTexLoc          = GetShaderLocation(nprResolveShader, "gDepthTex");
+    int resEnableOutlinesLoc    = GetShaderLocation(nprResolveShader, "enableOutlines");
+    int resEnableKuwaharaLoc    = GetShaderLocation(nprResolveShader, "enableKuwahara");
+    int resEnableGoochLoc       = GetShaderLocation(nprResolveShader, "enableGooch");
+    int resEnableToonLoc        = GetShaderLocation(nprResolveShader, "enableToon");
+    int resKuwaharaRadiusLoc    = GetShaderLocation(nprResolveShader, "kuwaharaRadius");
+    int resKuwaharaIntensityLoc = GetShaderLocation(nprResolveShader, "kuwaharaIntensity");
 
     SetShaderValue(nprResolveShader, nprBgColorLoc, &BackgroundColor, SHADER_UNIFORM_VEC3);
     SetShaderValue(nprResolveShader, nprAmbientLoc, &Config::EngineSettings::AmbientLightStrength,
@@ -639,6 +665,7 @@ int main() {
     // Gooch Shader Locations (Note: Gooch lacks ambient and base lightColor per your shader)
     int fwdGoochViewPosLoc     = GetShaderLocation(forwardGoochShader, "viewPos");
     int fwdGoochIntensityLoc   = GetShaderLocation(forwardGoochShader, "lightIntensity");
+    int fwdGoochAmbientLoc     = GetShaderLocation(forwardGoochShader, "ambientLightStrength");
     int fwdGoochActiveLightLoc = GetShaderLocation(forwardGoochShader, "activeLights");
     int fwdGoochMaxRadiusLoc   = GetShaderLocation(forwardGoochShader, "maxLightRadius");
     int fwdGoochAttConstLoc    = GetShaderLocation(forwardGoochShader, "attenuationConstant");
@@ -709,36 +736,99 @@ int main() {
     constexpr Rectangle fboDestRec = {0.0f, 0.0f, static_cast<float>(renderWidth),
                                       static_cast<float>(renderHeight)};
 
-    bool frameLimitUpdated = false;
-
     // initialize the key binding controllers for continuous inputs
     ContinuousInput<int> obsInput;
     ContinuousInput<int> lightInput;
     ContinuousInput<float> intensityInput;
     ContinuousInput<float> ambientInput;
+    ContinuousInput<float> radiusInput;
+    ContinuousInput<float> kuwIntInput;
 
     while (!WindowShouldClose()) {
-        // Update Camera and Screen
-        UpdateCamera(&camera, cameraMode);
-        auto currentWidth   = static_cast<float>(GetScreenWidth());
-        auto currentHeight  = static_cast<float>(GetScreenHeight());
-        float dynamicRes[2] = {currentWidth, currentHeight};
+        // CAMERA
+        // -----------------------------------------------------------------------------------------
 
-        if (frameLimitUpdated) {
-            SetTargetFPS(setFrameLimit ? Config::EngineSettings::TargetFPS : 0);
-            frameLimitUpdated = false;
+        if (IsKeyPressed(KEY_C)) {
+            int nextCam        = (static_cast<int>(currentCameraState) + 1) % 3;
+            currentCameraState = static_cast<CameraState>(nextCam);
+
+            if (currentCameraState == CameraState::Free) {
+                DisableCursor(); // Locks to window center and hides cursor
+            } else {
+                EnableCursor();
+            }
         }
 
-        // Screen Target. Forces final image to fill the window
+        if (currentCameraState == CameraState::Orbital) {
+            UpdateCamera(&camera, CAMERA_ORBITAL);
+        } else if (currentCameraState == CameraState::Free) {
+            // Decoupled Camera Controller for Custom Speed
+            float baseSpeed    = 50.0f; // movement speed
+            float turnSpeed    = 0.05f; // Mouse sensitivity
+            float zoomSpeed    = 5.0f;  // Scroll speed
+            float sprintMult   = IsKeyDown(KEY_LEFT_SHIFT) ? 3.0f : 1.0f;
+            float currentSpeed = baseSpeed * sprintMult * GetFrameTime();
+
+            // Calculate Local Vectors for True 3D Flight
+            Vector3 forward = Vector3Normalize(Vector3Subtract(camera.target, camera.position));
+            Vector3 right   = Vector3Normalize(Vector3CrossProduct(forward, camera.up));
+            Vector3 up      = Vector3Normalize(Vector3CrossProduct(right, forward));
+
+            // Accumulate 3D Velocity
+            Vector3 velocity = {0.0f, 0.0f, 0.0f};
+
+            if (IsKeyDown(KEY_W))
+                velocity = Vector3Add(velocity, Vector3Scale(forward, currentSpeed));
+            if (IsKeyDown(KEY_S))
+                velocity = Vector3Subtract(velocity, Vector3Scale(forward, currentSpeed));
+            if (IsKeyDown(KEY_D))
+                velocity = Vector3Add(velocity, Vector3Scale(right, currentSpeed));
+            if (IsKeyDown(KEY_A))
+                velocity = Vector3Subtract(velocity, Vector3Scale(right, currentSpeed));
+            if (IsKeyDown(KEY_E))
+                velocity = Vector3Add(velocity, Vector3Scale(up, currentSpeed));
+            if (IsKeyDown(KEY_Q))
+                velocity = Vector3Subtract(velocity, Vector3Scale(up, currentSpeed));
+
+            // Apply Translation Manually
+            camera.position = Vector3Add(camera.position, velocity);
+            camera.target   = Vector3Add(camera.target, velocity);
+
+            // Delegate Rotation and Zoom
+            Vector3 rotation = {0.0f, 0.0f, 0.0f};
+            auto [x, y]      = GetMouseDelta();
+            rotation.x       = x * turnSpeed;
+            rotation.y       = y * turnSpeed;
+            float zoom       = GetMouseWheelMove() * zoomSpeed * -1;
+
+            UpdateCameraPro(&camera, {0.0f, 0.0f, 0.0f}, rotation, zoom);
+        }
+
+        auto currentWidth             = static_cast<float>(GetScreenWidth());
+        auto currentHeight            = static_cast<float>(GetScreenHeight());
+        float dynamicRes[2]           = {currentWidth, currentHeight};
         const Rectangle screenDestRec = {0.0f, 0.0f, currentWidth, currentHeight};
 
         // KEY BINDINGS
         // -----------------------------------------------------------------------------------------
 
-        if (IsKeyPressed(KEY_F)) {
-            setFrameLimit     = !setFrameLimit;
-            frameLimitUpdated = true;
-        }
+        // NPR and Profiling Toggles
+        if (IsKeyPressed(KEY_O))
+            enableOutlines = !enableOutlines;
+        if (IsKeyPressed(KEY_K))
+            enableKuwahara = !enableKuwahara;
+        if (IsKeyPressed(KEY_G))
+            enableGooch = !enableGooch;
+        if (IsKeyPressed(KEY_T))
+            enableToon = !enableToon;
+        if (IsKeyPressed(KEY_RIGHT) && kuwaharaRadius < 8)
+            kuwaharaRadius++;
+        if (IsKeyPressed(KEY_LEFT) && kuwaharaRadius > 1)
+            kuwaharaRadius--;
+
+        // Adjust Kuwahara Intensity: Tap: +/- 0.5 | Hold: +/- 5.0 per sec
+        kuwIntInput.Update(KEY_UP, KEY_DOWN, kuwaharaIntensity, 0.5f, 5.0f, 1.0f, 20.0f);
+
         if (IsKeyPressed(KEY_TAB)) {
             // Cycle through the 3 rendering architectures
             int nextPath     = (static_cast<int>(activeRenderPath) + 1) % 3;
@@ -785,6 +875,21 @@ int main() {
             requestScreenshot = true;
         }
 
+        // Adjust Sphere Radius: Tap: +/- 10.0f | Hold: +/- 100.0f per second
+        float previousRadius = objectSphereRadius;
+        radiusInput.Update(KEY_NINE, KEY_KP_9, KEY_SEVEN, KEY_KP_7, objectSphereRadius, 10.0f,
+                           100.0f, 50.0f, 1000.0f);
+
+        // Synchronous Regeneration Hook
+        if (objectSphereRadius != previousRadius) {
+            GenerateScene(objectSphereRadius);
+
+            // Re-stream static VBO limits
+            int activeLimit = static_cast<int>(masterObstacleStyleIds.size());
+            rlUpdateVertexBuffer(styleIdVboId, masterObstacleStyleIds.data(),
+                                 activeLimit * static_cast<int>(sizeof(float)), 0);
+        }
+
         // Adjust Obstacles: Tap: +/- 100 | Hold: +/- 1000 per second
         obsInput.Update(KEY_SIX, KEY_KP_6, KEY_FOUR, KEY_KP_4, activeObstacleCount, 100, 1000.0f, 1,
                         MAX_OBSTACLES);
@@ -823,30 +928,35 @@ int main() {
         fwdTransformsBlinn.clear();
         fwdTransformsGooch.clear();
         fwdTransformsToon.clear();
+        fwdTransformsOutline.clear();
 
         for (int i = 0; i < activeObstacleCount; i++) {
             if (cameraFrustum.IsSphereVisible(masterObstacleSpheres[i])) {
-                visibleObstacleTransforms.push_back(masterObstacleTransforms[i]);
-                visibleObstacleStyleIds.push_back(masterObstacleStyleIds[i]);
-            }
-        }
-
-        for (int i = 0; i < activeObstacleCount; i++) {
-            if (cameraFrustum.IsSphereVisible(masterObstacleSpheres[i])) {
+                // Populate base deferred arrays
                 visibleObstacleTransforms.push_back(masterObstacleTransforms[i]);
                 visibleObstacleStyleIds.push_back(masterObstacleStyleIds[i]);
 
-                // Forward Rendering: Segregate by Style ID
+                // Forward Rendering: CPU Dynamic Routing
+                // Route Gooch vs Fallback
                 if (int currentStyle = static_cast<int>(masterObstacleStyleIds[i]);
-                    currentStyle == 1 || currentStyle == 4) {
-                    // Style 1 (Blinn) and Style 4 (Kuwahara fallback to Blinn)
+                    currentStyle == 2) {
+                    if (enableGooch)
+                        fwdTransformsGooch.push_back(masterObstacleTransforms[i]);
+                    else
+                        fwdTransformsBlinn.push_back(masterObstacleTransforms[i]);
+                } // Route Toon vs Fallback
+                else if (currentStyle == 3) {
+                    if (enableToon)
+                        fwdTransformsToon.push_back(masterObstacleTransforms[i]);
+                    else
+                        fwdTransformsBlinn.push_back(masterObstacleTransforms[i]);
+
+                    // Outlines are architecturally isolated from the surface shader
+                    fwdTransformsOutline.push_back(masterObstacleTransforms[i]);
+                }
+                // Baseline Blinn (Style 1) and Kuwahara (Style 4, unsupported in Forward)
+                else {
                     fwdTransformsBlinn.push_back(masterObstacleTransforms[i]);
-                } else if (currentStyle == 2) {
-                    // Style 2 (Gooch)
-                    fwdTransformsGooch.push_back(masterObstacleTransforms[i]);
-                } else if (currentStyle == 3) {
-                    // Style 3 (Toon/Outline)
-                    fwdTransformsToon.push_back(masterObstacleTransforms[i]);
                 }
             }
         }
@@ -909,7 +1019,6 @@ int main() {
             rlViewport(0, 0, renderWidth, renderHeight); // Force camera to render at set resolution
             rlActiveDrawBuffers(2); // Activate all G-Buffer color attachments simultaneously
             ClearBackground(BLANK);
-            // rlClearScreenBuffers(); // Manually clear the FBOs color and depth buffers
             rlDisableColorBlend(); // prevent auto blending
 
             // Draw models
@@ -955,6 +1064,11 @@ int main() {
             // LIGHTING PASS & RESOLVE
             // -------------------------------------------------------------------------------------
 
+            int outInt   = enableOutlines ? 1 : 0;
+            int kuwInt   = enableKuwahara ? 1 : 0;
+            int goochInt = enableGooch ? 1 : 0;
+            int toonInt  = enableToon ? 1 : 0;
+
             if (activeRenderPath == RenderPath::DeferredUber) {
                 // ARCHITECTURE A: UBER-SHADER
 
@@ -988,6 +1102,20 @@ int main() {
                     // Bind G-Buffer textures
                     SetShaderValueTexture(lightingPassShader, normalTexLoc, gNormal);
                     SetShaderValueTexture(lightingPassShader, depthTexLoc, gDepth);
+
+                    // set dynamic switches for NPR Effects
+                    SetShaderValue(lightingPassShader, uberEnableOutlinesLoc, &outInt,
+                                   SHADER_UNIFORM_INT);
+                    SetShaderValue(lightingPassShader, uberEnableKuwaharaLoc, &kuwInt,
+                                   SHADER_UNIFORM_INT);
+                    SetShaderValue(lightingPassShader, uberEnableGoochLoc, &goochInt,
+                                   SHADER_UNIFORM_INT);
+                    SetShaderValue(lightingPassShader, uberEnableToonLoc, &toonInt,
+                                   SHADER_UNIFORM_INT);
+                    SetShaderValue(lightingPassShader, uberKuwaharaRadiusLoc, &kuwaharaRadius,
+                                   SHADER_UNIFORM_INT);
+                    SetShaderValue(lightingPassShader, uberKuwaharaIntensityLoc, &kuwaharaIntensity,
+                                   SHADER_UNIFORM_FLOAT);
 
                     // Draw the G-Buffer Albedo to lighting shader
                     DrawTexturePro(gAlbedo, sourceRec, fboDestRec, {0, 0}, 0.0f, WHITE);
@@ -1026,6 +1154,11 @@ int main() {
                         SetShaderValueTexture(lightVolumeShader, lvNormalTexLoc, gNormal);
                         SetShaderValueTexture(lightVolumeShader, lvDepthTexLoc, gDepth);
 
+                        SetShaderValue(lightVolumeShader, lvEnableGoochLoc, &goochInt,
+                                       SHADER_UNIFORM_INT);
+                        SetShaderValue(lightVolumeShader, lvEnableToonLoc, &toonInt,
+                                       SHADER_UNIFORM_INT);
+
                         // Draw all Lights safely via back-faces
                         if (actualVisibleVolumeCount > 0) {
                             DrawMeshInstanced(lightningSphereMesh, lightVolumeMaterial,
@@ -1062,6 +1195,20 @@ int main() {
                     SetShaderValueTexture(nprResolveShader, nprNormalTexLoc, gNormal);
                     SetShaderValueTexture(nprResolveShader, nprDepthTexLoc, gDepth);
 
+                    // set dynamic switches for NPR Effects
+                    SetShaderValue(nprResolveShader, resEnableOutlinesLoc, &outInt,
+                                   SHADER_UNIFORM_INT);
+                    SetShaderValue(nprResolveShader, resEnableKuwaharaLoc, &kuwInt,
+                                   SHADER_UNIFORM_INT);
+                    SetShaderValue(nprResolveShader, resEnableGoochLoc, &goochInt,
+                                   SHADER_UNIFORM_INT);
+                    SetShaderValue(nprResolveShader, resEnableToonLoc, &toonInt,
+                                   SHADER_UNIFORM_INT);
+                    SetShaderValue(nprResolveShader, resKuwaharaRadiusLoc, &kuwaharaRadius,
+                                   SHADER_UNIFORM_INT);
+                    SetShaderValue(nprResolveShader, resKuwaharaIntensityLoc, &kuwaharaIntensity,
+                                   SHADER_UNIFORM_FLOAT);
+
                     // Draw full-screen quad to execute resolve
                     DrawTexturePro(gAlbedo, sourceRec, fboDestRec, {0, 0}, 0.0f, WHITE);
                 }
@@ -1070,8 +1217,7 @@ int main() {
             } else if (activeRenderPath == RenderPath::Forward) {
                 // ARCHITECTURE C: FORWARD RENDERING
 
-                // 1. ASPECT RATIO PARITY FIX:
-                // Native FBO binding & Viewport forcing mirrors the G-Buffer architecture
+                // FBO binding & Viewport forcing mirrors the G-Buffer architecture
                 rlEnableFramebuffer(litSceneTarget.id);
                 rlViewport(0, 0, renderWidth, renderHeight);
                 rlActiveDrawBuffers(1);
@@ -1142,6 +1288,8 @@ int main() {
                                        SHADER_UNIFORM_FLOAT);
                         SetShaderValue(forwardGoochShader, fwdGoochMaxRadiusLoc, &dynamicMaxRadius,
                                        SHADER_UNIFORM_FLOAT);
+                        SetShaderValue(forwardGoochShader, fwdGoochAmbientLoc,
+                                       &ambientLightStrength, SHADER_UNIFORM_FLOAT);
                         SetShaderValue(forwardGoochShader, fwdGoochActiveLightLoc,
                                        &safeVisibleLightCount, SHADER_UNIFORM_INT);
 
@@ -1159,49 +1307,52 @@ int main() {
                     // TOON PASS
                     if (toonCount > 0) {
                         BeginShaderMode(forwardToonShader);
-                        SetShaderValue(forwardToonShader, fwdToonViewPosLoc, &camera.position,
-                                       SHADER_UNIFORM_VEC3);
-                        SetShaderValue(forwardToonShader, fwdToonIntensityLoc, &lightIntensity,
-                                       SHADER_UNIFORM_FLOAT);
-                        SetShaderValue(forwardToonShader, fwdToonAmbientLoc, &ambientLightStrength,
-                                       SHADER_UNIFORM_FLOAT);
-                        SetShaderValue(forwardToonShader, fwdToonMaxRadiusLoc, &dynamicMaxRadius,
-                                       SHADER_UNIFORM_FLOAT);
-                        SetShaderValue(forwardToonShader, fwdToonActiveLightLoc,
-                                       &safeVisibleLightCount, SHADER_UNIFORM_INT);
-                        SetShaderValue(forwardToonShader, fwdToonLightColorLoc, &lightColor,
-                                       SHADER_UNIFORM_VEC3);
+                        {
+                            SetShaderValue(forwardToonShader, fwdToonViewPosLoc, &camera.position,
+                                           SHADER_UNIFORM_VEC3);
+                            SetShaderValue(forwardToonShader, fwdToonIntensityLoc, &lightIntensity,
+                                           SHADER_UNIFORM_FLOAT);
+                            SetShaderValue(forwardToonShader, fwdToonAmbientLoc,
+                                           &ambientLightStrength, SHADER_UNIFORM_FLOAT);
+                            SetShaderValue(forwardToonShader, fwdToonMaxRadiusLoc,
+                                           &dynamicMaxRadius, SHADER_UNIFORM_FLOAT);
+                            SetShaderValue(forwardToonShader, fwdToonActiveLightLoc,
+                                           &safeVisibleLightCount, SHADER_UNIFORM_INT);
+                            SetShaderValue(forwardToonShader, fwdToonLightColorLoc, &lightColor,
+                                           SHADER_UNIFORM_VEC3);
 
-                        if (safeVisibleLightCount > 0) {
-                            SetShaderValueV(forwardToonShader, fwdToonLightPosLoc,
-                                            visibleLightPositions.data(), SHADER_UNIFORM_VEC3,
-                                            safeVisibleLightCount);
+                            if (safeVisibleLightCount > 0) {
+                                SetShaderValueV(forwardToonShader, fwdToonLightPosLoc,
+                                                visibleLightPositions.data(), SHADER_UNIFORM_VEC3,
+                                                safeVisibleLightCount);
+                            }
+
+                            DrawMeshInstanced(baseMesh, fwdToonMaterial, fwdTransformsToon.data(),
+                                              toonCount);
                         }
-
-                        DrawMeshInstanced(baseMesh, fwdToonMaterial, fwdTransformsToon.data(),
-                                          toonCount);
                         EndShaderMode();
 
-                        // 3.1 INVERTED HULL OUTLINE FIX
-                        BeginShaderMode(forwardOutlineShader);
-                        SetShaderValue(forwardOutlineShader, fwdOutlineViewPosLoc, &camera.position,
-                                       SHADER_UNIFORM_VEC3);
-                        // Disable hardware culling so back faces survive to reach the fragment
-                        // shader
-                        rlDisableBackfaceCulling();
+                        // Inverted Hull Outline
+                        if (int outlineCount = static_cast<int>(fwdTransformsOutline.size());
+                            enableOutlines && outlineCount > 0) {
+                            BeginShaderMode(forwardOutlineShader);
+                            {
+                                SetShaderValue(forwardOutlineShader, fwdOutlineViewPosLoc,
+                                               &camera.position, SHADER_UNIFORM_VEC3);
+                                rlDisableBackfaceCulling();
 
-                        DrawMeshInstanced(baseMesh, fwdOutlineMaterial, fwdTransformsToon.data(),
-                                          toonCount);
+                                DrawMeshInstanced(baseMesh, fwdOutlineMaterial,
+                                                  fwdTransformsOutline.data(), outlineCount);
 
-                        // Immediately restore pipeline state to avoid breaking subsequent frame
-                        // math
-                        rlEnableBackfaceCulling();
-                        EndShaderMode();
+                                rlEnableBackfaceCulling();
+                            }
+                            EndShaderMode();
+                        }
                     }
                 }
                 EndMode3D();
 
-                // Fetach from internal FBO and restore window-scale viewport
+                // Fetch from internal FBO and restore window-scale viewport
                 rlDisableFramebuffer();
                 rlViewport(0, 0, GetRenderWidth(), GetRenderHeight());
             }
@@ -1241,8 +1392,8 @@ int main() {
             int pad       = static_cast<int>(20 * uiScale);
             int spacing   = static_cast<int>(26 * uiScale);
 
-            int panelWidth  = static_cast<int>(440 * uiScale);
-            int panelHeight = static_cast<int>(530 * uiScale);
+            int panelWidth  = static_cast<int>(450 * uiScale);
+            int panelHeight = static_cast<int>(800 * uiScale);
             int panelX      = pad;
             int panelY      = pad;
 
@@ -1263,7 +1414,7 @@ int main() {
             // Column Layout Coordinates
             int textX = panelX + pad;
             int valueX =
-                textX + static_cast<int>(170 * uiScale); // Hard vertical boundary for values
+                textX + static_cast<int>(180 * uiScale); // Hard vertical boundary for values
             int textY = panelY + pad;
 
             // Header
@@ -1274,7 +1425,7 @@ int main() {
             DrawText("ARCHITECTURE", textX, textY, fontSm, colMuted);
             textY += static_cast<int>(18 * uiScale);
 
-            DrawText("Mode", textX, textY, fontMd, colText);
+            DrawText("Pipeline-Mode", textX, textY, fontMd, colText);
             auto modeString = "Unknown";
             if (activeRenderPath == RenderPath::DeferredUber)
                 modeString = "Deferred (Uber-Shader)";
@@ -1282,12 +1433,38 @@ int main() {
                 modeString = "Deferred (Light Volumes)";
             else if (activeRenderPath == RenderPath::Forward)
                 modeString = "Forward (Baseline)";
-            DrawText(modeString, valueX, textY, fontMd, colText);
+            DrawText(modeString, valueX, textY, fontMd, colAccent);
             textY += spacing;
 
             DrawText("FBO Depth", textX, textY, fontMd, colText);
             DrawText(use16BitHDR ? "16-Bit HDR (Float)" : "8-Bit LDR (Clamped)", valueX, textY,
                      fontMd, use16BitHDR ? colGood : colBad);
+            textY += spacing + pad;
+
+            // NPR State Section
+            DrawText("NPR PIPELINE STATE", textX, textY, fontSm, colMuted);
+            textY += static_cast<int>(18 * uiScale);
+
+            DrawText("Outlines [O]", textX, textY, fontMd, colText);
+            DrawText(enableOutlines ? "ENABLED" : "DISABLED", valueX, textY, fontMd,
+                     enableOutlines ? colGood : colBad);
+            textY += spacing;
+
+            DrawText("Kuwahara [K]", textX, textY, fontMd, colText);
+            DrawText(enableKuwahara ? TextFormat("ENABLED (Rad: %d | Int: %.1f)", kuwaharaRadius,
+                                                 kuwaharaIntensity)
+                                    : "DISABLED",
+                     valueX, textY, fontMd, enableKuwahara ? colGood : colBad);
+            textY += spacing;
+
+            DrawText("Gooch [G]", textX, textY, fontMd, colText);
+            DrawText(enableGooch ? "ENABLED" : "DISABLED", valueX, textY, fontMd,
+                     enableGooch ? colGood : colBad);
+            textY += spacing;
+
+            DrawText("Toon [T]", textX, textY, fontMd, colText);
+            DrawText(enableToon ? "ENABLED" : "DISABLED", valueX, textY, fontMd,
+                     enableToon ? colGood : colBad);
             textY += spacing + pad;
 
             // Scene Data Section (State & Variables)
@@ -1329,9 +1506,20 @@ int main() {
 
             DrawText("Ambient Strength", textX, textY, fontMd, colText);
             DrawText(TextFormat("%.2f", ambientLightStrength), valueX, textY, fontMd, colText);
+            textY += spacing;
+
+            DrawText("Camera-Mode", textX, textY, fontMd, colText);
+            auto cameraModeString = "Unknown";
+            if (currentCameraState == CameraState::Orbital)
+                cameraModeString = "Orbital";
+            else if (currentCameraState == CameraState::Free)
+                cameraModeString = "Free";
+            else if (currentCameraState == CameraState::Static)
+                cameraModeString = "Static";
+            DrawText(cameraModeString, valueX, textY, fontMd, colAccent);
             textY += spacing + pad;
 
-            // Controls Section (Mutators & Input)
+            // Controls Section
             DrawText("CONTROLS", textX, textY, fontSm, colMuted);
             textY += static_cast<int>(18 * uiScale);
 
@@ -1343,24 +1531,37 @@ int main() {
             DrawText("[H]", valueX, textY, fontMd, colAction);
             textY += spacing;
 
-            DrawText("Adjust Obstacles", textX, textY, fontMd, colText);
+            DrawText("Obstacles Count", textX, textY, fontMd, colText);
             DrawText("[4 / 6]", valueX, textY, fontMd, colAction);
             textY += spacing;
 
-            DrawText("Adjust Lights", textX, textY, fontMd, colText);
+            DrawText("Lights Count", textX, textY, fontMd, colText);
             DrawText("[5 / 8]", valueX, textY, fontMd, colAction);
             textY += spacing;
 
-            DrawText("Adjust Intensity", textX, textY, fontMd, colText);
+            DrawText("Light Intensity", textX, textY, fontMd, colText);
             DrawText("[0 / 2]", valueX, textY, fontMd, colAction);
             textY += spacing;
 
-            DrawText("Adjust Ambient", textX, textY, fontMd, colText);
+            DrawText("Ambient Light", textX, textY, fontMd, colText);
             DrawText("[1 / 3]", valueX, textY, fontMd, colAction);
+            textY += spacing;
+
+            DrawText("Kuwahara Radius", textX, textY, fontMd, colText);
+            DrawText("[Left / Right]", valueX, textY, fontMd, colAction);
+            textY += spacing;
+
+            DrawText("Kuwahara Intensity", textX, textY, fontMd, colText);
+            DrawText("[Up / Down]", valueX, textY, fontMd, colAction);
             textY += spacing;
 
             DrawText("Capture Screen", textX, textY, fontMd, colText);
             DrawText("[P]", valueX, textY, fontMd, colAction);
+            textY += spacing;
+
+            DrawText("Switch Camera", textX, textY, fontMd, colText);
+            DrawText("[C]", valueX, textY, fontMd, colAction);
+            textY += spacing;
 
             // screenshot execution
             if (requestScreenshot) {

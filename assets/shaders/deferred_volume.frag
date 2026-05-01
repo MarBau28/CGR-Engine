@@ -16,6 +16,10 @@ uniform float attenuationConstant = 1.0;
 uniform float attenuationLinear = 0.09;
 uniform float attenuationQuadratic = 0.032;
 
+// Toggles
+uniform int enableGooch;
+uniform int enableToon;
+
 // G-Buffer
 uniform sampler2D texture0;   // Albedo
 uniform sampler2D gNormalTex; // Normal (RGB) + StyleID (Alpha)
@@ -72,14 +76,72 @@ void main()
     float distanceRatioQuad = distanceRatio * distanceRatio * distanceRatio * distanceRatio;
     attenuation *= clamp(1.0 - distanceRatioQuad, 0.0, 1.0);
 
-    // BRDF EVALUATION
+    // BRDF EVALUATION & FALLBACK ROUTING
     // -----------------------------------------------------------------------
 
-    if (styleID == 1 || styleID == 4) {
+    bool useBlinnFallback = false;
 
-        // STANDARD BLINN-PHONG (Used by Style 1 and base for Kuwahara Style 4)
+    if (styleID == 2) {
+
+        // GOOCH SHADING
         // -------------------------------------------------------------------------
 
+        if (enableGooch == 1) {
+            // Gooch Base Colors
+            vec3 surfaceColor = vec3(0.8, 0.4, 0.1);
+            vec3 coolColor = vec3(0.0, 0.0, 0.6) + 0.2 * surfaceColor;
+            vec3 warmColor = vec3(0.6, 0.6, 0.0) + 0.6 * surfaceColor;
+
+            // Gooch Diffuse Interpolation
+            float t = (dot(normal, lightDir) + 1.0) / 2.0;
+            vec3 goochDiffuse = mix(coolColor, warmColor, t);
+
+            // Specular
+            vec3 reflectDir = reflect(-lightDir, normal);
+            float spec = pow(max(dot(viewDir, reflectDir), 0.0), 192.0); // 48 * 4
+            vec3 specular = vec3(1.0) * spec;
+
+            // Output Gooch evaluation
+            vec3 resultingLight = (goochDiffuse + specular) * attenuation * lightIntensity;
+            accumulatedLight = vec4(resultingLight, 1.0);
+        } else {
+            useBlinnFallback = true;
+        }
+
+    } else if (styleID == 3) {
+
+        // TOON SHADING
+        // -------------------------------------------------------------------------
+
+        if (enableToon == 1) {
+            // Toon Settings
+            float levels = 8.0;
+            vec3 toonBaseColor = vec3(1.0, 0.275, 0.333);
+
+            // Diffuse
+            float diff = max(dot(normal, lightDir), 0.0);
+
+            // Quantization (Banding)
+            float level = floor(diff * levels);
+            diff = level / levels;
+            vec3 diffuse = diff * lightColor * lightIntensity;
+
+            // combine diffuse, attenuation and toon base color
+            vec3 resultingLight = diffuse * attenuation;
+            accumulatedLight = vec4(resultingLight * toonBaseColor, 1.0);
+        } else {
+            useBlinnFallback = true;
+        }
+
+    } else {
+        // Route Style 1 (Blinn), Style 4 (Kuwahara base light), and invalid IDs to fallback
+        useBlinnFallback = true;
+    }
+
+    // BASELINE BLINN-PHONG FALLBACK
+    // -------------------------------------------------------------------------
+
+    if (useBlinnFallback) {
         // Diffuse
         float diff = max(dot(normal, lightDir), 0.0);
         vec3 diffuse = diff * lightColor * lightIntensity;
@@ -94,54 +156,5 @@ void main()
 
         // Output light multiplied by albedo
         accumulatedLight = vec4(resultingLight * albedo, 1.0);
-
-    } else if (styleID == 2) {
-
-        // GOOCH SHADING
-        // -------------------------------------------------------------------------
-
-        // Gooch Base Colors
-        vec3 surfaceColor = vec3(0.8, 0.4, 0.1);
-        vec3 coolColor = vec3(0.0, 0.0, 0.6) + 0.2 * surfaceColor;
-        vec3 warmColor = vec3(0.6, 0.6, 0.0) + 0.6 * surfaceColor;
-
-        // Gooch Diffuse Interpolation
-        float t = (dot(normal, lightDir) + 1.0) / 2.0;
-        vec3 goochDiffuse = mix(coolColor, warmColor, t);
-
-        // Specular
-        vec3 reflectDir = reflect(-lightDir, normal);
-        float spec = pow(max(dot(viewDir, reflectDir), 0.0), 192.0); // 48 * 4
-        vec3 specular = vec3(1.0) * spec;
-
-        // Output Gooch evaluation
-        vec3 resultingLight = (goochDiffuse + specular) * attenuation * lightIntensity;
-        accumulatedLight = vec4(resultingLight, 1.0);
-
-    } else if (styleID == 3) {
-
-        // TOON SHADING
-        // -------------------------------------------------------------------------
-
-        // Toon Settings
-        float levels = 8.0;
-        vec3 toonBaseColor = vec3(1.0, 0.275, 0.333);
-
-        // Diffuse
-        float diff = max(dot(normal, lightDir), 0.0);
-
-        // Quantization (Banding)
-        float level = floor(diff * levels);
-        diff = level / levels;
-        vec3 diffuse = diff * lightColor * lightIntensity;
-
-        // combine diffuse, attenuation and toon base color
-        vec3 resultingLight = diffuse * attenuation;
-        accumulatedLight = vec4(resultingLight * toonBaseColor, 1.0);
-
-    } else {
-
-        // Fallback catch-all to prevent black pixels
-        accumulatedLight = vec4(0.0, 0.0, 0.0, 1.0);
     }
 }

@@ -14,6 +14,7 @@ uniform float maxLightRadius;
 uniform float attenuationConstant = 1.0;
 uniform float attenuationLinear = 0.09;
 uniform float attenuationQuadratic = 0.032;
+uniform float ambientLightStrength;
 
 #define MAX_LIGHTS 500
 uniform vec3 lightPositions[MAX_LIGHTS];
@@ -24,11 +25,12 @@ void main()
 {
     vec3 normal = normalize(fragNormal);
     vec3 viewDir = normalize(viewPos - fragPosition);
-    vec3 totalLighting = vec3(0.0);
 
     vec3 surfaceColor = vec3(0.8, 0.4, 0.1);
     vec3 coolColor = vec3(0.0, 0.0, 0.6) + 0.2 * surfaceColor;
     vec3 warmColor = vec3(0.6, 0.6, 0.0) + 0.6 * surfaceColor;
+
+    vec3 totalLighting = coolColor * ambientLightStrength;
 
     for (int i = 0; i < activeLights; i++) {
         vec3 lightVector = lightPositions[i] - fragPosition;
