@@ -2,6 +2,7 @@
 
 #include "raylib.h"
 #include <algorithm>
+#include <cmath>
 #include <type_traits>
 
 template <typename T> class ContinuousInput {
@@ -14,9 +15,9 @@ template <typename T> class ContinuousInput {
         if constexpr (std::is_integral_v<T>) {
             accum += step;
             if (accum >= 1.0f) {
-                float wholeStep = accum;
-                target          = isIncreasing ? std::min<T>(target + wholeStep, limit)
-                                               : std::max<T>(target - wholeStep, limit);
+                float wholeStep = std::floor(accum);
+                target = isIncreasing ? std::min<T>(target + static_cast<T>(wholeStep), limit)
+                                      : std::max<T>(target - static_cast<T>(wholeStep), limit);
                 accum -= wholeStep;
             }
         } else {
@@ -26,27 +27,50 @@ template <typename T> class ContinuousInput {
     }
 
   public:
-    void Update(const int keyInc, const int keyDec, T &target, T tapStep, const float holdRate,
-                T minVal, T maxVal) {
+    // Primary Signature: Handles exactly 2 keys per action.
+    void Update(const int keyIncPrimary, const int keyIncSecondary, const int keyDecPrimary,
+                const int keyDecSecondary, T &target, T tapStep, const float holdRate, T minVal,
+                T maxVal) {
         const float dt = GetFrameTime();
 
-        if (IsKeyDown(keyInc)) {
-            timer += dt;
-            if (IsKeyPressed(keyInc)) {
+        // Evaluate state locally. If secondary is 0 (KEY_NULL), it safely evaluates to false.
+        const bool incDown    = IsKeyDown(keyIncPrimary) || IsKeyDown(keyIncSecondary);
+        const bool incPressed = IsKeyPressed(keyIncPrimary) || IsKeyPressed(keyIncSecondary);
+
+        const bool decDown    = IsKeyDown(keyDecPrimary) || IsKeyDown(keyDecSecondary);
+        const bool decPressed = IsKeyPressed(keyDecPrimary) || IsKeyPressed(keyDecSecondary);
+
+        if (incDown) {
+            // Priority to fresh key presses to prevent timer bleed when switching keys
+            if (incPressed) {
                 target = std::min<T>(target + tapStep, maxVal);
-            } else if (timer > holdDelay) {
-                ApplyHold(target, holdRate * dt, maxVal, true);
+                timer  = 0.0f;
+                accum  = 0.0f;
+            } else {
+                timer += dt;
+                if (timer > holdDelay) {
+                    ApplyHold(target, holdRate * dt, maxVal, true);
+                }
             }
-        } else if (IsKeyDown(keyDec)) {
-            timer += dt;
-            if (IsKeyPressed(keyDec)) {
+        } else if (decDown) {
+            if (decPressed) {
                 target = std::max<T>(target - tapStep, minVal);
-            } else if (timer > holdDelay) {
-                ApplyHold(target, holdRate * dt, minVal, false);
+                timer  = 0.0f;
+                accum  = 0.0f;
+            } else {
+                timer += dt;
+                if (timer > holdDelay) {
+                    ApplyHold(target, holdRate * dt, minVal, false);
+                }
             }
         } else {
             timer = 0.0f;
             accum = 0.0f;
         }
+    }
+
+    void Update(const int keyInc, const int keyDec, T &target, T tapStep, const float holdRate,
+                T minVal, T maxVal) {
+        Update(keyInc, 0, keyDec, 0, target, tapStep, holdRate, minVal, maxVal);
     }
 };

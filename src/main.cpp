@@ -12,6 +12,9 @@
 // Structs
 // -------------------------------------------------------------------------------------------------
 
+// Render Architecture Enum
+enum class RenderPath { DeferredUber, DeferredVolume, Forward };
+
 struct BoundingSphere {
     Vector3 center;
     float radius;
@@ -87,30 +90,40 @@ struct Frustum {
 // Global Constants
 // -------------------------------------------------------------------------------------------------
 
-inline constexpr std::string_view obstacleTextureName           = "starry-galaxy_tex.png";
-inline constexpr std::string_view woodTextureName               = "wood_tex.png";
-inline constexpr std::string_view geometryVertexShaderName      = "geometry_pass.vert";
-inline constexpr std::string_view geometryFragmentShaderName    = "geometry_pass.frag";
-inline constexpr std::string_view lightingFragmentShaderName    = "lighting_pass.frag";
-inline constexpr std::string_view postFragmentShaderName        = "postprocess.frag";
-inline constexpr std::string_view instancedVertexShaderName     = "geometry_pass_instanced.vert";
-inline constexpr std::string_view instancedFragmentShaderName   = "geometry_pass_instanced.frag";
-inline constexpr std::string_view lightVolumeVertexShaderName   = "light_volume.vert";
-inline constexpr std::string_view lightVolumeFragmentShaderName = "light_volume.frag";
-inline constexpr std::string_view nprResolveFragmentShaderName  = "npr_resolve.frag";
-inline constexpr float modelScalar                              = 1.0f;
-inline constexpr float modelRotation                            = 1.5f;
-inline constexpr int cameraMode                                 = CAMERA_ORBITAL;
-inline constexpr int obstacleCount                              = 5000;
-inline constexpr float ObjectSphereRadius                       = 200.0f; // obstacle cloud size
-inline constexpr float minLightThreshold                        = 0.05f;
-inline constexpr float attenuationConstant                      = 1.0f;
-inline constexpr float attenuationLinear                        = 0.09f;
-inline constexpr float attenuationQuadratic                     = 0.032f;
-inline constexpr uint numberOfStyles                            = 4;
-inline constexpr int MAX_OBSTACLES                              = 30000;
-inline constexpr int MAX_LIGHTS                                 = 5000;
-inline constexpr float UiScale                                  = 0.8f;
+inline constexpr std::string_view obstacleTextureName = "starry-galaxy_tex.png";
+inline constexpr std::string_view woodTextureName     = "wood_tex.png";
+
+// Unified Shader Names
+inline constexpr std::string_view gBuffeVertexShaderName             = "g-buffer.vert";
+inline constexpr std::string_view gBuffeFragmentShaderName           = "g-buffer.frag";
+inline constexpr std::string_view deferredUberFragmentShaderName     = "deferred_uber.frag";
+inline constexpr std::string_view postFragmentShaderName             = "postprocess.frag";
+inline constexpr std::string_view gBufferInstancedVertexShaderName   = "g-buffer_instanced.vert";
+inline constexpr std::string_view gBufferInstancedFragmentShaderName = "g-buffer_instanced.frag";
+inline constexpr std::string_view deferredVolumeVertexShaderName     = "deferred_volume.vert";
+inline constexpr std::string_view deferredVolumeFragmentShaderName   = "deferred_volume.frag";
+inline constexpr std::string_view deferredResolveFragmentShaderName  = "deferred_resolve.frag";
+inline constexpr std::string_view forwardInstVertexShaderName        = "forward_instanced.vert";
+inline constexpr std::string_view forwardBlinnFragmentShaderName     = "forward_blinn.frag";
+inline constexpr std::string_view forwardGoochFragmentShaderName     = "forward_gooch.frag";
+inline constexpr std::string_view forwardToonFragmentShaderName      = "forward_toon.frag";
+inline constexpr std::string_view forwardOutlineVertexShaderName     = "forward_outline.vert";
+inline constexpr std::string_view forwardOutlineFragmentShaderName   = "forward_outline.frag";
+
+// General settings
+inline constexpr int cameraMode             = CAMERA_ORBITAL;
+inline constexpr float modelScalar          = 1.0f;
+inline constexpr float modelRotation        = 1.5f;
+inline constexpr int obstacleCount          = 5000;
+inline constexpr float ObjectSphereRadius   = 200.0f; // obstacle cloud size
+inline constexpr float minLightThreshold    = 0.05f;
+inline constexpr float attenuationConstant  = 1.0f;
+inline constexpr float attenuationLinear    = 0.09f;
+inline constexpr float attenuationQuadratic = 0.032f;
+inline constexpr uint numberOfStyles        = 4;
+inline constexpr int MAX_OBSTACLES          = 30000;
+inline constexpr int MAX_LIGHTS             = 5000;
+inline constexpr float UiScale              = 0.8f;
 
 // Global variables
 // -------------------------------------------------------------------------------------------------
@@ -130,17 +143,22 @@ std::vector<Matrix> visibleLightProxyTransforms;
 std::vector<Matrix> visibleLightVolumeTransforms;
 std::vector<Vector3> visibleLightPositions;
 
+// Forward Rendering Specific Bins (for culling)
+std::vector<Matrix> fwdTransformsBlinn;
+std::vector<Matrix> fwdTransformsGooch;
+std::vector<Matrix> fwdTransformsToon;
+
 // Settings
-bool setFrameLimit           = true;
-bool enableStyleSplit        = true;
-bool useDeferredLightVolumes = true;
-bool use16BitHDR             = true;
-int activeObstacleCount      = 5000;
-int activeLightCount         = 500;
-int actualGeneratedLights    = 0;
-float lightIntensity         = Config::EngineSettings::LightIntensity;
-float ambientLightStrength   = Config::EngineSettings::AmbientLightStrength;
-bool requestScreenshot       = false;
+bool setFrameLimit         = true;
+bool enableStyleSplit      = true;
+bool use16BitHDR           = true;
+int activeObstacleCount    = 5000;
+int activeLightCount       = 100;
+int actualGeneratedLights  = 0;
+float lightIntensity       = Config::EngineSettings::LightIntensity;
+float ambientLightStrength = Config::EngineSettings::AmbientLightStrength;
+bool requestScreenshot     = false;
+auto activeRenderPath      = RenderPath::DeferredVolume;
 
 int main() {
     // BASIC SETUP
@@ -162,25 +180,40 @@ int main() {
     camera.fovy       = Config::EngineSettings::CameraFOV;           // Field of View
     camera.projection = CAMERA_PERSPECTIVE;                          // standard 3D-depth projection
 
-    // Load  and link Shaders
+    // Load and link Shaders
     const std::string geometryVertPath =
-        std::string(Config::Paths::Shaders) + std::string(geometryVertexShaderName);
+        std::string(Config::Paths::Shaders) + std::string(gBuffeVertexShaderName);
     const std::string geometryFragPath =
-        std::string(Config::Paths::Shaders) + std::string(geometryFragmentShaderName);
+        std::string(Config::Paths::Shaders) + std::string(gBuffeFragmentShaderName);
     const std::string lightingFragPath =
-        std::string(Config::Paths::Shaders) + std::string(lightingFragmentShaderName);
+        std::string(Config::Paths::Shaders) + std::string(deferredUberFragmentShaderName);
     const std::string postFragPath =
         std::string(Config::Paths::Shaders) + std::string(postFragmentShaderName);
     const std::string instancedVertPath =
-        std::string(Config::Paths::Shaders) + std::string(instancedVertexShaderName);
+        std::string(Config::Paths::Shaders) + std::string(gBufferInstancedVertexShaderName);
     const std::string instancedFragPath =
-        std::string(Config::Paths::Shaders) + std::string(instancedFragmentShaderName);
+        std::string(Config::Paths::Shaders) + std::string(gBufferInstancedFragmentShaderName);
     const std::string lightVolumeVertPath =
-        std::string(Config::Paths::Shaders) + std::string(lightVolumeVertexShaderName);
+        std::string(Config::Paths::Shaders) + std::string(deferredVolumeVertexShaderName);
     const std::string lightVolumeFragPath =
-        std::string(Config::Paths::Shaders) + std::string(lightVolumeFragmentShaderName);
+        std::string(Config::Paths::Shaders) + std::string(deferredVolumeFragmentShaderName);
     const std::string nprResolveFragPath =
-        std::string(Config::Paths::Shaders) + std::string(nprResolveFragmentShaderName);
+        std::string(Config::Paths::Shaders) + std::string(deferredResolveFragmentShaderName);
+
+    const std::string forwardInstVertPath =
+        std::string(Config::Paths::Shaders) + std::string(forwardInstVertexShaderName);
+    const std::string forwardBlinnFragPath =
+        std::string(Config::Paths::Shaders) + std::string(forwardBlinnFragmentShaderName);
+    const std::string forwardGoochFragPath =
+        std::string(Config::Paths::Shaders) + std::string(forwardGoochFragmentShaderName);
+    const std::string forwardToonFragPath =
+        std::string(Config::Paths::Shaders) + std::string(forwardToonFragmentShaderName);
+    const std::string forwardOutlineVertPath =
+        std::string(Config::Paths::Shaders) + std::string(forwardOutlineVertexShaderName);
+    const std::string forwardOutlineFragPath =
+        std::string(Config::Paths::Shaders) + std::string(forwardOutlineFragmentShaderName);
+    const std::string forwardUnlitFragPath =
+        std::string(Config::Paths::Shaders) + "forward_unlit.frag";
 
     const Shader geometryPassShader =
         LoadShader(geometryVertPath.c_str(), geometryFragPath.c_str());
@@ -190,6 +223,29 @@ int main() {
     const Shader lightVolumeShader =
         LoadShader(lightVolumeVertPath.c_str(), lightVolumeFragPath.c_str());
     const Shader nprResolveShader = LoadShader(nullptr, nprResolveFragPath.c_str());
+
+    const Shader forwardBlinnShader =
+        LoadShader(forwardInstVertPath.c_str(), forwardBlinnFragPath.c_str());
+    const Shader forwardGoochShader =
+        LoadShader(forwardInstVertPath.c_str(), forwardGoochFragPath.c_str());
+    const Shader forwardToonShader =
+        LoadShader(forwardInstVertPath.c_str(), forwardToonFragPath.c_str());
+    const Shader forwardOutlineShader =
+        LoadShader(forwardOutlineVertPath.c_str(), forwardOutlineFragPath.c_str());
+    const Shader forwardUnlitShader =
+        LoadShader(forwardInstVertPath.c_str(), forwardUnlitFragPath.c_str());
+
+    // Bind instanceTransform attribute for all forward instanced vertex shaders
+    forwardBlinnShader.locs[SHADER_LOC_MATRIX_MODEL] =
+        GetShaderLocationAttrib(forwardBlinnShader, "instanceTransform");
+    forwardGoochShader.locs[SHADER_LOC_MATRIX_MODEL] =
+        GetShaderLocationAttrib(forwardGoochShader, "instanceTransform");
+    forwardToonShader.locs[SHADER_LOC_MATRIX_MODEL] =
+        GetShaderLocationAttrib(forwardToonShader, "instanceTransform");
+    forwardOutlineShader.locs[SHADER_LOC_MATRIX_MODEL] =
+        GetShaderLocationAttrib(forwardOutlineShader, "instanceTransform");
+    forwardUnlitShader.locs[SHADER_LOC_MATRIX_MODEL] =
+        GetShaderLocationAttrib(forwardUnlitShader, "instanceTransform");
 
     // OBJECT GENERATION
     // ---------------------------------------------------------------------------------------------
@@ -258,7 +314,7 @@ int main() {
         Vector3 pos = {cosf(angle) * radius, height, sinf(angle) * radius};
 
         // Determine Style ID
-        float styleId = enableStyleSplit ? static_cast<float>(GetRandomValue(1, 4)) : 1.0f;
+        float styleId = enableStyleSplit ? static_cast<float>(GetRandomValue(1, 3)) : 1.0f;
 
         // Calculate Transform Matrix
         Vector3 rotAxis = Vector3Normalize({static_cast<float>(GetRandomValue(0, 100)),
@@ -305,6 +361,21 @@ int main() {
 
     int lightsGenerated = 0;
     int overallAttempts = 0;
+
+    while (lightsGenerated < 10) {
+        Vector3 stackedPos                    = {0.0f, 5.0f, 0.0f};
+        masterLightPositions[lightsGenerated] = stackedPos;
+
+        // Generate physical debug sphere transform
+        Matrix proxyTransform =
+            MatrixMultiply(MatrixScale(1.5f, 1.5f, 1.5f),
+                           MatrixTranslate(stackedPos.x, stackedPos.y, stackedPos.z));
+
+        masterLightProxyTransforms.push_back(proxyTransform);
+        lightsGenerated++;
+    }
+
+    // Standard Light Generation
     while (lightsGenerated < MAX_LIGHTS && overallAttempts < 10000) {
         overallAttempts++;
         constexpr float maxHeight = ObjectSphereRadius / 2;
@@ -322,24 +393,6 @@ int main() {
             lightsGenerated++;
         }
     }
-
-    // stacking 50 lights on top of each other for Light-Volume clamping test
-    // while (lightsGenerated < 50) {
-    //     Vector3 stackedPos = {0.0f, 5.0f, 0.0f};
-    //     // use 50 lights for this test
-    //     masterLightPositions[lightsGenerated] = stackedPos;
-    //     Matrix proxyTransform =
-    //         MatrixMultiply(MatrixScale(1.5f, 1.5f, 1.5f),
-    //                        MatrixTranslate(stackedPos.x, stackedPos.y, stackedPos.z));
-    //     Matrix volumeTransform =
-    //         MatrixMultiply(MatrixScale(-maxRadius * 2.0f, -maxRadius * 2.0f, -maxRadius * 2.0f),
-    //                        MatrixTranslate(stackedPos.x, stackedPos.y, stackedPos.z));
-    //
-    //     masterLightProxyTransforms.push_back(proxyTransform);
-    //     masterLightVolumeTransforms.push_back(volumeTransform);
-    //
-    //     lightsGenerated++;
-    // }
 
     actualGeneratedLights = lightsGenerated;
     activeLightCount      = std::min(activeLightCount, actualGeneratedLights);
@@ -565,6 +618,86 @@ int main() {
     // post-process pass
     int postResolutionLoc = GetShaderLocation(postShader, "resolution");
 
+    // Blinn Shader Locations
+    int fwdBlinnViewPosLoc     = GetShaderLocation(forwardBlinnShader, "viewPos");
+    int fwdBlinnIntensityLoc   = GetShaderLocation(forwardBlinnShader, "lightIntensity");
+    int fwdBlinnAmbientLoc     = GetShaderLocation(forwardBlinnShader, "ambientLightStrength");
+    int fwdBlinnActiveLightLoc = GetShaderLocation(forwardBlinnShader, "activeLights");
+    int fwdBlinnMaxRadiusLoc   = GetShaderLocation(forwardBlinnShader, "maxLightRadius");
+    int fwdBlinnAttConstLoc    = GetShaderLocation(forwardBlinnShader, "attenuationConstant");
+    int fwdBlinnAttLinLoc      = GetShaderLocation(forwardBlinnShader, "attenuationLinear");
+    int fwdBlinnAttQuadLoc     = GetShaderLocation(forwardBlinnShader, "attenuationQuadratic");
+    int fwdBlinnLightPosLoc    = GetShaderLocation(forwardBlinnShader, "lightPositions");
+    int fwdBlinnLightColorLoc  = GetShaderLocation(forwardBlinnShader, "lightColor");
+
+    SetShaderValue(forwardBlinnShader, fwdBlinnAttConstLoc, &attenuationConstant,
+                   SHADER_UNIFORM_FLOAT);
+    SetShaderValue(forwardBlinnShader, fwdBlinnAttLinLoc, &attenuationLinear, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(forwardBlinnShader, fwdBlinnAttQuadLoc, &attenuationQuadratic,
+                   SHADER_UNIFORM_FLOAT);
+
+    // Gooch Shader Locations (Note: Gooch lacks ambient and base lightColor per your shader)
+    int fwdGoochViewPosLoc     = GetShaderLocation(forwardGoochShader, "viewPos");
+    int fwdGoochIntensityLoc   = GetShaderLocation(forwardGoochShader, "lightIntensity");
+    int fwdGoochActiveLightLoc = GetShaderLocation(forwardGoochShader, "activeLights");
+    int fwdGoochMaxRadiusLoc   = GetShaderLocation(forwardGoochShader, "maxLightRadius");
+    int fwdGoochAttConstLoc    = GetShaderLocation(forwardGoochShader, "attenuationConstant");
+    int fwdGoochAttLinLoc      = GetShaderLocation(forwardGoochShader, "attenuationLinear");
+    int fwdGoochAttQuadLoc     = GetShaderLocation(forwardGoochShader, "attenuationQuadratic");
+    int fwdGoochLightPosLoc    = GetShaderLocation(forwardGoochShader, "lightPositions");
+
+    SetShaderValue(forwardGoochShader, fwdGoochAttConstLoc, &attenuationConstant,
+                   SHADER_UNIFORM_FLOAT);
+    SetShaderValue(forwardGoochShader, fwdGoochAttLinLoc, &attenuationLinear, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(forwardGoochShader, fwdGoochAttQuadLoc, &attenuationQuadratic,
+                   SHADER_UNIFORM_FLOAT);
+
+    // Toon Shader Locations
+    int fwdToonViewPosLoc     = GetShaderLocation(forwardToonShader, "viewPos");
+    int fwdToonIntensityLoc   = GetShaderLocation(forwardToonShader, "lightIntensity");
+    int fwdToonAmbientLoc     = GetShaderLocation(forwardToonShader, "ambientLightStrength");
+    int fwdToonActiveLightLoc = GetShaderLocation(forwardToonShader, "activeLights");
+    int fwdToonMaxRadiusLoc   = GetShaderLocation(forwardToonShader, "maxLightRadius");
+    int fwdToonAttConstLoc    = GetShaderLocation(forwardToonShader, "attenuationConstant");
+    int fwdToonAttLinLoc      = GetShaderLocation(forwardToonShader, "attenuationLinear");
+    int fwdToonAttQuadLoc     = GetShaderLocation(forwardToonShader, "attenuationQuadratic");
+    int fwdToonLightPosLoc    = GetShaderLocation(forwardToonShader, "lightPositions");
+    int fwdToonLightColorLoc  = GetShaderLocation(forwardToonShader, "lightColor");
+
+    SetShaderValue(forwardToonShader, fwdToonAttConstLoc, &attenuationConstant,
+                   SHADER_UNIFORM_FLOAT);
+    SetShaderValue(forwardToonShader, fwdToonAttLinLoc, &attenuationLinear, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(forwardToonShader, fwdToonAttQuadLoc, &attenuationQuadratic,
+                   SHADER_UNIFORM_FLOAT);
+
+    // Outline Shader Locations
+    int fwdOutlineViewPosLoc = GetShaderLocation(forwardOutlineShader, "viewPos");
+
+    // FORWARD RENDERING MATERIAL SETUP
+    // ---------------------------------------------------------------------------------------------
+    Material fwdBlinnMaterial                          = LoadMaterialDefault();
+    fwdBlinnMaterial.shader                            = forwardBlinnShader;
+    fwdBlinnMaterial.maps[MATERIAL_MAP_ALBEDO].texture = obstacleTexture;
+
+    Material fwdGoochMaterial                          = LoadMaterialDefault();
+    fwdGoochMaterial.shader                            = forwardGoochShader;
+    fwdGoochMaterial.maps[MATERIAL_MAP_ALBEDO].texture = obstacleTexture;
+
+    Material fwdToonMaterial                          = LoadMaterialDefault();
+    fwdToonMaterial.shader                            = forwardToonShader;
+    fwdToonMaterial.maps[MATERIAL_MAP_ALBEDO].texture = obstacleTexture;
+
+    Material fwdOutlineMaterial = LoadMaterialDefault();
+    fwdOutlineMaterial.shader   = forwardOutlineShader;
+
+    // Floor & Light Proxy Materials for Forward
+    Material fwdFloorMaterial                          = LoadMaterialDefault();
+    fwdFloorMaterial.shader                            = forwardBlinnShader;
+    fwdFloorMaterial.maps[MATERIAL_MAP_ALBEDO].texture = floorTexture;
+
+    Material fwdLightProxyMaterial = LoadMaterialDefault();
+    fwdLightProxyMaterial.shader   = forwardUnlitShader; // Unlit
+
     // MAIN GAME LOOP
     // ---------------------------------------------------------------------------------------------
 
@@ -590,7 +723,6 @@ int main() {
         auto currentWidth   = static_cast<float>(GetScreenWidth());
         auto currentHeight  = static_cast<float>(GetScreenHeight());
         float dynamicRes[2] = {currentWidth, currentHeight};
-        int fontSize        = static_cast<int>(currentHeight) / 30;
 
         if (frameLimitUpdated) {
             SetTargetFPS(setFrameLimit ? Config::EngineSettings::TargetFPS : 0);
@@ -608,7 +740,13 @@ int main() {
             frameLimitUpdated = true;
         }
         if (IsKeyPressed(KEY_TAB)) {
-            useDeferredLightVolumes = !useDeferredLightVolumes;
+            // Cycle through the 3 rendering architectures
+            int nextPath     = (static_cast<int>(activeRenderPath) + 1) % 3;
+            activeRenderPath = static_cast<RenderPath>(nextPath);
+
+            const char *pathNames[] = {"Deferred (Uber-Shader)", "Deferred (Light Volumes)",
+                                       "Forward (Baseline)"};
+            TraceLog(LOG_INFO, "PIPELINE SWAPPED: %s", pathNames[nextPath]);
         }
 
         // HDR to LDR Pipeline Toggle
@@ -648,18 +786,20 @@ int main() {
         }
 
         // Adjust Obstacles: Tap: +/- 100 | Hold: +/- 1000 per second
-        obsInput.Update(KEY_D, KEY_A, activeObstacleCount, 100, 1000.0f, 1, MAX_OBSTACLES);
+        obsInput.Update(KEY_SIX, KEY_KP_6, KEY_FOUR, KEY_KP_4, activeObstacleCount, 100, 1000.0f, 1,
+                        MAX_OBSTACLES);
 
         // Adjust Lights: Tap: +/- 10  | Hold: +/- 100 per second
-        lightInput.Update(KEY_W, KEY_S, activeLightCount, 10, 100.0f, 1, actualGeneratedLights);
+        lightInput.Update(KEY_EIGHT, KEY_KP_8, KEY_FIVE, KEY_KP_5, activeLightCount, 10, 100.0f, 1,
+                          actualGeneratedLights);
 
         // Adjust Light Intensity: Tap: +/- 0.1 | Hold: +/- 2.0 per second
-        intensityInput.Update(KEY_UP, KEY_DOWN, lightIntensity, 0.1f, 2.0f, 0.0f,
-                              std::numeric_limits<float>::max());
+        intensityInput.Update(KEY_TWO, KEY_KP_2, KEY_ZERO, KEY_KP_0, lightIntensity, 0.1f, 2.0f,
+                              0.0f, std::numeric_limits<float>::max());
 
         // Adjust Ambient Strength: Tap: +/- 0.05 | Hold: +/- 1.0 per second
-        ambientInput.Update(KEY_RIGHT, KEY_LEFT, ambientLightStrength, 0.05f, 1.0f, 0.0f,
-                            std::numeric_limits<float>::max());
+        ambientInput.Update(KEY_THREE, KEY_KP_3, KEY_ONE, KEY_KP_1, ambientLightStrength, 0.05f,
+                            1.0f, 0.0f, std::numeric_limits<float>::max());
 
         // CULLING MATH & MATRIX SETUP
         // -----------------------------------------------------------------------------------------
@@ -671,7 +811,7 @@ int main() {
         Matrix viewProj    = MatrixMultiply(view, proj);
         Matrix invViewProj = MatrixInvert(viewProj); // Calculated now, used in lighting pass
 
-        // Extract Frustum Planes
+        // Extract Frustum Planes & forward binning
         Frustum cameraFrustum{};
         cameraFrustum.Extract(viewProj);
 
@@ -679,10 +819,35 @@ int main() {
         visibleObstacleTransforms.clear();
         visibleObstacleStyleIds.clear();
 
+        // Clear Forward Bins
+        fwdTransformsBlinn.clear();
+        fwdTransformsGooch.clear();
+        fwdTransformsToon.clear();
+
         for (int i = 0; i < activeObstacleCount; i++) {
             if (cameraFrustum.IsSphereVisible(masterObstacleSpheres[i])) {
                 visibleObstacleTransforms.push_back(masterObstacleTransforms[i]);
                 visibleObstacleStyleIds.push_back(masterObstacleStyleIds[i]);
+            }
+        }
+
+        for (int i = 0; i < activeObstacleCount; i++) {
+            if (cameraFrustum.IsSphereVisible(masterObstacleSpheres[i])) {
+                visibleObstacleTransforms.push_back(masterObstacleTransforms[i]);
+                visibleObstacleStyleIds.push_back(masterObstacleStyleIds[i]);
+
+                // Forward Rendering: Segregate by Style ID
+                if (int currentStyle = static_cast<int>(masterObstacleStyleIds[i]);
+                    currentStyle == 1 || currentStyle == 4) {
+                    // Style 1 (Blinn) and Style 4 (Kuwahara fallback to Blinn)
+                    fwdTransformsBlinn.push_back(masterObstacleTransforms[i]);
+                } else if (currentStyle == 2) {
+                    // Style 2 (Gooch)
+                    fwdTransformsGooch.push_back(masterObstacleTransforms[i]);
+                } else if (currentStyle == 3) {
+                    // Style 3 (Toon/Outline)
+                    fwdTransformsToon.push_back(masterObstacleTransforms[i]);
+                }
             }
         }
 
@@ -744,8 +909,8 @@ int main() {
             rlViewport(0, 0, renderWidth, renderHeight); // Force camera to render at set resolution
             rlActiveDrawBuffers(2); // Activate all G-Buffer color attachments simultaneously
             ClearBackground(BLANK);
-            rlClearScreenBuffers(); // Manually clear the FBOs color and depth buffers
-            rlDisableColorBlend();  // prevent auto blending
+            // rlClearScreenBuffers(); // Manually clear the FBOs color and depth buffers
+            rlDisableColorBlend(); // prevent auto blending
 
             // Draw models
             BeginMode3D(camera);
@@ -790,7 +955,7 @@ int main() {
             // LIGHTING PASS & RESOLVE
             // -------------------------------------------------------------------------------------
 
-            if (!useDeferredLightVolumes) {
+            if (activeRenderPath == RenderPath::DeferredUber) {
                 // ARCHITECTURE A: UBER-SHADER
 
                 BeginTextureMode(litSceneTarget);
@@ -830,7 +995,7 @@ int main() {
                 EndShaderMode();
                 EndTextureMode();
 
-            } else {
+            } else if (activeRenderPath == RenderPath::DeferredVolume) {
                 // ARCHITECTURE B: MULTI-PASS DEFERRED
 
                 // Pass 2: Light Volume Accumulation
@@ -902,6 +1067,143 @@ int main() {
                 }
                 EndShaderMode();
                 EndTextureMode();
+            } else if (activeRenderPath == RenderPath::Forward) {
+                // ARCHITECTURE C: FORWARD RENDERING
+
+                // 1. ASPECT RATIO PARITY FIX:
+                // Native FBO binding & Viewport forcing mirrors the G-Buffer architecture
+                rlEnableFramebuffer(litSceneTarget.id);
+                rlViewport(0, 0, renderWidth, renderHeight);
+                rlActiveDrawBuffers(1);
+
+                Color bgCol = {
+                    static_cast<unsigned char>(Config::EngineSettings::BackgroundColor.x),
+                    static_cast<unsigned char>(Config::EngineSettings::BackgroundColor.y),
+                    static_cast<unsigned char>(Config::EngineSettings::BackgroundColor.z), 255};
+                ClearBackground(bgCol);
+
+                BeginMode3D(camera);
+                {
+                    // Force internal viewport to guarantee projection matrix matches
+                    rlViewport(0, 0, renderWidth, renderHeight);
+
+                    int safeVisibleLightCount = std::min(actualVisibleVolumeCount, 500);
+                    int blinnCount            = static_cast<int>(fwdTransformsBlinn.size());
+                    int goochCount            = static_cast<int>(fwdTransformsGooch.size());
+                    int toonCount             = static_cast<int>(fwdTransformsToon.size());
+
+                    // UNLIT PASS (Light Proxies)
+                    if (actualVisibleProxyCount > 0) {
+                        BeginShaderMode(forwardUnlitShader);
+                        DrawMeshInstanced(lightningSphereMesh, fwdLightProxyMaterial,
+                                          visibleLightProxyTransforms.data(),
+                                          std::min(actualVisibleProxyCount, 500));
+                        EndShaderMode();
+                    }
+
+                    // BLINN-PHONG PASS (Includes Floor)
+                    BeginShaderMode(forwardBlinnShader);
+                    {
+                        SetShaderValue(forwardBlinnShader, fwdBlinnViewPosLoc, &camera.position,
+                                       SHADER_UNIFORM_VEC3);
+                        SetShaderValue(forwardBlinnShader, fwdBlinnIntensityLoc, &lightIntensity,
+                                       SHADER_UNIFORM_FLOAT);
+                        SetShaderValue(forwardBlinnShader, fwdBlinnAmbientLoc,
+                                       &ambientLightStrength, SHADER_UNIFORM_FLOAT);
+                        SetShaderValue(forwardBlinnShader, fwdBlinnMaxRadiusLoc, &dynamicMaxRadius,
+                                       SHADER_UNIFORM_FLOAT);
+                        SetShaderValue(forwardBlinnShader, fwdBlinnActiveLightLoc,
+                                       &safeVisibleLightCount, SHADER_UNIFORM_INT);
+                        SetShaderValue(forwardBlinnShader, fwdBlinnLightColorLoc, &lightColor,
+                                       SHADER_UNIFORM_VEC3);
+
+                        if (safeVisibleLightCount > 0) {
+                            SetShaderValueV(forwardBlinnShader, fwdBlinnLightPosLoc,
+                                            visibleLightPositions.data(), SHADER_UNIFORM_VEC3,
+                                            safeVisibleLightCount);
+                        }
+
+                        Matrix floorIdentity = MatrixIdentity();
+                        DrawMeshInstanced(floorMesh, fwdFloorMaterial, &floorIdentity, 1);
+
+                        if (blinnCount > 0) {
+                            DrawMeshInstanced(baseMesh, fwdBlinnMaterial, fwdTransformsBlinn.data(),
+                                              blinnCount);
+                        }
+                    }
+                    EndShaderMode();
+
+                    // GOOCH PASS
+                    if (goochCount > 0) {
+                        BeginShaderMode(forwardGoochShader);
+                        SetShaderValue(forwardGoochShader, fwdGoochViewPosLoc, &camera.position,
+                                       SHADER_UNIFORM_VEC3);
+                        SetShaderValue(forwardGoochShader, fwdGoochIntensityLoc, &lightIntensity,
+                                       SHADER_UNIFORM_FLOAT);
+                        SetShaderValue(forwardGoochShader, fwdGoochMaxRadiusLoc, &dynamicMaxRadius,
+                                       SHADER_UNIFORM_FLOAT);
+                        SetShaderValue(forwardGoochShader, fwdGoochActiveLightLoc,
+                                       &safeVisibleLightCount, SHADER_UNIFORM_INT);
+
+                        if (safeVisibleLightCount > 0) {
+                            SetShaderValueV(forwardGoochShader, fwdGoochLightPosLoc,
+                                            visibleLightPositions.data(), SHADER_UNIFORM_VEC3,
+                                            safeVisibleLightCount);
+                        }
+
+                        DrawMeshInstanced(baseMesh, fwdGoochMaterial, fwdTransformsGooch.data(),
+                                          goochCount);
+                        EndShaderMode();
+                    }
+
+                    // TOON PASS
+                    if (toonCount > 0) {
+                        BeginShaderMode(forwardToonShader);
+                        SetShaderValue(forwardToonShader, fwdToonViewPosLoc, &camera.position,
+                                       SHADER_UNIFORM_VEC3);
+                        SetShaderValue(forwardToonShader, fwdToonIntensityLoc, &lightIntensity,
+                                       SHADER_UNIFORM_FLOAT);
+                        SetShaderValue(forwardToonShader, fwdToonAmbientLoc, &ambientLightStrength,
+                                       SHADER_UNIFORM_FLOAT);
+                        SetShaderValue(forwardToonShader, fwdToonMaxRadiusLoc, &dynamicMaxRadius,
+                                       SHADER_UNIFORM_FLOAT);
+                        SetShaderValue(forwardToonShader, fwdToonActiveLightLoc,
+                                       &safeVisibleLightCount, SHADER_UNIFORM_INT);
+                        SetShaderValue(forwardToonShader, fwdToonLightColorLoc, &lightColor,
+                                       SHADER_UNIFORM_VEC3);
+
+                        if (safeVisibleLightCount > 0) {
+                            SetShaderValueV(forwardToonShader, fwdToonLightPosLoc,
+                                            visibleLightPositions.data(), SHADER_UNIFORM_VEC3,
+                                            safeVisibleLightCount);
+                        }
+
+                        DrawMeshInstanced(baseMesh, fwdToonMaterial, fwdTransformsToon.data(),
+                                          toonCount);
+                        EndShaderMode();
+
+                        // 3.1 INVERTED HULL OUTLINE FIX
+                        BeginShaderMode(forwardOutlineShader);
+                        SetShaderValue(forwardOutlineShader, fwdOutlineViewPosLoc, &camera.position,
+                                       SHADER_UNIFORM_VEC3);
+                        // Disable hardware culling so back faces survive to reach the fragment
+                        // shader
+                        rlDisableBackfaceCulling();
+
+                        DrawMeshInstanced(baseMesh, fwdOutlineMaterial, fwdTransformsToon.data(),
+                                          toonCount);
+
+                        // Immediately restore pipeline state to avoid breaking subsequent frame
+                        // math
+                        rlEnableBackfaceCulling();
+                        EndShaderMode();
+                    }
+                }
+                EndMode3D();
+
+                // Fetach from internal FBO and restore window-scale viewport
+                rlDisableFramebuffer();
+                rlViewport(0, 0, GetRenderWidth(), GetRenderHeight());
             }
 
             // POST-PROCESSING PASS
@@ -914,9 +1216,14 @@ int main() {
                 // Pass Uniforms
                 SetShaderValue(postShader, postResolutionLoc, dynamicRes, SHADER_UNIFORM_VEC2);
 
-                // Dynamically route the correct texture to the final output
-                Texture2D finalRender =
-                    useDeferredLightVolumes ? resolveTarget.texture : litSceneTarget.texture;
+                // Dynamically route the correct texture to the final output based on architecture
+                Texture2D finalRender;
+                if (activeRenderPath == RenderPath::DeferredVolume) {
+                    finalRender = resolveTarget.texture;
+                } else {
+                    // Both Uber-Shader and Forward write their final composite to litSceneTarget
+                    finalRender = litSceneTarget.texture;
+                }
 
                 // Draw finished Scene into post-Processing shader
                 DrawTexturePro(finalRender, sourceRec, screenDestRec, {0, 0}, 0.0f, WHITE);
@@ -968,9 +1275,14 @@ int main() {
             textY += static_cast<int>(18 * uiScale);
 
             DrawText("Mode", textX, textY, fontMd, colText);
-            DrawText(useDeferredLightVolumes ? "Deferred (Light Volumes)"
-                                             : "Deferred (Uber-Shader)",
-                     valueX, textY, fontMd, colText);
+            auto modeString = "Unknown";
+            if (activeRenderPath == RenderPath::DeferredUber)
+                modeString = "Deferred (Uber-Shader)";
+            else if (activeRenderPath == RenderPath::DeferredVolume)
+                modeString = "Deferred (Light Volumes)";
+            else if (activeRenderPath == RenderPath::Forward)
+                modeString = "Forward (Baseline)";
+            DrawText(modeString, valueX, textY, fontMd, colText);
             textY += spacing;
 
             DrawText("FBO Depth", textX, textY, fontMd, colText);
@@ -993,12 +1305,23 @@ int main() {
                      valueX, textY, fontMd, colText);
             textY += spacing;
 
-            int drawnLights = useDeferredLightVolumes ? actualVisibleVolumeCount
-                                                      : std::min(actualVisibleVolumeCount, 500);
-            DrawText("Lights Rendered", textX, textY, fontMd, colText);
+            int drawnLights = 0;
+            if (activeRenderPath == RenderPath::DeferredVolume) {
+                drawnLights = actualVisibleVolumeCount; // Multi-Pass draws all culled lights
+            } else {
+                // Both Uber-Shader and Forward use the 500-light array limit
+                drawnLights = std::min(actualVisibleVolumeCount, 500);
+            }
+
+            DrawText("Lights Evaluated", textX, textY, fontMd, colText);
             DrawText(std::format("{} / {}", drawnLights, activeLightCount).c_str(), valueX, textY,
                      fontMd, colText);
             textY += spacing;
+
+            if (activeRenderPath != RenderPath::DeferredVolume && actualVisibleVolumeCount > 500) {
+                DrawText("WARNING: Shader Array Limit Exceeded!", textX, textY, fontSm, colBad);
+                textY += static_cast<int>(18 * uiScale);
+            }
 
             DrawText("Light Intensity", textX, textY, fontMd, colText);
             DrawText(TextFormat("%.2f", lightIntensity), valueX, textY, fontMd, colText);
@@ -1006,13 +1329,7 @@ int main() {
 
             DrawText("Ambient Strength", textX, textY, fontMd, colText);
             DrawText(TextFormat("%.2f", ambientLightStrength), valueX, textY, fontMd, colText);
-            textY += spacing;
-
-            if (!useDeferredLightVolumes && actualVisibleVolumeCount > 500) {
-                DrawText("WARNING: Uber-Shader Limit Exceeded!", textX, textY, fontSm, colBad);
-                textY += static_cast<int>(18 * uiScale);
-            }
-            textY += pad;
+            textY += spacing + pad;
 
             // Controls Section (Mutators & Input)
             DrawText("CONTROLS", textX, textY, fontSm, colMuted);
@@ -1027,19 +1344,19 @@ int main() {
             textY += spacing;
 
             DrawText("Adjust Obstacles", textX, textY, fontMd, colText);
-            DrawText("[A / D]", valueX, textY, fontMd, colAction);
+            DrawText("[4 / 6]", valueX, textY, fontMd, colAction);
             textY += spacing;
 
             DrawText("Adjust Lights", textX, textY, fontMd, colText);
-            DrawText("[S / W]", valueX, textY, fontMd, colAction);
+            DrawText("[5 / 8]", valueX, textY, fontMd, colAction);
             textY += spacing;
 
             DrawText("Adjust Intensity", textX, textY, fontMd, colText);
-            DrawText("[Down / Up]", valueX, textY, fontMd, colAction);
+            DrawText("[0 / 2]", valueX, textY, fontMd, colAction);
             textY += spacing;
 
             DrawText("Adjust Ambient", textX, textY, fontMd, colText);
-            DrawText("[Left / Right]", valueX, textY, fontMd, colAction);
+            DrawText("[1 / 3]", valueX, textY, fontMd, colAction);
             textY += spacing;
 
             DrawText("Capture Screen", textX, textY, fontMd, colText);
@@ -1114,6 +1431,11 @@ int main() {
     UnloadShader(lightingPassShader);
     UnloadShader(lightVolumeShader);
     UnloadShader(nprResolveShader);
+    UnloadShader(forwardBlinnShader);
+    UnloadShader(forwardGoochShader);
+    UnloadShader(forwardToonShader);
+    UnloadShader(forwardOutlineShader);
+    UnloadShader(forwardUnlitShader);
     UnloadShader(postShader);
 
     // Standard unloads
