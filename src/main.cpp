@@ -856,10 +856,10 @@ int main() {
             requestScreenshot = true;
         }
 
-        // Adjust Sphere Radius: Tap: +/- 10.0f | Hold: +/- 100.0f per second
+        // Adjust Sphere Radius: Tap: +/- 5.0f | Hold: +/- 50.0f per second
         float previousRadius = objectSphereRadius;
-        radiusInput.Update(KEY_NINE, KEY_KP_9, KEY_SEVEN, KEY_KP_7, objectSphereRadius, 10.0f,
-                           100.0f, 50.0f, 1000.0f);
+        radiusInput.Update(KEY_NINE, KEY_KP_9, KEY_SEVEN, KEY_KP_7, objectSphereRadius, 5.0f, 50.0f,
+                           50.0f, 1000.0f);
 
         // Synchronous Regeneration Hook
         if (objectSphereRadius != previousRadius) {
@@ -1374,19 +1374,22 @@ int main() {
             int spacing   = static_cast<int>(26 * uiScale);
 
             int panelWidth  = static_cast<int>(450 * uiScale);
-            int panelHeight = static_cast<int>(800 * uiScale);
+            int panelHeight = static_cast<int>(850 * uiScale);
             int panelX      = pad;
             int panelY      = pad;
 
             // UI Color-Palette
-            Color colBg     = {20, 24, 28, 245};    // Sleek dark slate
-            Color colBorder = {60, 65, 75, 255};    // Subtle border outline
-            Color colText   = {235, 235, 240, 255}; // Soft white
-            Color colMuted  = {150, 155, 165, 255}; // Muted gray for headers
-            Color colAccent = {170, 205, 250, 255}; // Pastel blue
-            Color colAction = {250, 215, 160, 255}; // Pastel gold/yellow
-            Color colGood   = {175, 235, 180, 255}; // Pastel green
-            Color colBad    = {245, 165, 165, 255}; // Pastel red
+            Color colBg       = {20, 24, 28, 245};    // Dark slate
+            Color colBorder   = {60, 65, 75, 255};    // Subtle border outline
+            Color colText     = {235, 235, 240, 255}; // Soft white
+            Color colMuted    = {150, 155, 165, 255}; // Muted gray
+            Color colAccent   = {170, 205, 250, 255}; // Pastel blue
+            Color colAction   = {255, 240, 165, 255}; // Pastel Yellow
+            Color colWarning  = {255, 200, 140, 255}; // Pastel Orange
+            Color colGood     = {175, 235, 180, 255}; // Pastel green
+            Color colBad      = {245, 165, 165, 255}; // Pastel red
+            Color colSpecial  = {200, 180, 245, 255}; // Pastel purple
+            Color colSpecial2 = {160, 240, 245, 255}; // Pastel Pink
 
             // Panel Background
             DrawRectangle(panelX, panelY, panelWidth, panelHeight, colBg);
@@ -1399,7 +1402,7 @@ int main() {
             int textY = panelY + pad;
 
             // Header
-            DrawText("HYDRA ENGINE TELEMETRY", textX, textY, fontLg, colAccent);
+            DrawText("HYDRA ENGINE DASHBOARD", textX, textY, fontLg, colAccent);
             textY += spacing + pad;
 
             // Pipeline Section
@@ -1414,7 +1417,7 @@ int main() {
                 modeString = "Deferred (Light Volumes)";
             else if (activeRenderPath == RenderPath::Forward)
                 modeString = "Forward (Baseline)";
-            DrawText(modeString, valueX, textY, fontMd, colAccent);
+            DrawText(modeString, valueX, textY, fontMd, colSpecial);
             textY += spacing;
 
             DrawText("FBO Depth", textX, textY, fontMd, colText);
@@ -1453,9 +1456,24 @@ int main() {
             textY += static_cast<int>(18 * uiScale);
 
             int currentFps = GetFPS();
-            Color fpsColor = currentFps >= 60 ? colGood : (currentFps >= 30 ? colAction : colBad);
+            Color fpsColor = currentFps >= 60 ? colGood : (currentFps >= 30 ? colWarning : colBad);
             DrawText("Framerate", textX, textY, fontMd, colText);
             DrawText(TextFormat("%d FPS", currentFps), valueX, textY, fontMd, fpsColor);
+            textY += spacing;
+
+            DrawText("Camera-Mode", textX, textY, fontMd, colText);
+            auto cameraModeString = "Unknown";
+            if (currentCameraState == CameraState::Orbital)
+                cameraModeString = "Orbital";
+            else if (currentCameraState == CameraState::Free)
+                cameraModeString = "Free";
+            else if (currentCameraState == CameraState::Static)
+                cameraModeString = "Static";
+            DrawText(cameraModeString, valueX, textY, fontMd, colSpecial2);
+            textY += spacing;
+
+            DrawText("Cloud Size", textX, textY, fontMd, colText);
+            DrawText(TextFormat("%.2f", objectSphereRadius), valueX, textY, fontMd, colText);
             textY += spacing;
 
             DrawText("Obstacles", textX, textY, fontMd, colText);
@@ -1487,17 +1505,6 @@ int main() {
 
             DrawText("Ambient Strength", textX, textY, fontMd, colText);
             DrawText(TextFormat("%.2f", ambientLightStrength), valueX, textY, fontMd, colText);
-            textY += spacing;
-
-            DrawText("Camera-Mode", textX, textY, fontMd, colText);
-            auto cameraModeString = "Unknown";
-            if (currentCameraState == CameraState::Orbital)
-                cameraModeString = "Orbital";
-            else if (currentCameraState == CameraState::Free)
-                cameraModeString = "Free";
-            else if (currentCameraState == CameraState::Static)
-                cameraModeString = "Static";
-            DrawText(cameraModeString, valueX, textY, fontMd, colAccent);
             textY += spacing + pad;
 
             // Controls Section
@@ -1510,6 +1517,10 @@ int main() {
 
             DrawText("Toggle HDR/LDR", textX, textY, fontMd, colText);
             DrawText("[H]", valueX, textY, fontMd, colAction);
+            textY += spacing;
+
+            DrawText("Cloud Size", textX, textY, fontMd, colText);
+            DrawText("[7 / 9]", valueX, textY, fontMd, colAction);
             textY += spacing;
 
             DrawText("Obstacles Count", textX, textY, fontMd, colText);
