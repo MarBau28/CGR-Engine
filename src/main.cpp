@@ -110,7 +110,6 @@ struct GpuProfiler {
     static void End() { glEndQuery(GL_TIME_ELAPSED); }
 
     void Update() {
-        const int backBuffer   = 1 - queryFrame;
         unsigned int available = 0;
 
         // Check if GPU has finished writing the data
@@ -205,8 +204,9 @@ bool enableToon            = true;
 int kuwaharaRadius         = 4;
 float kuwaharaIntensity    = 4.0f;
 float objectSphereRadius   = 200.0f; // obstacle cloud size
+bool useClusteredStyles    = false;
 
-void GenerateScene(const float sphereRadius) {
+void GenerateScene(const float sphereRadius, const bool clustered) {
     // Zero-allocation clear
     masterObstacleTransforms.clear();
     masterObstacleStyleIds.clear();
@@ -214,7 +214,7 @@ void GenerateScene(const float sphereRadius) {
     occupiedLightPositions.clear();
     masterLightProxyTransforms.clear();
 
-    // Obstacle Generation (O(N) Uniform Cylindrical Distribution)
+    // Obstacle Generation
     for (int i = 0; i < MAX_OBSTACLES; i++) {
         constexpr float baseRadius = 0.6495f;
         const float scale          = static_cast<float>(GetRandomValue(10, 30)) / 10.0f;
@@ -232,8 +232,20 @@ void GenerateScene(const float sphereRadius) {
 
         const Vector3 pos = {cosf(angle) * radius, height, sinf(angle) * radius};
 
-        // Determine Style ID
-        auto styleId = static_cast<float>(GetRandomValue(1, 4));
+        // PHASE 2: Spatial Clustering vs Random for StyleID
+        float styleId = 1.0f;
+        if (clustered) {
+            if (pos.x >= 0.0f && pos.z >= 0.0f)
+                styleId = 1.0f; // Quadrant 1: Blinn
+            else if (pos.x < 0.0f && pos.z >= 0.0f)
+                styleId = 2.0f; // Quadrant 2: Gooch
+            else if (pos.x < 0.0f && pos.z < 0.0f)
+                styleId = 3.0f; // Quadrant 3: Toon
+            else
+                styleId = 4.0f; // Quadrant 4: Fallback and Kuwahara
+        } else {
+            styleId = static_cast<float>(GetRandomValue(1, 4));
+        }
 
         // Calculate Transform Matrix
         const Vector3 rotAxis = Vector3Normalize({static_cast<float>(GetRandomValue(0, 100)),
@@ -433,7 +445,7 @@ int main() {
     visibleLightVolumeTransforms.reserve(MAX_LIGHTS);
 
     // Bootstrap initial scene generation
-    GenerateScene(objectSphereRadius);
+    GenerateScene(objectSphereRadius, useClusteredStyles);
 
     // set light color
     Vector3 lightColor = {Config::EngineSettings::MainLightColor.x / 255.0f,
@@ -901,6 +913,16 @@ int main() {
             requestScreenshot = true;
         }
 
+        // Clustering Hook
+        if (IsKeyPressed(KEY_M)) {
+            useClusteredStyles = !useClusteredStyles;
+            GenerateScene(objectSphereRadius, useClusteredStyles);
+
+            int activeLimit = static_cast<int>(masterObstacleStyleIds.size());
+            rlUpdateVertexBuffer(styleIdVboId, masterObstacleStyleIds.data(),
+                                 activeLimit * static_cast<int>(sizeof(float)), 0);
+        }
+
         // Adjust Sphere Radius: Tap: +/- 5.0f | Hold: +/- 50.0f per second
         float previousRadius = objectSphereRadius;
         radiusInput.Update(KEY_NINE, KEY_KP_9, KEY_SEVEN, KEY_KP_7, objectSphereRadius, 5.0f, 50.0f,
@@ -908,7 +930,7 @@ int main() {
 
         // Synchronous Regeneration Hook
         if (objectSphereRadius != previousRadius) {
-            GenerateScene(objectSphereRadius);
+            GenerateScene(objectSphereRadius, useClusteredStyles);
 
             // Re-stream static VBO limits
             int activeLimit = static_cast<int>(masterObstacleStyleIds.size());
@@ -1589,6 +1611,11 @@ int main() {
             DrawText(cameraModeString, valueX, textY, fontMd, colSpecial2);
             textY += spacing;
 
+            DrawText("Distribution", textX, textY, fontMd, colText);
+            DrawText(useClusteredStyles ? "Quadrants (Clustered)" : "Uniform (Random)", valueX,
+                     textY, fontMd, colSpecial2);
+            textY += spacing;
+
             DrawText("Cloud Size", textX, textY, fontMd, colText);
             DrawText(TextFormat("%.2f", objectSphereRadius), valueX, textY, fontMd, colText);
             textY += spacing;
@@ -1670,6 +1697,10 @@ int main() {
 
             DrawText("Switch Camera", textX, textY, fontMd, colText);
             DrawText("[C]", valueX, textY, fontMd, colAction);
+            textY += spacing;
+
+            DrawText("Switch Distribution", textX, textY, fontMd, colText);
+            DrawText("[M]", valueX, textY, fontMd, colAction);
             textY += spacing;
 
             // screenshot execution
