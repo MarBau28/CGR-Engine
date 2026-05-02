@@ -17,14 +17,15 @@ uniform float styleId; // Main Style ID for NPR Shader
 
 void main()
 {
+    vec4 texColor = texture(texture0, fragTexCoord);
+
+    // Alpha discard for masked textures
+    if (texColor.a < 0.1) discard;
+
     // Raw Color
     gAlbedo = texture(texture0, fragTexCoord) * colDiffuse;
 
-    // Surface Normal
-    if (isLightSource == 1) {
-        // If it's light source, force empty normals to trigger the post-process mask
-        gNormal = vec4(0.0, 0.0, 0.0, 1.0);
-    } else {
-        gNormal = vec4(normalize(fragNormal), styleId);
-    }
+    vec3 packedNormal = normalize(fragNormal) * 0.5 + 0.5; // Pack Normal
+    float packedStyle = styleId / 255.0; // Encode Style ID
+    gNormal = vec4(packedNormal, packedStyle);
 }

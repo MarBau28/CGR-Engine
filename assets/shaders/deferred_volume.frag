@@ -41,15 +41,16 @@ void main()
     vec4 albedoData = texture(texture0, screenUV);
     vec3 albedo = albedoData.rgb;
 
+    // Extract Normal and StyleID (Decode from 8-bit "Alpha"-channel)
     vec4 normalData = texture(gNormalTex, screenUV);
-    vec3 rawNormal = normalData.rgb;
-    int styleID = int(round(normalData.a));
+    vec3 rawNormal = normalData.rgb * 2.0 - 1.0;
+    int styleID = int(round(normalData.a * 255.0));
 
     // Reconstruct World Position
     float depth = texture(gDepthTex, screenUV).r;
 
     // Skybox or unlit pixel (Light proxy sphere), abort lighting calculation
-    if (depth == 1.0 && length(rawNormal) < 0.1) {
+    if (styleID == 0) {
         discard;
     }
 

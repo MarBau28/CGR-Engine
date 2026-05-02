@@ -13,13 +13,21 @@ uniform int isLightSource;
 
 void main()
 {
+    vec4 texColor = texture(texture0, fragTexCoord);
+
+    // Alpha discard for masked textures
+    if (texColor.a < 0.1) discard;
+
     // If light sphere, render it white/unlit and bypass normal calculations
     if (isLightSource == 1) {
-        gAlbedo = vec4(1.0);
         gNormal = vec4(0.0);
-        return;
-    }
+        gAlbedo = vec4(1.0);
+    } else {
+        vec3 n = normalize(fragNormal);
+        vec3 packedNormal = n * 0.5 + 0.5; // Pack Normal
+        float packedStyle = fragStyleID / 255.0; // Encode Style ID
+        gNormal = vec4(packedNormal, packedStyle);
 
-    gAlbedo = texture(texture0, fragTexCoord);
-    gNormal = vec4(normalize(fragNormal), fragStyleID);
+        gAlbedo = texColor;
+    }
 }

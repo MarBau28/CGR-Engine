@@ -7,6 +7,7 @@
 #include <chrono>
 #include <filesystem>
 #include <format>
+#include <glad/glad.h>
 #include <vector>
 
 // Structs
@@ -90,6 +91,43 @@ struct Frustum {
     }
 };
 
+struct GpuProfiler {
+    unsigned int queries[2]{0, 0};
+    int queryFrame   = 0;
+    double elapsedMs = 0.0;
+
+    void Init() {
+        glGenQueries(2, queries);
+        // Dummy query to initialize back-buffer and prevent read errors on frame 1
+        glBeginQuery(GL_TIME_ELAPSED, queries[0]);
+        glEndQuery(GL_TIME_ELAPSED);
+        glBeginQuery(GL_TIME_ELAPSED, queries[1]);
+        glEndQuery(GL_TIME_ELAPSED);
+    }
+
+    void Begin() const { glBeginQuery(GL_TIME_ELAPSED, queries[queryFrame]); }
+
+    static void End() { glEndQuery(GL_TIME_ELAPSED); }
+
+    void Update() {
+        const int backBuffer   = 1 - queryFrame;
+        unsigned int available = 0;
+
+        // Check if GPU has finished writing the data
+        glGetQueryObjectuiv(queries[1 - queryFrame], GL_QUERY_RESULT_AVAILABLE, &available);
+        if (available) {
+            GLuint64 timeNs = 0;
+            glGetQueryObjectui64v(queries[1 - queryFrame], GL_QUERY_RESULT, &timeNs);
+            elapsedMs = static_cast<double>(timeNs) / 1000000.0; // convert to milliseconds
+
+            // Only swap if data was successfully received
+            queryFrame = 1 - queryFrame;
+        }
+    }
+
+    void Destroy() const { glDeleteQueries(2, queries); }
+};
+
 // Global Constants
 // -------------------------------------------------------------------------------------------------
 
@@ -118,7 +156,7 @@ inline constexpr float minLightThreshold    = 0.05f;
 inline constexpr float attenuationConstant  = 1.0f;
 inline constexpr float attenuationLinear    = 0.09f;
 inline constexpr float attenuationQuadratic = 0.032f;
-inline constexpr int MAX_OBSTACLES          = 30000;
+inline constexpr int MAX_OBSTACLES          = 50000;
 inline constexpr int MAX_LIGHTS             = 5000;
 inline constexpr float UiScale              = 0.8f;
 
@@ -146,19 +184,22 @@ std::vector<Matrix> fwdTransformsGooch;
 std::vector<Matrix> fwdTransformsToon;
 std::vector<Matrix> fwdTransformsOutline;
 
+// Profiling Data
+GpuProfiler geomProfiler;
+GpuProfiler lightProfiler;
+
 // Settings
-bool setFrameLimit         = true;
 bool use16BitHDR           = true;
 int activeObstacleCount    = 5000;
-int activeLightCount       = 100;
+int activeLightCount       = 250;
 int actualGeneratedLights  = 0;
 float lightIntensity       = Config::EngineSettings::LightIntensity;
 float ambientLightStrength = Config::EngineSettings::AmbientLightStrength;
 bool requestScreenshot     = false;
 auto activeRenderPath      = RenderPath::Forward;
 auto currentCameraState    = CameraState::Orbital;
-bool enableOutlines        = true;
-bool enableKuwahara        = true;
+bool enableOutlines        = false;
+bool enableKuwahara        = false;
 bool enableGooch           = true;
 bool enableToon            = true;
 int kuwaharaRadius         = 4;
@@ -261,6 +302,10 @@ int main() {
                                       static_cast<float>(renderHeight)};
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_MAXIMIZED);
     InitWindow(renderWidth, renderHeight, "HyDra");
+
+    // Initialize Hardware Profilers
+    geomProfiler.Init();
+    lightProfiler.Init();
 
     // Camera Setup
     Camera3D camera   = {0};
@@ -453,7 +498,7 @@ int main() {
         rlLoadTexture(nullptr, renderWidth, renderHeight, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, 1);
     // Target 1: Normal + StyleID (16-bit Float RGBA)
     unsigned int normalTexId =
-        rlLoadTexture(nullptr, renderWidth, renderHeight, PIXELFORMAT_UNCOMPRESSED_R16G16B16A16, 1);
+        rlLoadTexture(nullptr, renderWidth, renderHeight, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, 1);
     // Target 2: Depth
     unsigned int depthTexId = rlLoadTextureDepth(renderWidth, renderHeight, false);
 
@@ -474,7 +519,7 @@ int main() {
     Texture2D gAlbedo = {albedoTexId, renderWidth, renderHeight, 1,
                          PIXELFORMAT_UNCOMPRESSED_R8G8B8A8};
     Texture2D gNormal = {normalTexId, renderWidth, renderHeight, 1,
-                         PIXELFORMAT_UNCOMPRESSED_R16G16B16A16};
+                         PIXELFORMAT_UNCOMPRESSED_R8G8B8A8};
     Texture2D gDepth  = {depthTexId, renderWidth, renderHeight, 1,
                          PIXELFORMAT_UNCOMPRESSED_GRAYSCALE};
 
@@ -859,7 +904,7 @@ int main() {
         // Adjust Sphere Radius: Tap: +/- 5.0f | Hold: +/- 50.0f per second
         float previousRadius = objectSphereRadius;
         radiusInput.Update(KEY_NINE, KEY_KP_9, KEY_SEVEN, KEY_KP_7, objectSphereRadius, 5.0f, 50.0f,
-                           50.0f, 1000.0f);
+                           1.0f, 1000.0f);
 
         // Synchronous Regeneration Hook
         if (objectSphereRadius != previousRadius) {
@@ -871,9 +916,9 @@ int main() {
                                  activeLimit * static_cast<int>(sizeof(float)), 0);
         }
 
-        // Adjust Obstacles: Tap: +/- 100 | Hold: +/- 1000 per second
-        obsInput.Update(KEY_SIX, KEY_KP_6, KEY_FOUR, KEY_KP_4, activeObstacleCount, 100, 1000.0f, 1,
-                        MAX_OBSTACLES);
+        // Adjust Obstacles: Tap: +/- 500 | Hold: +/- 10000 per second
+        obsInput.Update(KEY_SIX, KEY_KP_6, KEY_FOUR, KEY_KP_4, activeObstacleCount, 500, 10000.0f,
+                        1, MAX_OBSTACLES);
 
         // Adjust Lights: Tap: +/- 10  | Hold: +/- 100 per second
         lightInput.Update(KEY_EIGHT, KEY_KP_8, KEY_FIVE, KEY_KP_5, activeLightCount, 10, 100.0f, 1,
@@ -994,53 +1039,69 @@ int main() {
         {
             // GEOMETRY PASS
             // -------------------------------------------------------------------------------------
+            if (activeRenderPath == RenderPath::DeferredUber ||
+                activeRenderPath == RenderPath::DeferredVolume) {
+                // FBO Off-Screen rendering
+                rlEnableFramebuffer(FboId); // Redirect GPU output to custom FBO
+                rlViewport(0, 0, renderWidth,
+                           renderHeight); // Force camera to render at set resolution
+                rlActiveDrawBuffers(2);   // Activate all G-Buffer color attachments simultaneously
+                ClearBackground(BLANK);
+                rlDisableColorBlend(); // prevent auto blending
 
-            // FBO Off-Screen rendering
-            rlEnableFramebuffer(FboId);                  // Redirect GPU output to custom FBO
-            rlViewport(0, 0, renderWidth, renderHeight); // Force camera to render at set resolution
-            rlActiveDrawBuffers(2); // Activate all G-Buffer color attachments simultaneously
-            ClearBackground(BLANK);
-            rlDisableColorBlend(); // prevent auto blending
+                // Hardware profiling
+                rlDrawRenderBatchActive(); // flush state changes
+                geomProfiler.Begin();      // Start Geometry timer
 
-            // Draw models
-            BeginMode3D(camera);
-            {
-                // force back viewport to internal FBO resolution
-                rlViewport(0, 0, renderWidth, renderHeight);
+                // Draw models
+                BeginMode3D(camera);
+                {
+                    // force back viewport to internal FBO resolution
+                    rlViewport(0, 0, renderWidth, renderHeight);
 
-                // Draw Static Models (Floor) using standard shader
-                SetShaderValueMatrix(geometryPassShader, modelMatLoc, MatrixIdentity());
-                SetShaderValueMatrix(geometryPassShader, normalMatLoc, MatrixIdentity());
-                float generalStyleId = 1;
-                SetShaderValue(geometryPassShader, styleIdLoc, &generalStyleId,
-                               SHADER_UNIFORM_FLOAT);
-                DrawModel(floorModel, {0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
+                    // Draw Static Models (Floor) using standard shader
+                    SetShaderValueMatrix(geometryPassShader, modelMatLoc, MatrixIdentity());
+                    SetShaderValueMatrix(geometryPassShader, normalMatLoc, MatrixIdentity());
+                    float generalStyleId = 1;
+                    SetShaderValue(geometryPassShader, styleIdLoc, &generalStyleId,
+                                   SHADER_UNIFORM_FLOAT);
+                    DrawModel(floorModel, {0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
 
-                // Draw Lights proxies using instanced shader (+ culled)
-                int isLight = 1;
-                SetShaderValue(instancedShader, isLightLocInstanced, &isLight, SHADER_UNIFORM_INT);
-                if (actualVisibleProxyCount > 0) {
-                    DrawMeshInstanced(lightningSphereMesh, instancedLightMaterial,
-                                      visibleLightProxyTransforms.data(),
-                                      std::min(actualVisibleProxyCount, 500));
+                    // Draw Lights proxies using instanced shader (+ culled)
+                    int isLight = 1;
+                    SetShaderValue(instancedShader, isLightLocInstanced, &isLight,
+                                   SHADER_UNIFORM_INT);
+                    if (actualVisibleProxyCount > 0) {
+                        DrawMeshInstanced(lightningSphereMesh, instancedLightMaterial,
+                                          visibleLightProxyTransforms.data(),
+                                          std::min(actualVisibleProxyCount, 500));
+                    }
+
+                    // draw obstacles using instanced shader
+                    isLight = 0;
+                    SetShaderValue(instancedShader, isLightLocInstanced, &isLight,
+                                   SHADER_UNIFORM_INT);
+                    if (actualVisibleCount > 0) {
+                        DrawMeshInstanced(baseMesh, instancedMaterial,
+                                          visibleObstacleTransforms.data(), actualVisibleCount);
+                    }
                 }
+                EndMode3D(); // stop applying 3D math
 
-                // draw obstacles using instanced shader
-                isLight = 0;
-                SetShaderValue(instancedShader, isLightLocInstanced, &isLight, SHADER_UNIFORM_INT);
-                if (actualVisibleCount > 0) {
-                    DrawMeshInstanced(baseMesh, instancedMaterial, visibleObstacleTransforms.data(),
-                                      actualVisibleCount);
-                }
+                // Hardware profiling
+                rlDrawRenderBatchActive(); // Force push all deferred draws to GPU
+                GpuProfiler::End();        // stop hardware timer
+
+                // Restore GPU output back to the default screen buffer
+                rlEnableColorBlend();
+                rlDisableFramebuffer();
+
+                // Restore the viewport to actual window size
+                rlViewport(0, 0, GetRenderWidth(), GetRenderHeight());
+            } else {
+                // Reset timer display for Forward rendering
+                geomProfiler.elapsedMs = 0.0;
             }
-            EndMode3D(); // stop applying 3D math
-
-            // Restore GPU output back to the default screen buffer
-            rlEnableColorBlend();
-            rlDisableFramebuffer();
-
-            // Restore the viewport to actual window size
-            rlViewport(0, 0, GetRenderWidth(), GetRenderHeight());
 
             // LIGHTING PASS & RESOLVE
             // -------------------------------------------------------------------------------------
@@ -1055,6 +1116,11 @@ int main() {
 
                 BeginTextureMode(litSceneTarget);
                 ClearBackground(BLANK);
+
+                // Hardware profiling
+                rlDrawRenderBatchActive(); // flush
+                lightProfiler.Begin();     // start lighting timer
+
                 BeginShaderMode(lightingPassShader);
                 {
                     // set dynamic light data via uniforms
@@ -1102,14 +1168,24 @@ int main() {
                     DrawTexturePro(gAlbedo, sourceRec, fboDestRec, {0, 0}, 0.0f, WHITE);
                 }
                 EndShaderMode();
+
+                // Hardware profiling
+                rlDrawRenderBatchActive(); // flush for timer
+                GpuProfiler::End();        // End timer
+
                 EndTextureMode();
 
             } else if (activeRenderPath == RenderPath::DeferredVolume) {
-                // ARCHITECTURE B: MULTI-PASS DEFERRED
+                // ARCHITECTURE B: MULTI-PASS DEFERRED (LIGHT VOLUMES)
 
                 // Pass 2: Light Volume Accumulation
                 BeginTextureMode(litSceneTarget);
-                ClearBackground(BLANK);         // Clear canvas to black
+                ClearBackground(BLANK); // Clear canvas to black
+
+                // Hardware profiling
+                rlDrawRenderBatchActive(); // flush for timer
+                lightProfiler.Begin();     // End timer
+
                 BeginBlendMode(BLEND_ADDITIVE); // Enable hardware light accumulation
                 rlDisableDepthMask();           // Prevent spheres from occluding each other
 
@@ -1150,6 +1226,7 @@ int main() {
                     EndShaderMode();
                 }
                 EndMode3D();
+                rlDrawRenderBatchActive(); // flush volume draw
 
                 // Restore hardware states
                 rlEnableDepthMask();
@@ -1194,9 +1271,20 @@ int main() {
                     DrawTexturePro(gAlbedo, sourceRec, fboDestRec, {0, 0}, 0.0f, WHITE);
                 }
                 EndShaderMode();
+
+                // Hardware Profiling
+                rlDrawRenderBatchActive(); // flush for timer
+                GpuProfiler::End();        // end timer
+
                 EndTextureMode();
             } else if (activeRenderPath == RenderPath::Forward) {
                 // ARCHITECTURE C: FORWARD RENDERING
+
+                // Explicit State Sanitization
+                rlEnableDepthTest();
+                rlEnableDepthMask();
+                rlEnableBackfaceCulling();
+                rlSetCullFace(RL_CULL_FACE_BACK);
 
                 // FBO binding & Viewport forcing mirrors the G-Buffer architecture
                 rlEnableFramebuffer(litSceneTarget.id);
@@ -1208,6 +1296,10 @@ int main() {
                     static_cast<unsigned char>(Config::EngineSettings::BackgroundColor.y),
                     static_cast<unsigned char>(Config::EngineSettings::BackgroundColor.z), 255};
                 ClearBackground(bgCol);
+
+                // Hardware Profiling
+                rlDrawRenderBatchActive(); // flush
+                lightProfiler.Begin();     // start timer
 
                 BeginMode3D(camera);
                 {
@@ -1333,6 +1425,9 @@ int main() {
                 }
                 EndMode3D();
 
+                rlDrawRenderBatchActive(); // flush for timer
+                GpuProfiler::End();        // end timer
+
                 // Fetch from internal FBO and restore window-scale viewport
                 rlDisableFramebuffer();
                 rlViewport(0, 0, GetRenderWidth(), GetRenderHeight());
@@ -1374,7 +1469,7 @@ int main() {
             int spacing   = static_cast<int>(26 * uiScale);
 
             int panelWidth  = static_cast<int>(450 * uiScale);
-            int panelHeight = static_cast<int>(850 * uiScale);
+            int panelHeight = static_cast<int>(900 * uiScale);
             int panelX      = pad;
             int panelY      = pad;
 
@@ -1390,6 +1485,7 @@ int main() {
             Color colBad      = {245, 165, 165, 255}; // Pastel red
             Color colSpecial  = {200, 180, 245, 255}; // Pastel purple
             Color colSpecial2 = {160, 240, 245, 255}; // Pastel Pink
+            Color colSpecial3 = {255, 195, 190, 255}; // Pastel Peach/Salmon
 
             // Panel Background
             DrawRectangle(panelX, panelY, panelWidth, panelHeight, colBg);
@@ -1460,6 +1556,27 @@ int main() {
             DrawText("Framerate", textX, textY, fontMd, colText);
             DrawText(TextFormat("%d FPS", currentFps), valueX, textY, fontMd, fpsColor);
             textY += spacing;
+
+            if (activeRenderPath == RenderPath::Forward) {
+                DrawText("GPU Geometry", textX, textY, fontMd, colText);
+                DrawText("N/A (Unified)", valueX, textY, fontMd, colMuted);
+                textY += spacing;
+
+                DrawText("GPU Forward (All)", textX, textY, fontMd, colText);
+                DrawText(TextFormat("%.3f ms", lightProfiler.elapsedMs), valueX, textY, fontMd,
+                         colSpecial3);
+                textY += spacing;
+            } else {
+                DrawText("GPU Geometry", textX, textY, fontMd, colText);
+                DrawText(TextFormat("%.3f ms", geomProfiler.elapsedMs), valueX, textY, fontMd,
+                         colSpecial3);
+                textY += spacing;
+
+                DrawText("GPU Light + NPR", textX, textY, fontMd, colText);
+                DrawText(TextFormat("%.3f ms", lightProfiler.elapsedMs), valueX, textY, fontMd,
+                         colSpecial3);
+                textY += spacing;
+            }
 
             DrawText("Camera-Mode", textX, textY, fontMd, colText);
             auto cameraModeString = "Unknown";
@@ -1599,12 +1716,20 @@ int main() {
                          fullPath.string().c_str());
                 requestScreenshot = false;
             }
+
+            // Update Hardware Profilers before concluding the frame
+            geomProfiler.Update();
+            lightProfiler.Update();
         }
         EndDrawing();
     }
 
     // CLEANUP
     // ---------------------------------------------------------------------------------------------
+
+    // Unload Hardware profilers
+    geomProfiler.Destroy();
+    lightProfiler.Destroy();
 
     // Unload Materials
     UnloadMaterial(instancedMaterial);

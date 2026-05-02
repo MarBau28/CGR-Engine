@@ -93,10 +93,10 @@ void main()
     vec4 albedoData = texture(texture0, fragTexCoord);
     vec3 albedo = albedoData.rgb;
 
-    // Extract Normal and unpack StyleID from the alpha channel
+    // Extract Normal and StyleID (Decode from 8-bit "Alpha"-channel)
     vec4 normalData = texture(gNormalTex, fragTexCoord);
-    vec3 rawNormal = normalData.rgb;
-    int styleID = int(round(normalData.a));
+    vec3 rawNormal = normalData.rgb * 2.0 - 1.0;
+    int styleID = int(round(normalData.a * 255.0));
 
     // Reconstruct Worls Position from Depth
     float depth = texture(gDepthTex, fragTexCoord).r;
@@ -114,7 +114,7 @@ void main()
     vec3 fragPosition = worldPos.xyz / worldPos.w;
 
     // Masking check (for light sources and sky box)
-    if (length(rawNormal) < 0.1) {
+    if (styleID == 0) {
         // If empty space draw backgroundColor
         if (albedoData.a == 0.0) {
             finalColor = vec4(backgroundColor, 1.0);
@@ -350,20 +350,6 @@ void main()
             }
 
             finalAlbedo /= weightSum;
-
-            //            // Find quadrant with the minimum variance
-            //            float minVar = 1e6;
-            //            vec3 finalAlbedo = vec3(0.0);
-            //
-            //            for (int i = 0; i < 4; i++) {
-            //                // Sum of RGB variances
-            //                float v = variances[i].r + variances[i].g + variances[i].b;
-            //
-            //                if (v < minVar) {
-            //                    minVar = v;
-            //                    finalAlbedo = means[i];
-            //                }
-            //            }
 
             // Saturation adn Tint boost for painting look
             float luma = dot(finalAlbedo, vec3(0.299, 0.587, 0.114));

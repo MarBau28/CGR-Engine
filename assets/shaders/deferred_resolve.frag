@@ -34,15 +34,17 @@ void main()
     // Extract Base Data (G-Buffer)
     vec4 albedoData = texture(texture0, fragTexCoord);
     vec3 albedo = albedoData.rgb;
+
+    // Extract Normal and StyleID (Decode from 8-bit "Alpha"-channel)
     vec4 normalData = texture(gNormalTex, fragTexCoord);
-    vec3 rawNormal = normalData.rgb;
-    int styleID = int(round(normalData.a));
+    vec3 rawNormal = normalData.rgb * 2.0 - 1.0;
+    int styleID = int(round(normalData.a * 255.0));
 
     // Extract Accumulated Lighting from the Volume Pass
     vec3 litColor = texture(litSceneTex, fragTexCoord).rgb;
 
     // Masking check for Skybox
-    if (length(rawNormal) < 0.1) {
+    if (styleID == 0) {
         if (albedoData.a == 0.0) {
             finalColor = vec4(backgroundColor, 1.0);
         } else {
