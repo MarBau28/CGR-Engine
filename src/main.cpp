@@ -205,8 +205,17 @@ int kuwaharaRadius         = 4;
 float kuwaharaIntensity    = 4.0f;
 float objectSphereRadius   = 200.0f; // obstacle cloud size
 bool useClusteredStyles    = false;
+bool useLightSingularity   = false;
+int currentLodIndex        = 0;
+bool useNprRoom            = false;
+
+// SCENE GENERATION HELPERS
+// -------------------------------------------------------------------------------------------------
 
 void GenerateScene(const float sphereRadius, const bool clustered) {
+    // set random seed to guarantee equal benchmarking across runs
+    SetRandomSeed(1337);
+
     // Zero-allocation clear
     masterObstacleTransforms.clear();
     masterObstacleStyleIds.clear();
@@ -232,7 +241,7 @@ void GenerateScene(const float sphereRadius, const bool clustered) {
 
         const Vector3 pos = {cosf(angle) * radius, height, sinf(angle) * radius};
 
-        // PHASE 2: Spatial Clustering vs Random for StyleID
+        // Spatial Clustering vs Random for StyleID
         float styleId = 1.0f;
         if (clustered) {
             if (pos.x >= 0.0f && pos.z >= 0.0f)
@@ -265,18 +274,6 @@ void GenerateScene(const float sphereRadius, const bool clustered) {
     // Light Generation
     int lightsGenerated = 0;
 
-    // Seed initial stacked lights (Center Cluster)
-    while (lightsGenerated < 10) {
-        constexpr Vector3 stackedPos          = {0.0f, 5.0f, 0.0f};
-        masterLightPositions[lightsGenerated] = stackedPos;
-        Matrix proxyTransform =
-            MatrixMultiply(MatrixScale(1.5f, 1.5f, 1.5f),
-                           MatrixTranslate(stackedPos.x, stackedPos.y, stackedPos.z));
-        masterLightProxyTransforms.push_back(proxyTransform);
-        occupiedLightPositions.push_back(stackedPos);
-        lightsGenerated++;
-    }
-
     // Standard Light Generation
     while (lightsGenerated < MAX_LIGHTS) {
         const float u             = static_cast<float>(GetRandomValue(0, 10000)) / 10000.0f;
@@ -301,6 +298,77 @@ void GenerateScene(const float sphereRadius, const bool clustered) {
 
     actualGeneratedLights = lightsGenerated;
     activeLightCount      = std::min(activeLightCount, actualGeneratedLights);
+}
+
+void GenerateNprRoomScene(const int lightCount) {
+    masterObstacleTransforms.clear();
+    masterObstacleStyleIds.clear();
+    masterObstacleSpheres.clear();
+    occupiedLightPositions.clear();
+    masterLightProxyTransforms.clear();
+
+    constexpr float baseScale = 1.0f / 0.75f; // Because baseMesh is 0.75
+    constexpr float vW        = 100.0f;       // Visual Width/Depth
+    constexpr float vH        = 100.0f;       // Visual Height
+    constexpr float vT        = 1.0f;         // Visual Thickness
+
+    // Pre-calculate scaled dimensions
+    constexpr float sW   = vW * baseScale;
+    constexpr float sH   = vH * baseScale;
+    constexpr float sT   = vT * baseScale;
+    constexpr float padW = (vW + vT * 2.0f) * baseScale;
+
+    // Floor - Style 1 (Blinn)
+    masterObstacleTransforms.push_back(
+        MatrixMultiply(MatrixScale(padW, sT, padW), MatrixTranslate(0, -vT / 2.0f, 0)));
+    masterObstacleStyleIds.push_back(1.0f);
+    masterObstacleSpheres.push_back({{0, 0, 0}, vW * 0.75f});
+
+    // Ceiling - Style 1 (Blinn)
+    masterObstacleTransforms.push_back(
+        MatrixMultiply(MatrixScale(padW, sT, padW), MatrixTranslate(0, vH + vT / 2.0f, 0)));
+    masterObstacleStyleIds.push_back(1.0f);
+    masterObstacleSpheres.push_back({{0, vH, 0}, vW * 0.75f});
+
+    // Back Wall - Style 2 (Gooch)
+    masterObstacleTransforms.push_back(MatrixMultiply(
+        MatrixScale(padW, sH, sT), MatrixTranslate(0, vH / 2.0f, -vW / 2.0f - vT / 2.0f)));
+    masterObstacleStyleIds.push_back(2.0f);
+    masterObstacleSpheres.push_back({{0, vH / 2.0f, -vW / 2.0f}, vW * 0.75f});
+
+    // Left Wall - Style 3 (Toon)
+    masterObstacleTransforms.push_back(MatrixMultiply(
+        MatrixScale(sT, sH, sW), MatrixTranslate(-vW / 2.0f - vT / 2.0f, vH / 2.0f, 0)));
+    masterObstacleStyleIds.push_back(3.0f);
+    masterObstacleSpheres.push_back({{-vW / 2.0f, vH / 2.0f, 0}, vW * 0.75f});
+
+    // Right Wall - Style 4 (Kuwahara / Fallback)
+    masterObstacleTransforms.push_back(MatrixMultiply(
+        MatrixScale(sT, sH, sW), MatrixTranslate(vW / 2.0f + vT / 2.0f, vH / 2.0f, 0)));
+    masterObstacleStyleIds.push_back(4.0f);
+    masterObstacleSpheres.push_back({{vW / 2.0f, vH / 2.0f, 0}, vW * 0.75f});
+
+    // 3D Fibonacci Sphere Light Distribution
+    const float phi = PI * (3.0f - sqrtf(5.0f)); // Golden angle
+
+    for (int i = 0; i < lightCount; ++i) {
+        constexpr float usableRadius = 40.0f;
+        const float y                = 1.0f - (static_cast<float>(i) /
+                                static_cast<float>(lightCount > 1 ? lightCount - 1 : 1)) *
+                                   2.0f;
+        const float radius = sqrtf(1.0f - y * y) * usableRadius;
+        const float theta  = phi * static_cast<float>(i);
+
+        Vector3 pos = {cosf(theta) * radius,
+                       (y * usableRadius) + (vH / 2.0f), // Center vertically at Y=50
+                       sinf(theta) * radius};
+
+        masterLightPositions[i] = pos;
+        masterLightProxyTransforms.push_back(
+            MatrixMultiply(MatrixScale(1.5f, 1.5f, 1.5f), MatrixTranslate(pos.x, pos.y, pos.z)));
+        occupiedLightPositions.push_back(pos);
+    }
+    actualGeneratedLights = lightCount;
 }
 
 int main() {
@@ -397,9 +465,26 @@ int main() {
     // OBJECT GENERATION
     // ---------------------------------------------------------------------------------------------
 
-    // Generate obstacle base Meshes with Texture
-    Mesh baseMesh = GenMeshCube(0.75f, 0.75f, 0.75f);
-    GenMeshTangents(&baseMesh);
+    // Generate obstacle base Meshes
+    std::vector<Mesh> lodMeshes;
+
+    // LOD 0: Primitive Cube (12 Triangles)
+    lodMeshes.push_back(GenMeshCube(0.75f, 0.75f, 0.75f));
+    // LOD 1: Low-Poly Sphere (128 Triangles)
+    lodMeshes.push_back(GenMeshSphere(0.75f, 8, 8));
+    // LOD 2: Mid-Poly Sphere (512 Triangles)
+    lodMeshes.push_back(GenMeshSphere(0.75f, 16, 16));
+    // LOD 3: High-Poly Sphere (2,048 Triangles)
+    lodMeshes.push_back(GenMeshSphere(0.75f, 32, 32));
+    // LOD 4: Extreme-Poly Sphere (8,192 Triangles)
+    lodMeshes.push_back(GenMeshSphere(0.75f, 64, 64));
+
+    // Generate Tangents for all LODs
+    for (auto &mesh : lodMeshes) {
+        GenMeshTangents(&mesh);
+    }
+
+    // set object texture
     const std::string texturePath =
         std::string(Config::Paths::Textures) + std::string(obstacleTextureName);
     const Texture2D obstacleTexture = LoadTexture(texturePath.c_str());
@@ -463,16 +548,18 @@ int main() {
     unsigned int styleIdVboId =
         rlLoadVertexBuffer(masterObstacleStyleIds.data(), MAX_OBSTACLES * sizeof(float), true);
 
-    // Bind VBO to the baseMesh's VAO
-    rlEnableVertexArray(baseMesh.vaoId);
-    {
-        rlEnableVertexBuffer(styleIdVboId);
-        rlSetVertexAttribute(10, 1, RL_FLOAT, false, 0, 0); // Define data format
-        rlEnableVertexAttribute(10);
-        rlSetVertexAttributeDivisor(10, 1);
-        rlDisableVertexBuffer();
+    // Bind VBO to every LOD Mesh's VAO
+    for (const auto &mesh : lodMeshes) {
+        rlEnableVertexArray(mesh.vaoId);
+        {
+            rlEnableVertexBuffer(styleIdVboId);
+            rlSetVertexAttribute(10, 1, RL_FLOAT, false, 0, 0); // Define data format
+            rlEnableVertexAttribute(10);
+            rlSetVertexAttributeDivisor(10, 1);
+            rlDisableVertexBuffer();
+        }
+        rlDisableVertexArray();
     }
-    rlDisableVertexArray();
 
     // Set up the shared Material for the instanced draw call
     Material instancedMaterial                          = LoadMaterialDefault();
@@ -782,6 +869,11 @@ int main() {
     ContinuousInput<float> radiusInput;
     ContinuousInput<float> kuwIntInput;
 
+    // State Tracking
+    CameraState previousCameraState = currentCameraState;
+    Vector3 previousCameraPos       = camera.position;
+    Vector3 previousCameraTarget    = camera.target;
+
     while (!WindowShouldClose()) {
         // CAMERA
         // -----------------------------------------------------------------------------------------
@@ -850,8 +942,41 @@ int main() {
         // KEY BINDINGS
         // -----------------------------------------------------------------------------------------
 
+        // NPR Room Toggle
+        if (IsKeyPressed(KEY_R)) {
+            useNprRoom = !useNprRoom;
+
+            if (useNprRoom) {
+                // Save Scene State
+                previousCameraState  = currentCameraState;
+                previousCameraPos    = camera.position;
+                previousCameraTarget = camera.target;
+
+                // Lock Controls & Variables
+                currentCameraState = CameraState::Static;
+                camera.position    = {0.0f, 50.0f, 150.0f};
+                camera.target      = {0.0f, 50.0f, 0.0f};
+                currentLodIndex    = 0;
+                enableOutlines     = false;
+
+                GenerateNprRoomScene(activeLightCount);
+            } else {
+                // Restore Scene State
+                currentCameraState = previousCameraState;
+                camera.position    = previousCameraPos;
+                camera.target      = previousCameraTarget;
+
+                GenerateScene(objectSphereRadius, useClusteredStyles);
+            }
+
+            // Sync GPU Buffers
+            int activeLimit = static_cast<int>(masterObstacleStyleIds.size());
+            rlUpdateVertexBuffer(styleIdVboId, masterObstacleStyleIds.data(),
+                                 activeLimit * static_cast<int>(sizeof(float)), 0);
+        }
+
         // NPR and Profiling Toggles
-        if (IsKeyPressed(KEY_O))
+        if (IsKeyPressed(KEY_O) && !useNprRoom)
             enableOutlines = !enableOutlines;
         if (IsKeyPressed(KEY_K))
             enableKuwahara = !enableKuwahara;
@@ -914,7 +1039,7 @@ int main() {
         }
 
         // Clustering Hook
-        if (IsKeyPressed(KEY_M)) {
+        if (IsKeyPressed(KEY_M) && !useNprRoom) {
             useClusteredStyles = !useClusteredStyles;
             GenerateScene(objectSphereRadius, useClusteredStyles);
 
@@ -923,13 +1048,27 @@ int main() {
                                  activeLimit * static_cast<int>(sizeof(float)), 0);
         }
 
+        // Light singularity Toggle
+        if (IsKeyPressed(KEY_L)) {
+            useLightSingularity = !useLightSingularity;
+        }
+
+        // High poly Mesh Toggle +
+        if (IsKeyPressed(KEY_X) && !useNprRoom) {
+            currentLodIndex = (currentLodIndex + 1) % static_cast<int>(lodMeshes.size());
+        }
+        // High poly Mesh Toggle -
+        if (IsKeyPressed(KEY_Z) && !useNprRoom) {
+            currentLodIndex = std::max(0, (currentLodIndex - 1));
+        }
+
         // Adjust Sphere Radius: Tap: +/- 5.0f | Hold: +/- 50.0f per second
         float previousRadius = objectSphereRadius;
         radiusInput.Update(KEY_NINE, KEY_KP_9, KEY_SEVEN, KEY_KP_7, objectSphereRadius, 5.0f, 50.0f,
                            1.0f, 1000.0f);
 
         // Synchronous Regeneration Hook
-        if (objectSphereRadius != previousRadius) {
+        if (objectSphereRadius != previousRadius && !useNprRoom) {
             GenerateScene(objectSphereRadius, useClusteredStyles);
 
             // Re-stream static VBO limits
@@ -938,13 +1077,20 @@ int main() {
                                  activeLimit * static_cast<int>(sizeof(float)), 0);
         }
 
-        // Adjust Obstacles: Tap: +/- 500 | Hold: +/- 10000 per second
-        obsInput.Update(KEY_SIX, KEY_KP_6, KEY_FOUR, KEY_KP_4, activeObstacleCount, 500, 10000.0f,
-                        1, MAX_OBSTACLES);
+        // Adjust Obstacles: Tap: +/- 100 | Hold: +/- 5000 per second
+        obsInput.Update(KEY_SIX, KEY_KP_6, KEY_FOUR, KEY_KP_4, activeObstacleCount, 100, 5000.0f, 1,
+                        MAX_OBSTACLES);
 
-        // Adjust Lights: Tap: +/- 10  | Hold: +/- 100 per second
-        lightInput.Update(KEY_EIGHT, KEY_KP_8, KEY_FIVE, KEY_KP_5, activeLightCount, 10, 100.0f, 1,
-                          actualGeneratedLights);
+        // Adjust Lights: Tap: +/- 10  | Hold: +/- 200 per second
+        int previousLightCount = activeLightCount;
+        int maxAllowedLights   = useNprRoom ? 500 : actualGeneratedLights;
+        lightInput.Update(KEY_EIGHT, KEY_KP_8, KEY_FIVE, KEY_KP_5, activeLightCount, 10, 200.0f, 1,
+                          maxAllowedLights);
+
+        // Generate new NPR-Room with updated light count
+        if (useNprRoom && activeLightCount != previousLightCount) {
+            GenerateNprRoomScene(activeLightCount); // Re-calculate 3D grid layout instantly
+        }
 
         // Adjust Light Intensity: Tap: +/- 0.1 | Hold: +/- 2.0 per second
         intensityInput.Update(KEY_TWO, KEY_KP_2, KEY_ZERO, KEY_KP_0, lightIntensity, 0.1f, 2.0f,
@@ -978,7 +1124,11 @@ int main() {
         fwdTransformsToon.clear();
         fwdTransformsOutline.clear();
 
-        for (int i = 0; i < activeObstacleCount; i++) {
+        // Prevent indexing stale memory
+        int currentObstacleCount =
+            useNprRoom ? static_cast<int>(masterObstacleTransforms.size()) : activeObstacleCount;
+
+        for (int i = 0; i < currentObstacleCount; i++) {
             if (cameraFrustum.IsSphereVisible(masterObstacleSpheres[i])) {
                 // Populate base deferred arrays
                 visibleObstacleTransforms.push_back(masterObstacleTransforms[i]);
@@ -1032,29 +1182,57 @@ int main() {
         visibleLightVolumeTransforms.clear();
         visibleLightPositions.clear();
 
-        for (int i = 0; i < activeLightCount; i++) {
-            // Cull the light Volumes against Frustum using dynamic radius
-            if (BoundingSphere volumeSphere = {masterLightPositions[i], dynamicMaxRadius};
-                cameraFrustum.IsSphereVisible(volumeSphere)) {
-                Matrix volumeTransform = MatrixMultiply(
+        if (useLightSingularity) {
+            // Singularity light Distribution
+            Vector3 singularityPos = {0.0f, 10.0f, 0.0f}; // Hovering above center
+
+            if (BoundingSphere singularitySphere = {singularityPos, dynamicMaxRadius};
+                cameraFrustum.IsSphereVisible(singularitySphere)) {
+                // Pre-calculate the identical matrices once
+                Matrix volTransform = MatrixMultiply(
                     MatrixScale(-dynamicMaxRadius * 2.0f, -dynamicMaxRadius * 2.0f,
                                 -dynamicMaxRadius * 2.0f),
-                    MatrixTranslate(masterLightPositions[i].x, masterLightPositions[i].y,
-                                    masterLightPositions[i].z));
+                    MatrixTranslate(singularityPos.x, singularityPos.y, singularityPos.z));
+                Matrix proxyTransform = MatrixMultiply(
+                    MatrixScale(1.5f, 1.5f, 1.5f),
+                    MatrixTranslate(singularityPos.x, singularityPos.y, singularityPos.z));
 
-                visibleLightVolumeTransforms.push_back(volumeTransform);
-                visibleLightPositions.push_back(masterLightPositions[i]);
+                // Flood arrays with overlapping geometry
+                for (int i = 0; i < activeLightCount; i++) {
+                    visibleLightVolumeTransforms.push_back(volTransform);
+                    visibleLightProxyTransforms.push_back(proxyTransform);
+                    visibleLightPositions.push_back(singularityPos);
+                }
             }
+        } else {
+            // standard light distribution
+            for (int i = 0; i < activeLightCount; i++) {
+                // Cull the light Volumes against Frustum using dynamic radius
+                if (BoundingSphere volumeSphere = {masterLightPositions[i], dynamicMaxRadius};
+                    cameraFrustum.IsSphereVisible(volumeSphere)) {
+                    Matrix volumeTransform = MatrixMultiply(
+                        MatrixScale(-dynamicMaxRadius * 2.0f, -dynamicMaxRadius * 2.0f,
+                                    -dynamicMaxRadius * 2.0f),
+                        MatrixTranslate(masterLightPositions[i].x, masterLightPositions[i].y,
+                                        masterLightPositions[i].z));
 
-            // Cull the light proxy bulbs
-            if (BoundingSphere proxySphere = {masterLightPositions[i], 0.75f};
-                cameraFrustum.IsSphereVisible(proxySphere)) {
-                visibleLightProxyTransforms.push_back(masterLightProxyTransforms[i]);
+                    visibleLightVolumeTransforms.push_back(volumeTransform);
+                    visibleLightPositions.push_back(masterLightPositions[i]);
+                }
+
+                // Cull the light proxy bulbs
+                if (BoundingSphere proxySphere = {masterLightPositions[i], 0.75f};
+                    cameraFrustum.IsSphereVisible(proxySphere)) {
+                    visibleLightProxyTransforms.push_back(masterLightProxyTransforms[i]);
+                }
             }
         }
 
         int actualVisibleVolumeCount = static_cast<int>(visibleLightVolumeTransforms.size());
         int actualVisibleProxyCount  = static_cast<int>(visibleLightProxyTransforms.size());
+
+        // Determine active mesh
+        Mesh &currentMesh = lodMeshes[currentLodIndex];
 
         // Draw
         BeginDrawing();
@@ -1082,12 +1260,14 @@ int main() {
                     rlViewport(0, 0, renderWidth, renderHeight);
 
                     // Draw Static Models (Floor) using standard shader
-                    SetShaderValueMatrix(geometryPassShader, modelMatLoc, MatrixIdentity());
-                    SetShaderValueMatrix(geometryPassShader, normalMatLoc, MatrixIdentity());
-                    float generalStyleId = 1;
-                    SetShaderValue(geometryPassShader, styleIdLoc, &generalStyleId,
-                                   SHADER_UNIFORM_FLOAT);
-                    DrawModel(floorModel, {0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
+                    if (!useNprRoom) {
+                        SetShaderValueMatrix(geometryPassShader, modelMatLoc, MatrixIdentity());
+                        SetShaderValueMatrix(geometryPassShader, normalMatLoc, MatrixIdentity());
+                        float generalStyleId = 1;
+                        SetShaderValue(geometryPassShader, styleIdLoc, &generalStyleId,
+                                       SHADER_UNIFORM_FLOAT);
+                        DrawModel(floorModel, {0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
+                    }
 
                     // Draw Lights proxies using instanced shader (+ culled)
                     int isLight = 1;
@@ -1104,7 +1284,7 @@ int main() {
                     SetShaderValue(instancedShader, isLightLocInstanced, &isLight,
                                    SHADER_UNIFORM_INT);
                     if (actualVisibleCount > 0) {
-                        DrawMeshInstanced(baseMesh, instancedMaterial,
+                        DrawMeshInstanced(currentMesh, instancedMaterial,
                                           visibleObstacleTransforms.data(), actualVisibleCount);
                     }
                 }
@@ -1364,12 +1544,14 @@ int main() {
                                             safeVisibleLightCount);
                         }
 
-                        Matrix floorIdentity = MatrixIdentity();
-                        DrawMeshInstanced(floorMesh, fwdFloorMaterial, &floorIdentity, 1);
+                        if (!useNprRoom) {
+                            Matrix floorIdentity = MatrixIdentity();
+                            DrawMeshInstanced(floorMesh, fwdFloorMaterial, &floorIdentity, 1);
+                        }
 
                         if (blinnCount > 0) {
-                            DrawMeshInstanced(baseMesh, fwdBlinnMaterial, fwdTransformsBlinn.data(),
-                                              blinnCount);
+                            DrawMeshInstanced(currentMesh, fwdBlinnMaterial,
+                                              fwdTransformsBlinn.data(), blinnCount);
                         }
                     }
                     EndShaderMode();
@@ -1394,7 +1576,7 @@ int main() {
                                             safeVisibleLightCount);
                         }
 
-                        DrawMeshInstanced(baseMesh, fwdGoochMaterial, fwdTransformsGooch.data(),
+                        DrawMeshInstanced(currentMesh, fwdGoochMaterial, fwdTransformsGooch.data(),
                                           goochCount);
                         EndShaderMode();
                     }
@@ -1422,8 +1604,8 @@ int main() {
                                                 safeVisibleLightCount);
                             }
 
-                            DrawMeshInstanced(baseMesh, fwdToonMaterial, fwdTransformsToon.data(),
-                                              toonCount);
+                            DrawMeshInstanced(currentMesh, fwdToonMaterial,
+                                              fwdTransformsToon.data(), toonCount);
                         }
                         EndShaderMode();
 
@@ -1436,7 +1618,7 @@ int main() {
                                                &camera.position, SHADER_UNIFORM_VEC3);
                                 rlDisableBackfaceCulling();
 
-                                DrawMeshInstanced(baseMesh, fwdOutlineMaterial,
+                                DrawMeshInstanced(currentMesh, fwdOutlineMaterial,
                                                   fwdTransformsOutline.data(), outlineCount);
 
                                 rlEnableBackfaceCulling();
@@ -1490,8 +1672,8 @@ int main() {
             int pad       = static_cast<int>(20 * uiScale);
             int spacing   = static_cast<int>(26 * uiScale);
 
-            int panelWidth  = static_cast<int>(450 * uiScale);
-            int panelHeight = static_cast<int>(900 * uiScale);
+            int panelWidth  = static_cast<int>(500 * uiScale);
+            int panelHeight = static_cast<int>(1100 * uiScale);
             int panelX      = pad;
             int panelY      = pad;
 
@@ -1506,8 +1688,8 @@ int main() {
             Color colGood     = {175, 235, 180, 255}; // Pastel green
             Color colBad      = {245, 165, 165, 255}; // Pastel red
             Color colSpecial  = {200, 180, 245, 255}; // Pastel purple
-            Color colSpecial2 = {160, 240, 245, 255}; // Pastel Pink
-            Color colSpecial3 = {255, 195, 190, 255}; // Pastel Peach/Salmon
+            Color colSpecial2 = {160, 240, 245, 255}; // Pastel teal
+            Color colSpecial3 = {255, 195, 190, 255}; // Pastel peach
 
             // Panel Background
             DrawRectangle(panelX, panelY, panelWidth, panelHeight, colBg);
@@ -1516,7 +1698,7 @@ int main() {
             // Column Layout Coordinates
             int textX = panelX + pad;
             int valueX =
-                textX + static_cast<int>(180 * uiScale); // Hard vertical boundary for values
+                textX + static_cast<int>(250 * uiScale); // Hard vertical boundary for values
             int textY = panelY + pad;
 
             // Header
@@ -1541,6 +1723,11 @@ int main() {
             DrawText("FBO Depth", textX, textY, fontMd, colText);
             DrawText(use16BitHDR ? "16-Bit HDR (Float)" : "8-Bit LDR (Clamped)", valueX, textY,
                      fontMd, use16BitHDR ? colGood : colBad);
+            textY += spacing;
+
+            DrawText("Test Environment", textX, textY, fontMd, colText);
+            DrawText(useNprRoom ? "NPR Room (Synthetic)" : "Open World (Organic)", valueX, textY,
+                     fontMd, useNprRoom ? colWarning : colSpecial2);
             textY += spacing + pad;
 
             // NPR State Section
@@ -1616,12 +1803,27 @@ int main() {
                      textY, fontMd, colSpecial2);
             textY += spacing;
 
+            DrawText("Light Topology", textX, textY, fontMd, colText);
+            DrawText(useLightSingularity ? "Singularity (Stacked)" : "Uniform (Scattered)", valueX,
+                     textY, fontMd, colSpecial2);
+            textY += spacing;
+
+            DrawText("Geometry Level", textX, textY, fontMd, colText);
+            DrawText(TextFormat("LOD %d (%d Tris/Obj)", currentLodIndex, currentMesh.triangleCount),
+                     valueX, textY, fontMd, colWarning);
+            textY += spacing;
+
+            int activeTriangles = currentMesh.triangleCount * actualVisibleCount;
+            DrawText("Active Triangles", textX, textY, fontMd, colText);
+            DrawText(TextFormat("%d", activeTriangles), valueX, textY, fontMd, colWarning);
+            textY += spacing;
+
             DrawText("Cloud Size", textX, textY, fontMd, colText);
             DrawText(TextFormat("%.2f", objectSphereRadius), valueX, textY, fontMd, colText);
             textY += spacing;
 
             DrawText("Obstacles", textX, textY, fontMd, colText);
-            DrawText(std::format("{} / {}", actualVisibleCount, activeObstacleCount).c_str(),
+            DrawText(std::format("{} / {}", actualVisibleCount, currentObstacleCount).c_str(),
                      valueX, textY, fontMd, colText);
             textY += spacing;
 
@@ -1663,6 +1865,10 @@ int main() {
             DrawText("[H]", valueX, textY, fontMd, colAction);
             textY += spacing;
 
+            DrawText("Toggle \"NPR-Room\"", textX, textY, fontMd, colText);
+            DrawText("[R]", valueX, textY, fontMd, colAction);
+            textY += spacing;
+
             DrawText("Cloud Size", textX, textY, fontMd, colText);
             DrawText("[7 / 9]", valueX, textY, fontMd, colAction);
             textY += spacing;
@@ -1701,6 +1907,14 @@ int main() {
 
             DrawText("Switch Distribution", textX, textY, fontMd, colText);
             DrawText("[M]", valueX, textY, fontMd, colAction);
+            textY += spacing;
+
+            DrawText("Toggle Light-Collapse", textX, textY, fontMd, colText);
+            DrawText("[L]", valueX, textY, fontMd, colAction);
+            textY += spacing;
+
+            DrawText("Geometry LOD", textX, textY, fontMd, colText);
+            DrawText("[Z / X]", valueX, textY, fontMd, colAction);
             textY += spacing;
 
             // screenshot execution
@@ -1799,7 +2013,9 @@ int main() {
     UnloadShader(postShader);
 
     // Standard unloads
-    UnloadMesh(baseMesh);
+    for (auto &mesh : lodMeshes) {
+        UnloadMesh(mesh);
+    }
     UnloadTexture(obstacleTexture);
     UnloadTexture(floorTexture);
     UnloadModel(lightningSourceModel);
