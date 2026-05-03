@@ -5,9 +5,12 @@
 #include "rlgl.h"
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <format>
+#include <fstream>
 #include <glad/glad.h>
+#include <string>
 #include <vector>
 
 // Structs
@@ -32,6 +35,229 @@ struct FrustumPlane {
         const float length = Vector3Length(normal);
         normal             = Vector3Scale(normal, 1.0f / length);
         distance /= length;
+    }
+};
+
+struct CsvTelemetryWriter {
+    std::ofstream file;
+
+    bool Initialize(const std::string &filename) {
+        file.open(filename);
+        if (!file.is_open()) {
+            TraceLog(LOG_ERROR, "Failed to open telemetry CSV for writing.");
+            return false;
+        }
+
+        file << "Suite,Architecture,CPU_Upload_ms,Geom_Pass_ms,Light_Pass_ms,"
+             << "Total_Frame_ms,Instance_Count,LOD,Total_Tris,Light_Count,"
+             << "Light_Topology,Style_Topology,Kuwahara_Rad,Overdraw_Factor\n";
+
+        return true;
+    }
+
+    void AppendRow(const std::string &suiteName, const std::string &archName, const double cpuMs,
+                   const double geomMs, const double lightMs, const double totalFrameMs,
+                   const int instances, const int lod, const int tris, const int lights,
+                   const std::string &lightTop, const std::string &styleTop, const int kuwRad,
+                   const float overdraw) {
+        if (file.is_open()) {
+            file << suiteName << "," << archName << "," << cpuMs << "," << geomMs << "," << lightMs
+                 << "," << totalFrameMs << "," << instances << "," << lod << "," << tris << ","
+                 << lights << "," << lightTop << "," << styleTop << "," << kuwRad << "," << overdraw
+                 << "\n";
+        }
+    }
+
+    void Close() {
+        if (file.is_open()) {
+            file.flush();
+            file.close();
+            TraceLog(LOG_INFO, "Telemetry CSV saved successfully.");
+        }
+    }
+};
+
+enum class BenchmarkSuite {
+    Idle,
+    SuiteA_Geom,        // Rasterization Stress
+    SuiteB_DrawCall,    // Vertex/CPU Limit
+    SuiteC_Entropy,     // Warp Divergence vs State Change
+    SuiteD_FillRate,    // BRDF Scalability
+    SuiteE_Singularity, // 16-bit HDR Bandwidth Death
+    SuiteF_Spatial,     // Kuwahara Filter Cost
+    SuiteG_Synthesis,   // Real-World Mixed Load
+    SuiteH_Overdraw,    // The Overdraw Crucible
+    Complete
+};
+
+enum class ProfilerPhase { Warmup, Recording, Transitioning };
+
+struct BenchmarkController {
+    BenchmarkSuite currentSuite = BenchmarkSuite::Idle;
+    ProfilerPhase currentPhase  = ProfilerPhase::Transitioning;
+
+    int sweepIndex   = 0;
+    int frameCounter = 0;
+
+    static constexpr int WARMUP_FRAMES = 60;
+    static constexpr int RECORD_FRAMES = 120;
+
+    double accCpuMs   = 0.0;
+    double accGeomMs  = 0.0;
+    double accLightMs = 0.0;
+    double accTotalMs = 0.0;
+
+    CsvTelemetryWriter *csvWriter = nullptr;
+
+    // --- The Complete Execution Matrix Arrays ---
+    const int suiteA_Lods[5]      = {0, 1, 2, 3, 4};
+    const int suiteB_Instances[5] = {100, 1000, 5000, 10000, 50000};
+
+    // Suite C: 0 = Homogeneous (All Style 1), 1 = Quadrant_Clustered
+    const int suiteC_Styles[2] = {0, 1};
+
+    const int suiteD_Lights[6]   = {10, 50, 100, 500, 1000, 5000};
+    const int suiteE_Lights[5]   = {10, 50, 100, 250, 500};
+    const int suiteF_Kuwahara[4] = {1, 2, 4, 8};
+
+    // Suite G simultaneously scales Instances and Lights
+    const int suiteG_Instances[3] = {1000, 5000, 10000};
+    const int suiteG_Lights[3]    = {100, 250, 500};
+
+    const float suiteH_Radii[5] = {1000.0f, 500.0f, 250.0f, 100.0f, 50.0f};
+
+    void Start(CsvTelemetryWriter &writer) {
+        csvWriter    = &writer;
+        currentSuite = BenchmarkSuite::SuiteA_Geom;
+        sweepIndex   = 0;
+        TransitionToPhase(ProfilerPhase::Warmup);
+        TraceLog(LOG_INFO, "BENCHMARK STARTED: Suite A");
+    }
+
+    void TransitionToPhase(ProfilerPhase nextPhase) {
+        currentPhase = nextPhase;
+        frameCounter = 0;
+        if (nextPhase == ProfilerPhase::Warmup) {
+            accCpuMs   = 0.0;
+            accGeomMs  = 0.0;
+            accLightMs = 0.0;
+            accTotalMs = 0.0;
+        }
+    }
+
+    bool AdvanceState() {
+        sweepIndex++;
+
+        // Optimized Branching: Groups identical max limit values to resolve redundancy
+        int maxSweeps = 0;
+        switch (currentSuite) {
+        case BenchmarkSuite::SuiteA_Geom:
+        case BenchmarkSuite::SuiteB_DrawCall:
+        case BenchmarkSuite::SuiteE_Singularity:
+        case BenchmarkSuite::SuiteH_Overdraw:
+            maxSweeps = 5;
+            break;
+        case BenchmarkSuite::SuiteD_FillRate:
+            maxSweeps = 6;
+            break;
+        case BenchmarkSuite::SuiteF_Spatial:
+            maxSweeps = 4;
+            break;
+        case BenchmarkSuite::SuiteG_Synthesis:
+            maxSweeps = 3;
+            break;
+        case BenchmarkSuite::SuiteC_Entropy:
+            maxSweeps = 2;
+            break;
+        default:
+            break;
+        }
+
+        // Advance Suite if current sweep array is exhausted
+        if (sweepIndex >= maxSweeps) {
+            sweepIndex       = 0;
+            int nextSuiteInt = static_cast<int>(currentSuite) + 1;
+
+            if (nextSuiteInt == static_cast<int>(BenchmarkSuite::Complete)) {
+                currentSuite = BenchmarkSuite::Complete;
+                TraceLog(LOG_INFO, "BENCHMARK COMPLETE");
+                return true;
+            }
+
+            currentSuite = static_cast<BenchmarkSuite>(nextSuiteInt);
+            TraceLog(LOG_INFO, TextFormat("BENCHMARK ADVANCED TO SUITE: %d", nextSuiteInt));
+        }
+        TransitionToPhase(ProfilerPhase::Warmup);
+        return false;
+    }
+
+    void UpdateAndRecord(const double currentCpuMs, const double currentGeomMs,
+                         const double currentLightMs, const double currentTotalMs,
+                         const int currentInstances, const int currentLod, const int currentTris,
+                         const int currentLights, const std::string &lightTop,
+                         const std::string &styleTop, const int currentKuwRad,
+                         const float currentOverdraw, const std::string &archName) {
+        if (currentSuite == BenchmarkSuite::Idle || currentSuite == BenchmarkSuite::Complete)
+            return;
+
+        frameCounter++;
+
+        if (currentPhase == ProfilerPhase::Warmup) {
+            if (frameCounter >= WARMUP_FRAMES) {
+                TransitionToPhase(ProfilerPhase::Recording);
+            }
+        } else if (currentPhase == ProfilerPhase::Recording) {
+            accCpuMs += currentCpuMs;
+            accGeomMs += currentGeomMs;
+            accLightMs += currentLightMs;
+            accTotalMs += currentTotalMs;
+
+            if (frameCounter >= RECORD_FRAMES) {
+                const double avgCpu   = accCpuMs / RECORD_FRAMES;
+                const double avgGeom  = accGeomMs / RECORD_FRAMES;
+                const double avgLight = accLightMs / RECORD_FRAMES;
+                const double avgTotal = accTotalMs / RECORD_FRAMES;
+
+                // Complete string mapper
+                std::string suiteStr = "Unknown";
+                switch (currentSuite) {
+                case BenchmarkSuite::SuiteA_Geom:
+                    suiteStr = "SuiteA_Geom";
+                    break;
+                case BenchmarkSuite::SuiteB_DrawCall:
+                    suiteStr = "SuiteB_DrawCall";
+                    break;
+                case BenchmarkSuite::SuiteC_Entropy:
+                    suiteStr = "SuiteC_Entropy";
+                    break;
+                case BenchmarkSuite::SuiteD_FillRate:
+                    suiteStr = "SuiteD_FillRate";
+                    break;
+                case BenchmarkSuite::SuiteE_Singularity:
+                    suiteStr = "SuiteE_Singularity";
+                    break;
+                case BenchmarkSuite::SuiteF_Spatial:
+                    suiteStr = "SuiteF_Spatial";
+                    break;
+                case BenchmarkSuite::SuiteG_Synthesis:
+                    suiteStr = "SuiteG_Synthesis";
+                    break;
+                case BenchmarkSuite::SuiteH_Overdraw:
+                    suiteStr = "SuiteH_Overdraw";
+                    break;
+                default:
+                    break;
+                }
+
+                if (csvWriter) {
+                    csvWriter->AppendRow(suiteStr, archName, avgCpu, avgGeom, avgLight, avgTotal,
+                                         currentInstances, currentLod, currentTris, currentLights,
+                                         lightTop, styleTop, currentKuwRad, currentOverdraw);
+                }
+
+                AdvanceState();
+            }
+        }
     }
 };
 
@@ -127,6 +353,18 @@ struct GpuProfiler {
     void Destroy() const { glDeleteQueries(2, queries); }
 };
 
+struct CpuProfiler {
+    std::chrono::time_point<std::chrono::high_resolution_clock> startTime;
+    double elapsedMs = 0.0;
+
+    void Begin() { startTime = std::chrono::high_resolution_clock::now(); }
+
+    void End() {
+        const auto endTime = std::chrono::high_resolution_clock::now();
+        elapsedMs          = std::chrono::duration<double, std::milli>(endTime - startTime).count();
+    }
+};
+
 // Global Constants
 // -------------------------------------------------------------------------------------------------
 
@@ -209,7 +447,7 @@ bool useLightSingularity   = false;
 int currentLodIndex        = 0;
 bool useNprRoom            = false;
 
-// SCENE GENERATION HELPERS
+// HELPER FUNCTIONS
 // -------------------------------------------------------------------------------------------------
 
 void GenerateScene(const float sphereRadius, const bool clustered) {
@@ -369,6 +607,118 @@ void GenerateNprRoomScene(const int lightCount) {
         occupiedLightPositions.push_back(pos);
     }
     actualGeneratedLights = lightCount;
+}
+
+[[nodiscard]] float CalculateTheoreticalOverdraw(const int instanceCount, const float spawnRadius) {
+    constexpr float avgObstacleRadius = 0.6495f * 2.0f;
+    constexpr float singleVolume =
+        (4.0f / 3.0f) * PI * (avgObstacleRadius * avgObstacleRadius * avgObstacleRadius);
+
+    // Volume of the spawn area
+    const float spawnVolume = (2.0f / 3.0f) * PI * (spawnRadius * spawnRadius * spawnRadius);
+
+    if (spawnVolume <= 0.0f)
+        return 0.0f;
+
+    const float totalObstacleVolume = singleVolume * static_cast<float>(instanceCount);
+    return totalObstacleVolume / spawnVolume;
+}
+
+void ApplyBenchmarkState(const BenchmarkController &ctrl) {
+    // Only apply state changes on the absolute first frame of a new Warm-up phase
+    if (ctrl.currentPhase != ProfilerPhase::Warmup || ctrl.frameCounter != 0)
+        return;
+
+    const int idx = ctrl.sweepIndex;
+
+    // Reset baseline configurations to prevent cross-contamination between suites
+    enableOutlines      = false;
+    enableKuwahara      = false;
+    enableGooch         = false;
+    enableToon          = false;
+    useNprRoom          = false;
+    useClusteredStyles  = false;
+    useLightSingularity = false;
+    use16BitHDR         = true; // Default to HDR for Deferred pipelines
+
+    switch (ctrl.currentSuite) {
+    case BenchmarkSuite::SuiteA_Geom:
+        activeRenderPath    = RenderPath::DeferredUber;
+        activeObstacleCount = 100;
+        activeLightCount    = 50;
+        currentLodIndex     = ctrl.suiteA_Lods[idx];
+        objectSphereRadius  = 200.0f;
+        break;
+
+    case BenchmarkSuite::SuiteB_DrawCall:
+        activeRenderPath    = RenderPath::Forward;
+        currentLodIndex     = 0;
+        activeLightCount    = 50;
+        activeObstacleCount = ctrl.suiteB_Instances[idx];
+        objectSphereRadius  = 200.0f;
+        break;
+
+    case BenchmarkSuite::SuiteC_Entropy:
+        activeRenderPath   = RenderPath::DeferredUber;
+        useNprRoom         = true;
+        activeLightCount   = 100;
+        useClusteredStyles = (ctrl.suiteC_Styles[idx] == 1);
+        break;
+
+    case BenchmarkSuite::SuiteD_FillRate:
+        activeRenderPath    = RenderPath::DeferredVolume;
+        activeObstacleCount = 1; // Essentially a flat canvas
+        currentLodIndex     = 0;
+        activeLightCount    = ctrl.suiteD_Lights[idx];
+        objectSphereRadius  = 200.0f;
+        break;
+
+    case BenchmarkSuite::SuiteE_Singularity:
+        activeRenderPath    = RenderPath::DeferredVolume;
+        activeObstacleCount = 1;
+        useLightSingularity = true;
+        activeLightCount    = ctrl.suiteE_Lights[idx];
+        break;
+
+    case BenchmarkSuite::SuiteF_Spatial:
+        activeRenderPath    = RenderPath::DeferredUber;
+        activeObstacleCount = 5000;
+        activeLightCount    = 100;
+        enableKuwahara      = true;
+        kuwaharaRadius      = ctrl.suiteF_Kuwahara[idx];
+        objectSphereRadius  = 200.0f;
+        break;
+
+    case BenchmarkSuite::SuiteG_Synthesis:
+        activeRenderPath    = RenderPath::DeferredUber;
+        currentLodIndex     = 1;
+        enableGooch         = true;
+        enableToon          = true;
+        enableKuwahara      = true;
+        kuwaharaRadius      = 2;
+        activeObstacleCount = ctrl.suiteG_Instances[idx];
+        activeLightCount    = ctrl.suiteG_Lights[idx];
+        objectSphereRadius  = 300.0f;
+        break;
+
+    case BenchmarkSuite::SuiteH_Overdraw:
+        activeRenderPath    = RenderPath::DeferredUber;
+        activeObstacleCount = 10000;
+        activeLightCount    = 100;
+        currentLodIndex     = 0;
+        objectSphereRadius  = ctrl.suiteH_Radii[idx];
+        break;
+
+    default:
+        break;
+    }
+
+    // Force a synchronous scene regeneration with the newly locked variables
+    if (useNprRoom) {
+        GenerateNprRoomScene(activeLightCount);
+    } else {
+        GenerateScene(objectSphereRadius, useClusteredStyles);
+    }
 }
 
 int main() {
@@ -874,6 +1224,15 @@ int main() {
     Vector3 previousCameraPos       = camera.position;
     Vector3 previousCameraTarget    = camera.target;
 
+    // Benchmark setup
+    CsvTelemetryWriter telemetryWriter;
+    BenchmarkController benchController;
+    CpuProfiler cpuProfiler;
+    bool isBenchmarkActive = false;
+
+    // Calculate initial overdraw to prevent uninitialized data
+    float currentOverdraw = CalculateTheoreticalOverdraw(activeObstacleCount, objectSphereRadius);
+
     while (!WindowShouldClose()) {
         // CAMERA
         // -----------------------------------------------------------------------------------------
@@ -941,6 +1300,20 @@ int main() {
 
         // KEY BINDINGS
         // -----------------------------------------------------------------------------------------
+
+        // Trigger Benchmark via F11
+        if (IsKeyPressed(KEY_F11) && !isBenchmarkActive) {
+            if (telemetryWriter.Initialize("hydra_benchmark_results.csv")) {
+                benchController.Start(telemetryWriter);
+                isBenchmarkActive = true;
+            }
+        }
+
+        // Intercept and Enforce State
+        if (isBenchmarkActive) {
+            ApplyBenchmarkState(benchController);
+            currentOverdraw = CalculateTheoreticalOverdraw(activeObstacleCount, objectSphereRadius);
+        }
 
         // NPR Room Toggle
         if (IsKeyPressed(KEY_R)) {
@@ -1099,6 +1472,9 @@ int main() {
         // Adjust Ambient Strength: Tap: +/- 0.05 | Hold: +/- 1.0 per second
         ambientInput.Update(KEY_THREE, KEY_KP_3, KEY_ONE, KEY_KP_1, ambientLightStrength, 0.05f,
                             1.0f, 0.0f, std::numeric_limits<float>::max());
+
+        // Start CPU timer to measure culling, matrix uploads, and draw call issuance
+        cpuProfiler.Begin();
 
         // CULLING MATH & MATRIX SETUP
         // -----------------------------------------------------------------------------------------
@@ -1673,7 +2049,7 @@ int main() {
             int spacing   = static_cast<int>(26 * uiScale);
 
             int panelWidth  = static_cast<int>(500 * uiScale);
-            int panelHeight = static_cast<int>(1100 * uiScale);
+            int panelHeight = static_cast<int>(1300 * uiScale);
             int panelX      = pad;
             int panelY      = pad;
 
@@ -1967,6 +2343,44 @@ int main() {
             lightProfiler.Update();
         }
         EndDrawing();
+
+        // Update Hardware Profilers
+        geomProfiler.Update();
+        lightProfiler.Update();
+
+        // End CPU timer
+        cpuProfiler.End();
+
+        // Feed data to the State Machine
+        if (isBenchmarkActive) {
+            std::string archStr = "Unknown";
+            if (activeRenderPath == RenderPath::Forward)
+                archStr = "Forward";
+            else if (activeRenderPath == RenderPath::DeferredUber)
+                archStr = "Deferred_Uber";
+            else if (activeRenderPath == RenderPath::DeferredVolume)
+                archStr = "Deferred_Volume";
+
+            std::string lightTopStr = useLightSingularity ? "Singularity" : "Scattered";
+            std::string styleTopStr = useClusteredStyles ? "Clustered" : "Random";
+            if (useNprRoom)
+                styleTopStr = "NPR_Room_Static";
+
+            int activeTris = lodMeshes[currentLodIndex].triangleCount * actualVisibleCount;
+
+            benchController.UpdateAndRecord(cpuProfiler.elapsedMs, geomProfiler.elapsedMs,
+                                            lightProfiler.elapsedMs, GetFrameTime() * 1000.0,
+                                            activeObstacleCount, currentLodIndex, activeTris,
+                                            activeLightCount, lightTopStr, styleTopStr,
+                                            kuwaharaRadius, currentOverdraw, archStr);
+
+            // Auto-shutdown when finished
+            if (benchController.currentSuite == BenchmarkSuite::Complete) {
+                telemetryWriter.Close();
+                isBenchmarkActive = false;
+                TraceLog(LOG_INFO, "BENCHMARK SHUTDOWN COMPLETE. CHECK CSV.");
+            }
+        }
     }
 
     // CLEANUP
