@@ -119,9 +119,9 @@ void main()
             vec3 normalEdgeY = vec3(0.0);
 
             for (int i = 0; i < 9; i++) {
-                // Sampling of neigboring normals from G-Buffer
+                // Sampling of neigboring normals from G-Buffer (and normal decode)
                 vec2 offsetUV = fragTexCoord + offsets[i] * (texelSize * adaptiveThickness);
-                vec3 sampleNormal = texture(gNormalTex, offsetUV).rgb;
+                vec3 sampleNormal = texture(gNormalTex, offsetUV).rgb * 2.0 - 1.0;
 
                 // Reconstruct neighbor position from Depth Buffer for edge detection
                 float neighborDepth = texture(gDepthTex, offsetUV).r;

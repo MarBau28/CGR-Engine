@@ -110,7 +110,7 @@ struct BenchmarkController {
     CsvTelemetryWriter *csvWriter = nullptr;
 
     // --- The Complete Execution Matrix Arrays ---
-    const int suiteA_Lods[5]      = {0, 1, 2, 3, 4};
+    const int suiteA_LODs[5]      = {0, 1, 2, 3, 4};
     const int suiteB_Instances[5] = {100, 1000, 5000, 10000, 50000};
 
     // Suite C: 0 = Homogeneous (All Style 1), 1 = Quadrant_Clustered
@@ -646,7 +646,7 @@ void ApplyBenchmarkState(const BenchmarkController &ctrl) {
         activeRenderPath    = RenderPath::DeferredUber;
         activeObstacleCount = 100;
         activeLightCount    = 50;
-        currentLodIndex     = ctrl.suiteA_Lods[idx];
+        currentLodIndex     = ctrl.suiteA_LODs[idx];
         objectSphereRadius  = 200.0f;
         break;
 

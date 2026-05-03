@@ -21,8 +21,6 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
 
 # Define executable
 add_executable(CGR-Engine ${SOURCES}
-        old/old_Texture.cpp
-        old/old_Texture.h
         include/Config.h
         include/InputHandler.h)
 
