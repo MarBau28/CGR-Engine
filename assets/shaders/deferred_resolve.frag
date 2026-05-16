@@ -226,7 +226,7 @@ void main()
             //                }
             //            }
 
-            // Generalized Kuwahara Weighted Sum
+            // Generalized Kuwahara (Weighted Sum)
             float weightSum = 0.0;
             vec3 finalPainterlyColor = vec3(0.0);
 

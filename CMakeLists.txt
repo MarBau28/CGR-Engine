@@ -22,7 +22,24 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
 # Define executable
 add_executable(CGR-Engine ${SOURCES}
         include/Config.h
-        include/InputHandler.h)
+        include/InputHandler.h
+        src/Profilers.cpp
+        include/Profilers.h
+        src/Telemetry.cpp
+        include/Telemetry.h
+        src/CameraController.cpp
+        include/CameraController.h
+        src/BenchmarkOrchestrator.cpp
+        include/BenchmarkOrchestrator.h
+        src/SceneManager.cpp
+        include/SceneManager.h
+        include/EngineState.h
+        src/TelemetryDashboard.cpp
+        include/TelemetryDashboard.h
+        src/InputController.cpp
+        include/InputController.h
+        src/RenderContext.cpp
+        include/RenderContext.h)
 
 # Include directories
 target_include_directories(CGR-Engine PRIVATE
