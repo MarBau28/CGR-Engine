@@ -67,17 +67,14 @@ int main() {
 
     while (!WindowShouldClose()) {
         // Screen Resolution setup
-        auto currentWidth             = static_cast<float>(GetScreenWidth());
-        auto currentHeight            = static_cast<float>(GetScreenHeight());
-        float dynamicRes[2]           = {currentWidth, currentHeight};
-        const Rectangle screenDestRec = {0.0f, 0.0f, currentWidth, currentHeight};
+        const Rectangle screenDestRec = {0.0f, 0.0f, static_cast<float>(GetScreenWidth()),
+                                         static_cast<float>(GetScreenHeight())};
         float internalRes[2]          = {static_cast<float>(engineState.renderWidth),
                                          static_cast<float>(engineState.renderHeight)};
         const Rectangle sourceRec     = {0.0f, 0.0f, static_cast<float>(engineState.renderWidth),
                                          -static_cast<float>(engineState.renderHeight)};
-
-        const Rectangle fboDestRec = {0.0f, 0.0f, static_cast<float>(engineState.renderWidth),
-                                      static_cast<float>(engineState.renderHeight)};
+        const Rectangle fboDestRec    = {0.0f, 0.0f, static_cast<float>(engineState.renderWidth),
+                                         static_cast<float>(engineState.renderHeight)};
 
         // INPUT & STATE MANAGEMENT
         // -----------------------------------------------------------------------------------------
@@ -127,14 +124,20 @@ int main() {
             }
         }
 
+        // Guarantee the physical GPU texture memory matches the engine state
+        if (engineState.renderWidth != ctx.gAlbedo.width ||
+            engineState.renderHeight != ctx.gAlbedo.height) {
+            ctx.ResizeTargets(engineState.renderWidth, engineState.renderHeight,
+                              engineState.use16BitHDR);
+        }
+
         // CPU CULLING & DATA PREP
         // -----------------------------------------------------------------------------------------
 
         cpuProfiler.Begin();
 
         // Extract frustum planes and populate visibility arrays to avoid drawing occluded objects
-        sceneManager.UpdateVisibility(cameraController, engineState, engineState.renderWidth,
-                                      engineState.renderHeight);
+        sceneManager.UpdateVisibility(cameraController, engineState);
 
         int actualVisibleCount =
             static_cast<int>(sceneManager.GetVisibleObstacleTransforms().size());
@@ -165,9 +168,11 @@ int main() {
 
         double aspect = static_cast<double>(engineState.renderWidth) /
                         static_cast<double>(engineState.renderHeight);
-        Matrix viewProj =
-            MatrixMultiply(GetCameraMatrix(camera),
-                           MatrixPerspective(camera.fovy * DEG2RAD, aspect, 0.01, 1000.0));
+        Matrix view        = GetCameraMatrix(camera);
+        Matrix proj        = MatrixPerspective(camera.fovy * DEG2RAD, aspect,
+                                               Config::EngineSettings::CameraNearPlane,
+                                               Config::EngineSettings::CameraFarPlane);
+        Matrix viewProj    = MatrixMultiply(view, proj);
         Matrix invViewProj = MatrixInvert(viewProj);
 
         // Fetch current active geometry based on LOD state
@@ -184,6 +189,7 @@ int main() {
 
             if (engineState.activeRenderPath == RenderPath::DeferredUber ||
                 engineState.activeRenderPath == RenderPath::DeferredVolume) {
+                rlDrawRenderBatchActive();
                 rlEnableFramebuffer(ctx.FboId);
                 rlViewport(0, 0, engineState.renderWidth, engineState.renderHeight);
                 rlActiveDrawBuffers(2); // Albedo (Color0) + Normals (Color1)
@@ -196,7 +202,7 @@ int main() {
 
                 BeginMode3D(camera);
                 {
-                    rlViewport(0, 0, engineState.renderWidth, engineState.renderHeight);
+                    rlSetMatrixProjection(proj);
 
                     // conditionally draw floor
                     if (!engineState.useNprRoom && engineState.renderFloor) {
@@ -253,154 +259,169 @@ int main() {
             // Pipeline Branch A: Deferred Shading (Single Uber-Shader)
             if (engineState.activeRenderPath == RenderPath::DeferredUber) {
                 BeginTextureMode(ctx.litSceneTarget);
-                ClearBackground(BLANK);
-
-                rlDrawRenderBatchActive();
-                lightProfiler.Begin();
-
-                BeginShaderMode(ctx.lightingPassShader);
                 {
-                    // Inject environment factors
-                    SetShaderValue(ctx.lightingPassShader, ctx.intensityLoc,
-                                   &engineState.lightIntensity, SHADER_UNIFORM_FLOAT);
-                    SetShaderValue(ctx.lightingPassShader, ctx.ambientLoc,
-                                   &engineState.ambientLightStrength, SHADER_UNIFORM_FLOAT);
-                    SetShaderValue(ctx.lightingPassShader, ctx.maxLightRadiusLoc, &dynamicMaxRadius,
-                                   SHADER_UNIFORM_FLOAT);
+                    ClearBackground(BLANK);
 
-                    // Inject light array and position data
-                    int safeVisibleLightCount = std::min(actualVisibleVolumeCount, 500);
-                    SetShaderValue(ctx.lightingPassShader, ctx.LightingResolutionLoc, internalRes,
-                                   SHADER_UNIFORM_VEC2);
-                    SetShaderValue(ctx.lightingPassShader, ctx.activeLightsLoc,
-                                   &safeVisibleLightCount, SHADER_UNIFORM_INT);
-                    SetShaderValueV(ctx.lightingPassShader, ctx.lightPosArrayLoc,
-                                    sceneManager.GetVisibleLightPositions().data(),
-                                    SHADER_UNIFORM_VEC3, safeVisibleLightCount);
-                    SetShaderValue(ctx.lightingPassShader, ctx.lightColorLoc, &lightColor,
-                                   SHADER_UNIFORM_VEC3);
-                    SetShaderValue(ctx.lightingPassShader, ctx.postViewPosLoc, &camera.position,
-                                   SHADER_UNIFORM_VEC3);
-                    SetShaderValueMatrix(ctx.lightingPassShader, ctx.invViewProjLoc, invViewProj);
+                    rlDrawRenderBatchActive();
+                    lightProfiler.Begin();
 
-                    // Bind G-Buffer outputs as shader inputs
-                    SetShaderValueTexture(ctx.lightingPassShader, ctx.normalTexLoc, ctx.gNormal);
-                    SetShaderValueTexture(ctx.lightingPassShader, ctx.depthTexLoc, ctx.gDepth);
+                    BeginShaderMode(ctx.lightingPassShader);
+                    {
+                        // Inject environment factors
+                        SetShaderValue(ctx.lightingPassShader, ctx.intensityLoc,
+                                       &engineState.lightIntensity, SHADER_UNIFORM_FLOAT);
+                        SetShaderValue(ctx.lightingPassShader, ctx.ambientLoc,
+                                       &engineState.ambientLightStrength, SHADER_UNIFORM_FLOAT);
+                        SetShaderValue(ctx.lightingPassShader, ctx.maxLightRadiusLoc,
+                                       &dynamicMaxRadius, SHADER_UNIFORM_FLOAT);
 
-                    // NPR State Injections
-                    SetShaderValue(ctx.lightingPassShader, ctx.uberEnableOutlinesLoc, &outInt,
-                                   SHADER_UNIFORM_INT);
-                    SetShaderValue(ctx.lightingPassShader, ctx.uberEnableKuwaharaLoc, &kuwInt,
-                                   SHADER_UNIFORM_INT);
-                    SetShaderValue(ctx.lightingPassShader, ctx.uberEnableGoochLoc, &goochInt,
-                                   SHADER_UNIFORM_INT);
-                    SetShaderValue(ctx.lightingPassShader, ctx.uberEnableToonLoc, &toonInt,
-                                   SHADER_UNIFORM_INT);
-                    SetShaderValue(ctx.lightingPassShader, ctx.uberKuwaharaRadiusLoc,
-                                   &engineState.kuwaharaRadius, SHADER_UNIFORM_INT);
-                    SetShaderValue(ctx.lightingPassShader, ctx.uberKuwaharaIntensityLoc,
-                                   &engineState.kuwaharaIntensity, SHADER_UNIFORM_FLOAT);
+                        // Inject light array and position data
+                        int safeVisibleLightCount = std::min(actualVisibleVolumeCount, 500);
+                        SetShaderValue(ctx.lightingPassShader, ctx.LightingResolutionLoc,
+                                       internalRes, SHADER_UNIFORM_VEC2);
+                        SetShaderValue(ctx.lightingPassShader, ctx.activeLightsLoc,
+                                       &safeVisibleLightCount, SHADER_UNIFORM_INT);
+                        SetShaderValueV(ctx.lightingPassShader, ctx.lightPosArrayLoc,
+                                        sceneManager.GetVisibleLightPositions().data(),
+                                        SHADER_UNIFORM_VEC3, safeVisibleLightCount);
+                        SetShaderValue(ctx.lightingPassShader, ctx.lightColorLoc, &lightColor,
+                                       SHADER_UNIFORM_VEC3);
+                        SetShaderValue(ctx.lightingPassShader, ctx.postViewPosLoc, &camera.position,
+                                       SHADER_UNIFORM_VEC3);
+                        SetShaderValueMatrix(ctx.lightingPassShader, ctx.invViewProjLoc,
+                                             invViewProj);
 
-                    // Execute screen-space quad
-                    DrawTexturePro(ctx.gAlbedo, sourceRec, fboDestRec, {0, 0}, 0.0f, WHITE);
+                        // Bind G-Buffer outputs as shader inputs
+                        SetShaderValueTexture(ctx.lightingPassShader, ctx.normalTexLoc,
+                                              ctx.gNormal);
+                        SetShaderValueTexture(ctx.lightingPassShader, ctx.depthTexLoc, ctx.gDepth);
+
+                        // NPR State Injections
+                        SetShaderValue(ctx.lightingPassShader, ctx.uberEnableOutlinesLoc, &outInt,
+                                       SHADER_UNIFORM_INT);
+                        SetShaderValue(ctx.lightingPassShader, ctx.uberEnableKuwaharaLoc, &kuwInt,
+                                       SHADER_UNIFORM_INT);
+                        SetShaderValue(ctx.lightingPassShader, ctx.uberEnableGoochLoc, &goochInt,
+                                       SHADER_UNIFORM_INT);
+                        SetShaderValue(ctx.lightingPassShader, ctx.uberEnableToonLoc, &toonInt,
+                                       SHADER_UNIFORM_INT);
+                        SetShaderValue(ctx.lightingPassShader, ctx.uberKuwaharaRadiusLoc,
+                                       &engineState.kuwaharaRadius, SHADER_UNIFORM_INT);
+                        SetShaderValue(ctx.lightingPassShader, ctx.uberKuwaharaIntensityLoc,
+                                       &engineState.kuwaharaIntensity, SHADER_UNIFORM_FLOAT);
+
+                        // Execute screen-space quad
+                        DrawTexturePro(ctx.gAlbedo, sourceRec, fboDestRec, {0, 0}, 0.0f, WHITE);
+                    }
+                    EndShaderMode();
+
+                    rlDrawRenderBatchActive();
+                    GpuProfiler::End();
                 }
-                EndShaderMode();
-
-                rlDrawRenderBatchActive();
-                GpuProfiler::End();
                 EndTextureMode();
 
                 // Pipeline Branch B: Deferred Shading (Volumetric Light Rendering)
             } else if (engineState.activeRenderPath == RenderPath::DeferredVolume) {
                 // Pass 1: Accumulate Lighting
                 BeginTextureMode(ctx.litSceneTarget);
-                ClearBackground(BLANK);
-
-                rlDrawRenderBatchActive();
-                lightProfiler.Begin();
-
-                BeginBlendMode(BLEND_ADDITIVE); // Accumulate overlapping light volumes
-                rlDisableDepthMask();           // Prevent light spheres from occluding each other
-
-                BeginMode3D(camera);
                 {
-                    BeginShaderMode(ctx.lightVolumeShader);
+                    ClearBackground(BLANK);
+
+                    rlDrawRenderBatchActive();
+                    lightProfiler.Begin();
+
+                    BeginBlendMode(BLEND_ADDITIVE); // Accumulate overlapping light volumes
                     {
-                        SetShaderValue(ctx.lightVolumeShader, ctx.lvIntensityLoc,
-                                       &engineState.lightIntensity, SHADER_UNIFORM_FLOAT);
-                        SetShaderValue(ctx.lightVolumeShader, ctx.lvMaxRadiusLoc, &dynamicMaxRadius,
-                                       SHADER_UNIFORM_FLOAT);
-                        SetShaderValue(ctx.lightVolumeShader, ctx.lvResolutionLoc, internalRes,
-                                       SHADER_UNIFORM_VEC2);
-                        SetShaderValue(ctx.lightVolumeShader, ctx.lvViewPosLoc, &camera.position,
-                                       SHADER_UNIFORM_VEC3);
-                        SetShaderValue(ctx.lightVolumeShader, ctx.lvLightColorLoc, &lightColor,
-                                       SHADER_UNIFORM_VEC3);
-                        SetShaderValueMatrix(ctx.lightVolumeShader, ctx.lvInvViewProjLoc,
-                                             invViewProj);
-                        SetShaderValueTexture(ctx.lightVolumeShader, ctx.lvAlbedoTexLoc,
-                                              ctx.gAlbedo);
-                        SetShaderValueTexture(ctx.lightVolumeShader, ctx.lvNormalTexLoc,
-                                              ctx.gNormal);
-                        SetShaderValueTexture(ctx.lightVolumeShader, ctx.lvDepthTexLoc, ctx.gDepth);
-                        SetShaderValue(ctx.lightVolumeShader, ctx.lvEnableGoochLoc, &goochInt,
-                                       SHADER_UNIFORM_INT);
-                        SetShaderValue(ctx.lightVolumeShader, ctx.lvEnableToonLoc, &toonInt,
-                                       SHADER_UNIFORM_INT);
+                        rlDisableDepthMask(); // Prevent light spheres from occluding each other
 
-                        if (actualVisibleVolumeCount > 0) {
-                            DrawMeshInstanced(ctx.lightningSphereMesh, ctx.lightVolumeMaterial,
-                                              sceneManager.GetVisibleLightVolumeTransforms().data(),
-                                              actualVisibleVolumeCount);
+                        BeginMode3D(camera);
+                        {
+                            BeginShaderMode(ctx.lightVolumeShader);
+                            {
+                                SetShaderValue(ctx.lightVolumeShader, ctx.lvIntensityLoc,
+                                               &engineState.lightIntensity, SHADER_UNIFORM_FLOAT);
+                                SetShaderValue(ctx.lightVolumeShader, ctx.lvMaxRadiusLoc,
+                                               &dynamicMaxRadius, SHADER_UNIFORM_FLOAT);
+                                SetShaderValue(ctx.lightVolumeShader, ctx.lvResolutionLoc,
+                                               internalRes, SHADER_UNIFORM_VEC2);
+                                SetShaderValue(ctx.lightVolumeShader, ctx.lvViewPosLoc,
+                                               &camera.position, SHADER_UNIFORM_VEC3);
+                                SetShaderValue(ctx.lightVolumeShader, ctx.lvLightColorLoc,
+                                               &lightColor, SHADER_UNIFORM_VEC3);
+                                SetShaderValueMatrix(ctx.lightVolumeShader, ctx.lvInvViewProjLoc,
+                                                     invViewProj);
+                                SetShaderValueTexture(ctx.lightVolumeShader, ctx.lvAlbedoTexLoc,
+                                                      ctx.gAlbedo);
+                                SetShaderValueTexture(ctx.lightVolumeShader, ctx.lvNormalTexLoc,
+                                                      ctx.gNormal);
+                                SetShaderValueTexture(ctx.lightVolumeShader, ctx.lvDepthTexLoc,
+                                                      ctx.gDepth);
+                                SetShaderValue(ctx.lightVolumeShader, ctx.lvEnableGoochLoc,
+                                               &goochInt, SHADER_UNIFORM_INT);
+                                SetShaderValue(ctx.lightVolumeShader, ctx.lvEnableToonLoc, &toonInt,
+                                               SHADER_UNIFORM_INT);
+
+                                if (actualVisibleVolumeCount > 0) {
+                                    DrawMeshInstanced(
+                                        ctx.lightningSphereMesh, ctx.lightVolumeMaterial,
+                                        sceneManager.GetVisibleLightVolumeTransforms().data(),
+                                        actualVisibleVolumeCount);
+                                }
+                            }
+                            EndShaderMode();
                         }
-                    }
-                    EndShaderMode();
-                }
-                EndMode3D();
-                rlDrawRenderBatchActive();
+                        EndMode3D();
+                        rlDrawRenderBatchActive();
 
-                rlEnableDepthMask();
-                EndBlendMode();
+                        rlEnableDepthMask();
+                    }
+                    EndBlendMode();
+                }
                 EndTextureMode();
 
                 // Pass 2: NPR Resolve (Combine lighting buffer with NPR effects)
                 BeginTextureMode(ctx.resolveTarget);
-                ClearBackground(BLANK);
-                BeginShaderMode(ctx.nprResolveShader);
                 {
-                    SetShaderValue(ctx.nprResolveShader, ctx.nprAmbientLoc,
-                                   &engineState.ambientLightStrength, SHADER_UNIFORM_FLOAT);
-                    SetShaderValue(ctx.nprResolveShader, ctx.nprResolutionLoc, internalRes,
-                                   SHADER_UNIFORM_VEC2);
-                    SetShaderValue(ctx.nprResolveShader, ctx.nprViewPosLoc, &camera.position,
-                                   SHADER_UNIFORM_VEC3);
-                    SetShaderValueMatrix(ctx.nprResolveShader, ctx.nprInvViewProjLoc, invViewProj);
+                    ClearBackground(BLANK);
+                    BeginShaderMode(ctx.nprResolveShader);
+                    {
+                        SetShaderValue(ctx.nprResolveShader, ctx.nprAmbientLoc,
+                                       &engineState.ambientLightStrength, SHADER_UNIFORM_FLOAT);
+                        SetShaderValue(ctx.nprResolveShader, ctx.nprResolutionLoc, internalRes,
+                                       SHADER_UNIFORM_VEC2);
+                        SetShaderValue(ctx.nprResolveShader, ctx.nprViewPosLoc, &camera.position,
+                                       SHADER_UNIFORM_VEC3);
+                        SetShaderValueMatrix(ctx.nprResolveShader, ctx.nprInvViewProjLoc,
+                                             invViewProj);
 
-                    SetShaderValueTexture(ctx.nprResolveShader, ctx.nprLitSceneTexLoc,
-                                          ctx.litSceneTarget.texture);
-                    SetShaderValueTexture(ctx.nprResolveShader, ctx.nprAlbedoTexLoc, ctx.gAlbedo);
-                    SetShaderValueTexture(ctx.nprResolveShader, ctx.nprNormalTexLoc, ctx.gNormal);
-                    SetShaderValueTexture(ctx.nprResolveShader, ctx.nprDepthTexLoc, ctx.gDepth);
+                        SetShaderValueTexture(ctx.nprResolveShader, ctx.nprLitSceneTexLoc,
+                                              ctx.litSceneTarget.texture);
+                        SetShaderValueTexture(ctx.nprResolveShader, ctx.nprAlbedoTexLoc,
+                                              ctx.gAlbedo);
+                        SetShaderValueTexture(ctx.nprResolveShader, ctx.nprNormalTexLoc,
+                                              ctx.gNormal);
+                        SetShaderValueTexture(ctx.nprResolveShader, ctx.nprDepthTexLoc, ctx.gDepth);
 
-                    SetShaderValue(ctx.nprResolveShader, ctx.resEnableOutlinesLoc, &outInt,
-                                   SHADER_UNIFORM_INT);
-                    SetShaderValue(ctx.nprResolveShader, ctx.resEnableKuwaharaLoc, &kuwInt,
-                                   SHADER_UNIFORM_INT);
-                    SetShaderValue(ctx.nprResolveShader, ctx.resEnableGoochLoc, &goochInt,
-                                   SHADER_UNIFORM_INT);
-                    SetShaderValue(ctx.nprResolveShader, ctx.resEnableToonLoc, &toonInt,
-                                   SHADER_UNIFORM_INT);
-                    SetShaderValue(ctx.nprResolveShader, ctx.resKuwaharaRadiusLoc,
-                                   &engineState.kuwaharaRadius, SHADER_UNIFORM_INT);
-                    SetShaderValue(ctx.nprResolveShader, ctx.resKuwaharaIntensityLoc,
-                                   &engineState.kuwaharaIntensity, SHADER_UNIFORM_FLOAT);
+                        SetShaderValue(ctx.nprResolveShader, ctx.resEnableOutlinesLoc, &outInt,
+                                       SHADER_UNIFORM_INT);
+                        SetShaderValue(ctx.nprResolveShader, ctx.resEnableKuwaharaLoc, &kuwInt,
+                                       SHADER_UNIFORM_INT);
+                        SetShaderValue(ctx.nprResolveShader, ctx.resEnableGoochLoc, &goochInt,
+                                       SHADER_UNIFORM_INT);
+                        SetShaderValue(ctx.nprResolveShader, ctx.resEnableToonLoc, &toonInt,
+                                       SHADER_UNIFORM_INT);
+                        SetShaderValue(ctx.nprResolveShader, ctx.resKuwaharaRadiusLoc,
+                                       &engineState.kuwaharaRadius, SHADER_UNIFORM_INT);
+                        SetShaderValue(ctx.nprResolveShader, ctx.resKuwaharaIntensityLoc,
+                                       &engineState.kuwaharaIntensity, SHADER_UNIFORM_FLOAT);
 
-                    DrawTexturePro(ctx.gAlbedo, sourceRec, fboDestRec, {0, 0}, 0.0f, WHITE);
+                        DrawTexturePro(ctx.gAlbedo, sourceRec, fboDestRec, {0, 0}, 0.0f, WHITE);
+                    }
+                    EndShaderMode();
+
+                    rlDrawRenderBatchActive();
+                    GpuProfiler::End();
                 }
-                EndShaderMode();
-
-                rlDrawRenderBatchActive();
-                GpuProfiler::End();
                 EndTextureMode();
 
                 // Pipeline Branch C: forward Shading (Baseline Evaluation)
@@ -426,7 +447,7 @@ int main() {
 
                 BeginMode3D(camera);
                 {
-                    rlViewport(0, 0, engineState.renderWidth, engineState.renderHeight);
+                    rlSetMatrixProjection(proj);
 
                     int safeVisibleLightCount = std::min(actualVisibleVolumeCount, 500);
                     int blinnCount = static_cast<int>(sceneManager.GetFwdTransformsBlinn().size());
@@ -437,9 +458,11 @@ int main() {
 
                     if (actualVisibleProxyCount > 0) {
                         BeginShaderMode(ctx.forwardUnlitShader);
-                        DrawMeshInstanced(ctx.lightningSphereMesh, ctx.fwdLightProxyMaterial,
-                                          sceneManager.GetVisibleLightProxyTransforms().data(),
-                                          std::min(actualVisibleProxyCount, 500));
+                        {
+                            DrawMeshInstanced(ctx.lightningSphereMesh, ctx.fwdLightProxyMaterial,
+                                              sceneManager.GetVisibleLightProxyTransforms().data(),
+                                              std::min(actualVisibleProxyCount, 500));
+                        }
                         EndShaderMode();
                     }
 
@@ -482,25 +505,28 @@ int main() {
                     // Gooch Shading Bin
                     if (goochCount > 0) {
                         BeginShaderMode(ctx.forwardGoochShader);
-                        SetShaderValue(ctx.forwardGoochShader, ctx.fwdGoochViewPosLoc,
-                                       &camera.position, SHADER_UNIFORM_VEC3);
-                        SetShaderValue(ctx.forwardGoochShader, ctx.fwdGoochIntensityLoc,
-                                       &engineState.lightIntensity, SHADER_UNIFORM_FLOAT);
-                        SetShaderValue(ctx.forwardGoochShader, ctx.fwdGoochMaxRadiusLoc,
-                                       &dynamicMaxRadius, SHADER_UNIFORM_FLOAT);
-                        SetShaderValue(ctx.forwardGoochShader, ctx.fwdGoochAmbientLoc,
-                                       &engineState.ambientLightStrength, SHADER_UNIFORM_FLOAT);
-                        SetShaderValue(ctx.forwardGoochShader, ctx.fwdGoochActiveLightLoc,
-                                       &safeVisibleLightCount, SHADER_UNIFORM_INT);
+                        {
+                            SetShaderValue(ctx.forwardGoochShader, ctx.fwdGoochViewPosLoc,
+                                           &camera.position, SHADER_UNIFORM_VEC3);
+                            SetShaderValue(ctx.forwardGoochShader, ctx.fwdGoochIntensityLoc,
+                                           &engineState.lightIntensity, SHADER_UNIFORM_FLOAT);
+                            SetShaderValue(ctx.forwardGoochShader, ctx.fwdGoochMaxRadiusLoc,
+                                           &dynamicMaxRadius, SHADER_UNIFORM_FLOAT);
+                            SetShaderValue(ctx.forwardGoochShader, ctx.fwdGoochAmbientLoc,
+                                           &engineState.ambientLightStrength, SHADER_UNIFORM_FLOAT);
+                            SetShaderValue(ctx.forwardGoochShader, ctx.fwdGoochActiveLightLoc,
+                                           &safeVisibleLightCount, SHADER_UNIFORM_INT);
 
-                        if (safeVisibleLightCount > 0) {
-                            SetShaderValueV(ctx.forwardGoochShader, ctx.fwdGoochLightPosLoc,
-                                            sceneManager.GetVisibleLightPositions().data(),
-                                            SHADER_UNIFORM_VEC3, safeVisibleLightCount);
+                            if (safeVisibleLightCount > 0) {
+                                SetShaderValueV(ctx.forwardGoochShader, ctx.fwdGoochLightPosLoc,
+                                                sceneManager.GetVisibleLightPositions().data(),
+                                                SHADER_UNIFORM_VEC3, safeVisibleLightCount);
+                            }
+
+                            DrawMeshInstanced(currentMesh, ctx.fwdGoochMaterial,
+                                              sceneManager.GetFwdTransformsGooch().data(),
+                                              goochCount);
                         }
-
-                        DrawMeshInstanced(currentMesh, ctx.fwdGoochMaterial,
-                                          sceneManager.GetFwdTransformsGooch().data(), goochCount);
                         EndShaderMode();
                     }
 
@@ -567,7 +593,7 @@ int main() {
             // Project the accumulated lighting/NPR FBO texture to the screen quad
             BeginShaderMode(ctx.postShader);
             {
-                SetShaderValue(ctx.postShader, ctx.postResolutionLoc, dynamicRes,
+                SetShaderValue(ctx.postShader, ctx.postResolutionLoc, internalRes,
                                SHADER_UNIFORM_VEC2);
 
                 Texture2D finalRender = (engineState.activeRenderPath == RenderPath::DeferredVolume)

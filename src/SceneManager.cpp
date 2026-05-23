@@ -238,9 +238,9 @@ void SceneManager::GenerateNprRoomScene(const int lightCount) {
     actualGeneratedLights = lightCount;
 }
 
-void SceneManager::UpdateVisibility(CameraController &camera, const EngineState &state,
-                                    int screenWidth, int screenHeight) {
-    double aspect   = static_cast<double>(screenWidth) / static_cast<double>(screenHeight);
+void SceneManager::UpdateVisibility(CameraController &camera, const EngineState &state) {
+    double aspect =
+        static_cast<double>(state.renderWidth) / static_cast<double>(state.renderHeight);
     Matrix proj     = MatrixPerspective(camera.GetCamera().fovy * DEG2RAD, aspect,
                                         Config::EngineSettings::CameraNearPlane,
                                         Config::EngineSettings::CameraFarPlane);

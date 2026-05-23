@@ -22,8 +22,7 @@ class SceneManager {
     void RebuildScene(const EngineState &state);
 
     // Executes CPU-side frustum culling and populates visible arrays
-    void UpdateVisibility(CameraController &camera, const EngineState &state, int screenWidth,
-                          int screenHeight);
+    void UpdateVisibility(CameraController &camera, const EngineState &state);
 
     // Base Deferred Data
     [[nodiscard]] const std::vector<Matrix> &GetVisibleObstacleTransforms() const {
