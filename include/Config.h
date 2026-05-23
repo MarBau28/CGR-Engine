@@ -15,22 +15,25 @@ namespace Config::Assets {
 }
 
 namespace Config::Shaders {
-    inline constexpr std::string_view GBufferVert          = "g-buffer.vert";
-    inline constexpr std::string_view GBufferFrag          = "g-buffer.frag";
-    inline constexpr std::string_view DeferredUberFrag     = "deferred_uber.frag";
-    inline constexpr std::string_view PostProcessFrag      = "postprocess.frag";
-    inline constexpr std::string_view GBufferInstancedVert = "g-buffer_instanced.vert";
-    inline constexpr std::string_view GBufferInstancedFrag = "g-buffer_instanced.frag";
-    inline constexpr std::string_view DeferredVolumeVert   = "deferred_volume.vert";
-    inline constexpr std::string_view DeferredVolumeFrag   = "deferred_volume.frag";
-    inline constexpr std::string_view DeferredResolveFrag  = "deferred_resolve.frag";
-    inline constexpr std::string_view ForwardInstancedVert = "forward_instanced.vert";
-    inline constexpr std::string_view ForwardBlinnFrag     = "forward_blinn.frag";
-    inline constexpr std::string_view ForwardGoochFrag     = "forward_gooch.frag";
-    inline constexpr std::string_view ForwardToonFrag      = "forward_toon.frag";
-    inline constexpr std::string_view ForwardOutlineVert   = "forward_outline.vert";
-    inline constexpr std::string_view ForwardOutlineFrag   = "forward_outline.frag";
-    inline constexpr std::string_view ForwardUnlitFrag     = "forward_unlit.frag";
+    inline constexpr std::string_view GBufferVert = "/deferred/geometry/g-buffer.vert";
+    inline constexpr std::string_view GBufferFrag = "/deferred/geometry/g-buffer.frag";
+    inline constexpr std::string_view GBufferInstancedVert =
+        "/deferred/geometry/g-buffer_instanced.vert";
+    inline constexpr std::string_view GBufferInstancedFrag =
+        "/deferred/geometry/g-buffer_instanced.frag";
+    inline constexpr std::string_view DeferredUberFrag   = "/deferred/uber/deferred_uber.frag";
+    inline constexpr std::string_view DeferredVolumeVert = "/deferred/volumes/deferred_volume.vert";
+    inline constexpr std::string_view DeferredVolumeFrag = "/deferred/volumes/deferred_volume.frag";
+    inline constexpr std::string_view DeferredResolveFrag =
+        "/deferred/volumes/deferred_resolve.frag";
+    inline constexpr std::string_view ForwardInstancedVert = "/forward/forward_instanced.vert";
+    inline constexpr std::string_view ForwardBlinnFrag     = "/forward/forward_blinn.frag";
+    inline constexpr std::string_view ForwardGoochFrag     = "/forward/forward_gooch.frag";
+    inline constexpr std::string_view ForwardToonFrag      = "/forward/forward_toon.frag";
+    inline constexpr std::string_view ForwardOutlineVert   = "/forward/forward_outline.vert";
+    inline constexpr std::string_view ForwardOutlineFrag   = "/forward/forward_outline.frag";
+    inline constexpr std::string_view ForwardUnlitFrag     = "/forward/forward_unlit.frag";
+    inline constexpr std::string_view PostProcessFrag      = "/post_process/post_process.frag";
 }
 
 namespace Config::EngineSettings {
@@ -38,6 +41,8 @@ namespace Config::EngineSettings {
     inline constexpr int ScreenWidth             = 1920;
     inline constexpr int ScreenHeight            = 1080;
     inline constexpr float CameraFOV             = 45.0f;
+    inline constexpr float CameraNearPlane       = 1.0f;
+    inline constexpr float CameraFarPlane        = 10000.0f;
     inline constexpr Vector3 CameraOrientation   = {0.0f, 1.0f, 0.0f};
     inline constexpr Vector3 CameraViewDirection = {0.0f, 0.0f, 0.0f};
     inline constexpr Vector3 CameraPosition      = {150.0f, 150.0f, 150.0f};
@@ -77,4 +82,5 @@ namespace Config::DefaultState {
     inline constexpr bool UseLightSingularity = false;
     inline constexpr int CurrentLodIndex      = 0;
     inline constexpr bool UseNprRoom          = false;
+    inline constexpr bool RenderFloor         = true;
 }

@@ -4,7 +4,7 @@
 #include "raylib.h"
 #include <vector>
 
-// Forward declarations
+// forward declarations
 class CameraController;
 struct EngineState;
 
@@ -44,7 +44,7 @@ class SceneManager {
         return visibleLightPositions;
     }
 
-    // Forward Rendering Specific Bins (Pre-sorted during culling)
+    // forward Rendering Specific Bins (Pre-sorted during culling)
     [[nodiscard]] const std::vector<Matrix> &GetFwdTransformsBlinn() const {
         return fwdTransformsBlinn;
     }
@@ -82,14 +82,14 @@ class SceneManager {
     std::vector<Matrix> visibleLightVolumeTransforms;
     std::vector<Vector3> visibleLightPositions;
 
-    // Forward Bins
+    // forward Bins
     std::vector<Matrix> fwdTransformsBlinn;
     std::vector<Matrix> fwdTransformsGooch;
     std::vector<Matrix> fwdTransformsToon;
     std::vector<Matrix> fwdTransformsOutline;
 
     // Internal Generators
-    void GenerateStandardScene(float sphereRadius, bool clustered, int maxObstacles, int maxLights);
+    void GenerateStandardScene(float sphereRadius, bool clustered);
     void GenerateNprRoomScene(int lightCount);
 
     // Returns the true obstacle count depending on the active environment

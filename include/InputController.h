@@ -5,9 +5,10 @@
 #include "InputHandler.h"
 
 struct InputEventFlags {
-    bool triggerBenchmarkStart = false;
-    bool triggerSceneRebuild   = false;
-    bool triggerHdrFboRebuild  = false;
+    bool triggerBenchmarkStart    = false;
+    bool triggerSceneRebuild      = false;
+    bool triggerHdrFboRebuild     = false;
+    bool triggerResolutionRebuild = false;
 };
 
 class InputController {

@@ -25,7 +25,7 @@ void RenderContext::Initialize(const EngineState &engineState, const SceneManage
     nprResolveShader =
         LoadShader(nullptr, (sPath + std::string(Config::Shaders::DeferredResolveFrag)).c_str());
 
-    // Forward Pipeline Shaders (Baseline comparison)
+    // forward Pipeline Shaders (Baseline comparison)
     forwardBlinnShader =
         LoadShader((sPath + std::string(Config::Shaders::ForwardInstancedVert)).c_str(),
                    (sPath + std::string(Config::Shaders::ForwardBlinnFrag)).c_str());
@@ -71,12 +71,20 @@ void RenderContext::Initialize(const EngineState &engineState, const SceneManage
         std::string(Config::Paths::Textures) + std::string(Config::Assets::ObstacleTexture);
     obstacleTexture = LoadTexture(texPath.c_str());
 
+    // generate mip-maps for obstacle textures
+    GenTextureMipmaps(&obstacleTexture);
+    SetTextureFilter(obstacleTexture, TEXTURE_FILTER_TRILINEAR);
+
     // Generate floor plane and tile texture coordinates for the NPR Room
-    floorMesh  = GenMeshPlane(1000.0f, 1000.0f, 100, 100);
+    floorMesh  = GenMeshPlane(1000.0f, 1000.0f, 1, 1);
     floorModel = LoadModelFromMesh(floorMesh);
     const std::string woodTexPath =
         std::string(Config::Paths::Textures) + std::string(Config::Assets::WoodTexture);
     floorTexture = LoadTexture(woodTexPath.c_str());
+
+    // generate mip-maps for floor texture
+    GenTextureMipmaps(&floorTexture);
+    SetTextureFilter(floorTexture, TEXTURE_FILTER_TRILINEAR);
     SetTextureWrap(floorTexture, TEXTURE_WRAP_REPEAT);
 
     for (int i = 0; i < floorMesh.vertexCount; i++) {
@@ -148,7 +156,7 @@ void RenderContext::Initialize(const EngineState &engineState, const SceneManage
     albedoTexId =
         rlLoadTexture(nullptr, renderWidth, renderHeight, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, 1);
     normalTexId =
-        rlLoadTexture(nullptr, renderWidth, renderHeight, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, 1);
+        rlLoadTexture(nullptr, renderWidth, renderHeight, PIXELFORMAT_UNCOMPRESSED_R16G16B16A16, 1);
     depthTexId = rlLoadTextureDepth(renderWidth, renderHeight, false);
 
     rlEnableFramebuffer(FboId);
@@ -163,7 +171,7 @@ void RenderContext::Initialize(const EngineState &engineState, const SceneManage
 
     // Wrap raw GL IDs into Raylib Textures
     gAlbedo = {albedoTexId, renderWidth, renderHeight, 1, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8};
-    gNormal = {normalTexId, renderWidth, renderHeight, 1, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8};
+    gNormal = {normalTexId, renderWidth, renderHeight, 1, PIXELFORMAT_UNCOMPRESSED_R16G16B16A16};
     gDepth  = {depthTexId, renderWidth, renderHeight, 1, PIXELFORMAT_UNCOMPRESSED_GRAYSCALE};
 
     // Point filtering is crucial for G-Buffer sampling to avoid interpolating across object edges
@@ -175,8 +183,8 @@ void RenderContext::Initialize(const EngineState &engineState, const SceneManage
     // ---------------------------------------------------------------------------------------------
 
     // Initialize lighting accumulation targets
-    litSceneTarget = LoadRenderTexture(renderWidth, renderHeight);
-    resolveTarget  = LoadRenderTexture(renderWidth, renderHeight);
+    litSceneTarget.id = 0;
+    resolveTarget.id  = 0;
     RebuildHDRTargets(engineState.use16BitHDR, renderWidth, renderHeight);
 
     // Bind G-Buffer outputs as inputs for the Light Volume shader
@@ -292,7 +300,7 @@ void RenderContext::Initialize(const EngineState &engineState, const SceneManage
     // Post-Process Pass
     postResolutionLoc = GetShaderLocation(postShader, "resolution");
 
-    // Forward Blinn Pass
+    // forward Blinn Pass
     fwdBlinnViewPosLoc     = GetShaderLocation(forwardBlinnShader, "viewPos");
     fwdBlinnIntensityLoc   = GetShaderLocation(forwardBlinnShader, "lightIntensity");
     fwdBlinnAmbientLoc     = GetShaderLocation(forwardBlinnShader, "ambientLightStrength");
@@ -311,7 +319,7 @@ void RenderContext::Initialize(const EngineState &engineState, const SceneManage
     SetShaderValue(forwardBlinnShader, fwdBlinnAttQuadLoc,
                    &Config::EngineSettings::AttenuationQuadratic, SHADER_UNIFORM_FLOAT);
 
-    // Forward Gooch Pass
+    // forward Gooch Pass
     fwdGoochViewPosLoc     = GetShaderLocation(forwardGoochShader, "viewPos");
     fwdGoochIntensityLoc   = GetShaderLocation(forwardGoochShader, "lightIntensity");
     fwdGoochAmbientLoc     = GetShaderLocation(forwardGoochShader, "ambientLightStrength");
@@ -329,7 +337,7 @@ void RenderContext::Initialize(const EngineState &engineState, const SceneManage
     SetShaderValue(forwardGoochShader, fwdGoochAttQuadLoc,
                    &Config::EngineSettings::AttenuationQuadratic, SHADER_UNIFORM_FLOAT);
 
-    // Forward Toon Pass
+    // forward Toon Pass
     fwdToonViewPosLoc     = GetShaderLocation(forwardToonShader, "viewPos");
     fwdToonIntensityLoc   = GetShaderLocation(forwardToonShader, "lightIntensity");
     fwdToonAmbientLoc     = GetShaderLocation(forwardToonShader, "ambientLightStrength");
@@ -350,7 +358,7 @@ void RenderContext::Initialize(const EngineState &engineState, const SceneManage
 
     fwdOutlineViewPosLoc = GetShaderLocation(forwardOutlineShader, "viewPos");
 
-    // Forward Materials Setup
+    // forward Materials Setup
     fwdBlinnMaterial                                   = LoadMaterialDefault();
     fwdBlinnMaterial.shader                            = forwardBlinnShader;
     fwdBlinnMaterial.maps[MATERIAL_MAP_ALBEDO].texture = obstacleTexture;
@@ -378,24 +386,85 @@ void RenderContext::Initialize(const EngineState &engineState, const SceneManage
 // of 16-bit Float vs 8-bit Clamped rendering.
 void RenderContext::RebuildHDRTargets(const bool use16BitHDR, const int renderWidth,
                                       const int renderHeight) {
-    const int targetFormat =
-        use16BitHDR ? PIXELFORMAT_UNCOMPRESSED_R16G16B16A16 : PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+    // Fully destroy old FBOs (Color + Depth + Raylib Structs)
+    if (litSceneTarget.id != 0)
+        UnloadRenderTexture(litSceneTarget);
+    if (resolveTarget.id != 0)
+        UnloadRenderTexture(resolveTarget);
 
-    rlUnloadTexture(litSceneTarget.texture.id);
-    litSceneTarget.texture.id = rlLoadTexture(nullptr, renderWidth, renderHeight, targetFormat, 1);
-    litSceneTarget.texture.format = targetFormat;
-    rlEnableFramebuffer(litSceneTarget.id);
-    rlFramebufferAttach(litSceneTarget.id, litSceneTarget.texture.id, RL_ATTACHMENT_COLOR_CHANNEL0,
-                        RL_ATTACHMENT_TEXTURE2D, 0);
+    // Scaffold new render targets at dynamic resolution.
+    litSceneTarget = LoadRenderTexture(renderWidth, renderHeight);
+    resolveTarget  = LoadRenderTexture(renderWidth, renderHeight);
+
+    // HDR Switch management
+    if (use16BitHDR) {
+        constexpr int targetFormat = PIXELFORMAT_UNCOMPRESSED_R16G16B16A16;
+
+        // Lit Scene target Update
+        rlUnloadTexture(litSceneTarget.texture.id);
+        litSceneTarget.texture.id =
+            rlLoadTexture(nullptr, renderWidth, renderHeight, targetFormat, 1);
+        litSceneTarget.texture.format = targetFormat;
+
+        rlEnableFramebuffer(litSceneTarget.id);
+        rlFramebufferAttach(litSceneTarget.id, litSceneTarget.texture.id,
+                            RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
+        rlDisableFramebuffer();
+
+        // Resolve target Update
+        rlUnloadTexture(resolveTarget.texture.id);
+        resolveTarget.texture.id =
+            rlLoadTexture(nullptr, renderWidth, renderHeight, targetFormat, 1);
+        resolveTarget.texture.format = targetFormat;
+
+        rlEnableFramebuffer(resolveTarget.id);
+        rlFramebufferAttach(resolveTarget.id, resolveTarget.texture.id,
+                            RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
+        rlDisableFramebuffer();
+    }
+}
+
+// RESIZE FUNCTION
+// -------------------------------------------------------------------------------------------------
+
+void RenderContext::ResizeTargets(const int newWidth, const int newHeight, const bool use16BitHDR) {
+    // Unload existing G-Buffer FBO and Textures
+    rlUnloadFramebuffer(FboId);
+    rlUnloadTexture(albedoTexId);
+    rlUnloadTexture(normalTexId);
+    rlUnloadTexture(depthTexId);
+
+    // Re-allocate G-Buffer Textures at new resolution
+    FboId       = rlLoadFramebuffer();
+    albedoTexId = rlLoadTexture(nullptr, newWidth, newHeight, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, 1);
+    normalTexId =
+        rlLoadTexture(nullptr, newWidth, newHeight, PIXELFORMAT_UNCOMPRESSED_R16G16B16A16, 1);
+    depthTexId = rlLoadTextureDepth(newWidth, newHeight, false);
+
+    rlEnableFramebuffer(FboId);
+    rlFramebufferAttach(FboId, albedoTexId, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D,
+                        0);
+    rlFramebufferAttach(FboId, normalTexId, RL_ATTACHMENT_COLOR_CHANNEL1, RL_ATTACHMENT_TEXTURE2D,
+                        0);
+    rlFramebufferAttach(FboId, depthTexId, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_TEXTURE2D, 0);
     rlDisableFramebuffer();
 
-    rlUnloadTexture(resolveTarget.texture.id);
-    resolveTarget.texture.id = rlLoadTexture(nullptr, renderWidth, renderHeight, targetFormat, 1);
-    resolveTarget.texture.format = targetFormat;
-    rlEnableFramebuffer(resolveTarget.id);
-    rlFramebufferAttach(resolveTarget.id, resolveTarget.texture.id, RL_ATTACHMENT_COLOR_CHANNEL0,
-                        RL_ATTACHMENT_TEXTURE2D, 0);
-    rlDisableFramebuffer();
+    // Update Raylib Texture Wrappers
+    gAlbedo = {albedoTexId, newWidth, newHeight, 1, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8};
+    gNormal = {normalTexId, newWidth, newHeight, 1, PIXELFORMAT_UNCOMPRESSED_R16G16B16A16};
+    gDepth  = {depthTexId, newWidth, newHeight, 1, PIXELFORMAT_UNCOMPRESSED_GRAYSCALE};
+
+    SetTextureFilter(gAlbedo, TEXTURE_FILTER_POINT);
+    SetTextureFilter(gNormal, TEXTURE_FILTER_POINT);
+    SetTextureFilter(gDepth, TEXTURE_FILTER_POINT);
+
+    // Re-bind to materials
+    lightVolumeMaterial.maps[MATERIAL_MAP_ALBEDO].texture    = gAlbedo;
+    lightVolumeMaterial.maps[MATERIAL_MAP_NORMAL].texture    = gNormal;
+    lightVolumeMaterial.maps[MATERIAL_MAP_ROUGHNESS].texture = gDepth;
+
+    // Rebuild downstream HDR calculation targets
+    RebuildHDRTargets(use16BitHDR, newWidth, newHeight);
 }
 
 // CLEANUP FUNCTION

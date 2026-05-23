@@ -11,11 +11,11 @@ class CameraController {
     void Update();
     void CycleState();
     void SetState(CameraState newState);
-    CameraState GetState() const;
+    [[nodiscard]] CameraState GetState() const;
 
     void SetDeterministicState(Vector3 position, Vector3 target, float fov);
     void SetLocked(bool locked);
-    bool IsLocked() const;
+    [[nodiscard]] bool IsLocked() const;
 
     Camera3D &GetCamera();
 

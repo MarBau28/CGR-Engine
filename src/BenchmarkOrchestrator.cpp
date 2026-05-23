@@ -159,7 +159,7 @@ void BenchmarkOrchestrator::UpdateAndRecord(const double totalFrameTimeMs, const
 
             const std::string archStr =
                 currentState.activeRenderPath == RenderPath::Forward
-                    ? "Forward"
+                    ? "forward"
                     : (currentState.activeRenderPath == RenderPath::DeferredUber
                            ? "Deferred_Uber"
                            : "Deferred_Volume");

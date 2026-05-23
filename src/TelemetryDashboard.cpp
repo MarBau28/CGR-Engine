@@ -10,6 +10,9 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuProf,
                               const GpuProfiler &geomProf, const GpuProfiler &lightProf,
                               const CameraController &camCtrl, const SceneManager &sceneManager,
                               int currentMeshTriangleCount) {
+    // GENERAL UI SETUP
+    // ---------------------------------------------------------------------------------------------
+
     auto currentHeight = static_cast<float>(GetScreenHeight());
     float uiScale      = (currentHeight / 1080.0f) * Config::EngineSettings::UiScale;
 
@@ -19,8 +22,8 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuProf,
     int pad     = static_cast<int>(20 * uiScale);
     int spacing = static_cast<int>(26 * uiScale);
 
-    int panelWidth  = static_cast<int>(500 * uiScale);
-    int panelHeight = static_cast<int>(1150 * uiScale);
+    int panelWidth  = static_cast<int>(550 * uiScale);
+    int panelHeight = static_cast<int>(1250 * uiScale);
     int panelX      = pad;
     int panelY      = pad;
 
@@ -47,6 +50,9 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuProf,
     DrawText("HYDRA ENGINE DASHBOARD", textX, textY, fontLg, colAccent);
     textY += spacing + pad;
 
+    // ARCHITECTURE
+    // ---------------------------------------------------------------------------------------------
+
     DrawText("ARCHITECTURE", textX, textY, fontSm, colMuted);
     textY += static_cast<int>(18 * uiScale);
 
@@ -57,8 +63,13 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuProf,
     else if (state.activeRenderPath == RenderPath::DeferredVolume)
         modeString = "Deferred (Light Volumes)";
     else if (state.activeRenderPath == RenderPath::Forward)
-        modeString = "Forward (Baseline)";
+        modeString = "forward (Baseline)";
     DrawText(modeString, valueX, textY, fontMd, colSpecial);
+    textY += spacing;
+
+    DrawText("Render Resolution", textX, textY, fontMd, colText);
+    DrawText(TextFormat("%d x %d", state.renderWidth, state.renderHeight), valueX, textY, fontMd,
+             colWarning);
     textY += spacing;
 
     DrawText("FBO Depth", textX, textY, fontMd, colText);
@@ -96,6 +107,9 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuProf,
              state.enableToon ? colGood : colBad);
     textY += spacing + pad;
 
+    // SCENE DATA
+    // ---------------------------------------------------------------------------------------------
+
     DrawText("SCENE DATA", textX, textY, fontSm, colMuted);
     textY += static_cast<int>(18 * uiScale);
 
@@ -110,7 +124,7 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuProf,
         DrawText("N/A (Unified)", valueX, textY, fontMd, colMuted);
         textY += spacing;
 
-        DrawText("GPU Forward (All)", textX, textY, fontMd, colText);
+        DrawText("GPU forward (All)", textX, textY, fontMd, colText);
         DrawText(TextFormat("%.3f ms", lightProf.elapsedMs), valueX, textY, fontMd, colSpecial3);
         textY += spacing;
     } else {
@@ -138,6 +152,11 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuProf,
     DrawText(cameraModeString, valueX, textY, fontMd, colSpecial2);
     textY += spacing;
 
+    DrawText("Floor Rendering", textX, textY, fontMd, colText);
+    DrawText(state.renderFloor ? "ENABLED" : "DISABLED", valueX, textY, fontMd,
+             state.renderFloor ? colGood : colBad);
+    textY += spacing;
+
     DrawText("Distribution", textX, textY, fontMd, colText);
     DrawText(state.useClusteredStyles ? "Quadrants (Clustered)" : "Uniform (Random)", valueX, textY,
              fontMd, colSpecial2);
@@ -156,7 +175,7 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuProf,
     int actualVisibleCount = static_cast<int>(sceneManager.GetVisibleObstacleTransforms().size());
     int activeTriangles    = currentMeshTriangleCount * actualVisibleCount;
     DrawText("Active Triangles", textX, textY, fontMd, colText);
-    DrawText(TextFormat("%d", activeTriangles), valueX, textY, fontMd, colWarning);
+    DrawText(TextFormat("%d", activeTriangles), valueX, textY, fontMd, colText);
     textY += spacing;
 
     DrawText("Cloud Size", textX, textY, fontMd, colText);
@@ -194,17 +213,26 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuProf,
     DrawText(TextFormat("%.2f", state.ambientLightStrength), valueX, textY, fontMd, colText);
     textY += spacing + pad;
 
+    // CONTROLS
+    // ---------------------------------------------------------------------------------------------
+
     DrawText("CONTROLS", textX, textY, fontSm, colMuted);
     textY += static_cast<int>(18 * uiScale);
 
     DrawText("Toggle Pipeline", textX, textY, fontMd, colText);
     DrawText("[TAB]", valueX, textY, fontMd, colAction);
     textY += spacing;
+    DrawText("Scale Resolution", textX, textY, fontMd, colText);
+    DrawText("[PgDn / PgUp]", valueX, textY, fontMd, colAction);
+    textY += spacing;
     DrawText("Toggle HDR/LDR", textX, textY, fontMd, colText);
     DrawText("[H]", valueX, textY, fontMd, colAction);
     textY += spacing;
     DrawText("Toggle \"NPR-Room\"", textX, textY, fontMd, colText);
     DrawText("[R]", valueX, textY, fontMd, colAction);
+    textY += spacing;
+    DrawText("Toggle Floor", textX, textY, fontMd, colText);
+    DrawText("[F]", valueX, textY, fontMd, colAction);
     textY += spacing;
     DrawText("Cloud Size", textX, textY, fontMd, colText);
     DrawText("[7 / 9]", valueX, textY, fontMd, colAction);
@@ -242,7 +270,9 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuProf,
     DrawText("Geometry LOD", textX, textY, fontMd, colText);
     DrawText("[Z / X]", valueX, textY, fontMd, colAction);
 
-    // Screenshot Handling
+    // SCREENSHOT HANDLING
+    // ---------------------------------------------------------------------------------------------
+
     if (state.requestScreenshot) {
         rlDrawRenderBatchActive();
         namespace fs         = std::filesystem;

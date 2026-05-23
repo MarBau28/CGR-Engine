@@ -1,5 +1,4 @@
-// SYSTEM INCLUDES
-// -------------------------------------------------------------------------------------------------
+// INCLUDES/IMPORTS
 #include "../include/BenchmarkOrchestrator.h"
 #include "../include/CameraController.h"
 #include "../include/Config.h"
@@ -10,9 +9,6 @@
 #include "../include/SceneManager.h"
 #include "../include/Telemetry.h"
 #include "../include/TelemetryDashboard.h"
-
-// EXTERNAL DEPENDENCIES
-// -------------------------------------------------------------------------------------------------
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
@@ -21,9 +17,6 @@
 #include <rlgl.h>
 #include <string>
 #include <vector>
-
-// APPLICATION ENTRY
-// -------------------------------------------------------------------------------------------------
 
 int main() {
     // SYSTEM INSTANTIATION
@@ -46,13 +39,10 @@ int main() {
                                           cameraController);
 
     // Context & Window Creation
-    constexpr int renderWidth      = Config::EngineSettings::ScreenWidth;
-    constexpr int renderHeight     = Config::EngineSettings::ScreenHeight;
-    constexpr float internalRes[2] = {static_cast<float>(renderWidth),
-                                      static_cast<float>(renderHeight)};
-
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_MAXIMIZED);
-    InitWindow(renderWidth, renderHeight, "HyDra");
+    InitWindow(Config::EngineSettings::ScreenWidth, Config::EngineSettings::ScreenHeight, "HyDra");
+    rlSetClipPlanes(Config::EngineSettings::CameraNearPlane,
+                    Config::EngineSettings::CameraFarPlane);
 
     // Hardware Profilers Init
     geomProfiler.Init();
@@ -66,7 +56,7 @@ int main() {
 
     // Centralized repository for all GPU handles (Shaders, Materials, FBOs, Textures)
     RenderContext ctx;
-    ctx.Initialize(engineState, sceneManager, renderWidth, renderHeight);
+    ctx.Initialize(engineState, sceneManager, engineState.renderWidth, engineState.renderHeight);
 
     Vector3 lightColor = {Config::EngineSettings::MainLightColor.x / 255.0f,
                           Config::EngineSettings::MainLightColor.y / 255.0f,
@@ -75,30 +65,34 @@ int main() {
     // MAIN GAME LOOP
     // ---------------------------------------------------------------------------------------------
 
-    // Pre-calculated target rectangles for texture projections
-    constexpr Rectangle sourceRec  = {0.0f, 0.0f, static_cast<float>(renderWidth),
-                                      -static_cast<float>(renderHeight)};
-    constexpr Rectangle fboDestRec = {0.0f, 0.0f, static_cast<float>(renderWidth),
-                                      static_cast<float>(renderHeight)};
-
     while (!WindowShouldClose()) {
+        // Screen Resolution setup
         auto currentWidth             = static_cast<float>(GetScreenWidth());
         auto currentHeight            = static_cast<float>(GetScreenHeight());
         float dynamicRes[2]           = {currentWidth, currentHeight};
         const Rectangle screenDestRec = {0.0f, 0.0f, currentWidth, currentHeight};
+        float internalRes[2]          = {static_cast<float>(engineState.renderWidth),
+                                         static_cast<float>(engineState.renderHeight)};
+        const Rectangle sourceRec     = {0.0f, 0.0f, static_cast<float>(engineState.renderWidth),
+                                         -static_cast<float>(engineState.renderHeight)};
+
+        const Rectangle fboDestRec = {0.0f, 0.0f, static_cast<float>(engineState.renderWidth),
+                                      static_cast<float>(engineState.renderHeight)};
 
         // INPUT & STATE MANAGEMENT
         // -----------------------------------------------------------------------------------------
 
         // Pass input authority to the controller and receive structural event flags
-        InputEventFlags inputFlags = inputController.ProcessInputs(
-            engineState, cameraController, benchController.IsActive(),
-            sceneManager.GetActualGeneratedLights(), static_cast<int>(ctx.lodMeshes.size()));
+        auto [triggerBenchmarkStart, triggerSceneRebuild, triggerHdrFboRebuild,
+              triggerResolutionRebuild] =
+            inputController.ProcessInputs(engineState, cameraController, benchController.IsActive(),
+                                          sceneManager.GetActualGeneratedLights(),
+                                          static_cast<int>(ctx.lodMeshes.size()));
 
         Camera3D &camera = cameraController.GetCamera();
 
         // Benchmark Boot Sequence
-        if (inputFlags.triggerBenchmarkStart) {
+        if (triggerBenchmarkStart) {
             if (telemetryWriter.Initialize("hydra_benchmark_results.csv")) {
                 benchController.Start(BenchmarkSuite::SuiteA_Geom);
             }
@@ -116,25 +110,31 @@ int main() {
         } else {
             // Process manually triggered structural rebuilds (e.g., toggling NPR room or clustered
             // styles)
-            if (inputFlags.triggerSceneRebuild) {
+            if (triggerSceneRebuild) {
                 sceneManager.RebuildScene(engineState);
                 rlUpdateVertexBuffer(
                     ctx.styleIdVboId, sceneManager.GetMasterStyleIds().data(),
                     static_cast<int>(sceneManager.GetMasterStyleIds().size() * sizeof(float)), 0);
             }
             // Execute heavy FBO reallocation if user toggles 8-bit/16-bit HDR
-            if (inputFlags.triggerHdrFboRebuild) {
-                ctx.RebuildHDRTargets(engineState.use16BitHDR, renderWidth, renderHeight);
+            if (triggerHdrFboRebuild) {
+                ctx.RebuildHDRTargets(engineState.use16BitHDR, engineState.renderWidth,
+                                      engineState.renderHeight);
+            }
+            if (triggerResolutionRebuild) {
+                ctx.ResizeTargets(engineState.renderWidth, engineState.renderHeight,
+                                  engineState.use16BitHDR);
             }
         }
 
         // CPU CULLING & DATA PREP
         // -----------------------------------------------------------------------------------------
+
         cpuProfiler.Begin();
 
         // Extract frustum planes and populate visibility arrays to avoid drawing occluded objects
-        sceneManager.UpdateVisibility(cameraController, engineState, GetScreenWidth(),
-                                      GetScreenHeight());
+        sceneManager.UpdateVisibility(cameraController, engineState, engineState.renderWidth,
+                                      engineState.renderHeight);
 
         int actualVisibleCount =
             static_cast<int>(sceneManager.GetVisibleObstacleTransforms().size());
@@ -163,7 +163,8 @@ int main() {
                 (2.0f * Config::EngineSettings::AttenuationQuadratic);
         }
 
-        double aspect = static_cast<double>(currentWidth) / static_cast<double>(currentHeight);
+        double aspect = static_cast<double>(engineState.renderWidth) /
+                        static_cast<double>(engineState.renderHeight);
         Matrix viewProj =
             MatrixMultiply(GetCameraMatrix(camera),
                            MatrixPerspective(camera.fovy * DEG2RAD, aspect, 0.01, 1000.0));
@@ -172,6 +173,7 @@ int main() {
         // Fetch current active geometry based on LOD state
         Mesh &currentMesh   = ctx.lodMeshes[engineState.currentLodIndex];
         int activeTriangles = currentMesh.triangleCount * actualVisibleCount;
+
         // RENDER EXECUTION
         // -----------------------------------------------------------------------------------------
 
@@ -183,7 +185,7 @@ int main() {
             if (engineState.activeRenderPath == RenderPath::DeferredUber ||
                 engineState.activeRenderPath == RenderPath::DeferredVolume) {
                 rlEnableFramebuffer(ctx.FboId);
-                rlViewport(0, 0, renderWidth, renderHeight);
+                rlViewport(0, 0, engineState.renderWidth, engineState.renderHeight);
                 rlActiveDrawBuffers(2); // Albedo (Color0) + Normals (Color1)
 
                 ClearBackground(BLANK);
@@ -194,9 +196,10 @@ int main() {
 
                 BeginMode3D(camera);
                 {
-                    rlViewport(0, 0, renderWidth, renderHeight);
+                    rlViewport(0, 0, engineState.renderWidth, engineState.renderHeight);
 
-                    if (!engineState.useNprRoom) {
+                    // conditionally draw floor
+                    if (!engineState.useNprRoom && engineState.renderFloor) {
                         SetShaderValueMatrix(ctx.geometryPassShader, ctx.modelMatLoc,
                                              MatrixIdentity());
                         SetShaderValueMatrix(ctx.geometryPassShader, ctx.normalMatLoc,
@@ -236,11 +239,12 @@ int main() {
                 rlDisableFramebuffer();
                 rlViewport(0, 0, GetRenderWidth(), GetRenderHeight());
             } else {
-                geomProfiler.elapsedMs = 0.0; // Geometry cost is unified into Forward pass
+                geomProfiler.elapsedMs = 0.0; // Geometry cost is unified into forward pass
             }
 
             // LIGHTING & RESOLVE PASSES
             // -------------------------------------------------------------------------------------
+
             int outInt   = engineState.enableOutlines ? 1 : 0;
             int kuwInt   = engineState.enableKuwahara ? 1 : 0;
             int goochInt = engineState.enableGooch ? 1 : 0;
@@ -399,7 +403,7 @@ int main() {
                 GpuProfiler::End();
                 EndTextureMode();
 
-                // Pipeline Branch C: Forward Shading (Baseline Evaluation)
+                // Pipeline Branch C: forward Shading (Baseline Evaluation)
             } else if (engineState.activeRenderPath == RenderPath::Forward) {
                 rlEnableDepthTest();
                 rlEnableDepthMask();
@@ -407,7 +411,7 @@ int main() {
                 rlSetCullFace(RL_CULL_FACE_BACK);
 
                 rlEnableFramebuffer(ctx.litSceneTarget.id);
-                rlViewport(0, 0, renderWidth, renderHeight);
+                rlViewport(0, 0, engineState.renderWidth, engineState.renderHeight);
                 rlActiveDrawBuffers(1);
 
                 Color bgCol = {
@@ -418,11 +422,11 @@ int main() {
 
                 rlDrawRenderBatchActive();
                 lightProfiler
-                    .Begin(); // Tracks both Geometry & Lighting simultaneously in Forward mode
+                    .Begin(); // Tracks both Geometry & Lighting simultaneously in forward mode
 
                 BeginMode3D(camera);
                 {
-                    rlViewport(0, 0, renderWidth, renderHeight);
+                    rlViewport(0, 0, engineState.renderWidth, engineState.renderHeight);
 
                     int safeVisibleLightCount = std::min(actualVisibleVolumeCount, 500);
                     int blinnCount = static_cast<int>(sceneManager.GetFwdTransformsBlinn().size());
@@ -461,7 +465,7 @@ int main() {
                                             SHADER_UNIFORM_VEC3, safeVisibleLightCount);
                         }
 
-                        if (!engineState.useNprRoom) {
+                        if (!engineState.useNprRoom && engineState.renderFloor) {
                             Matrix floorIdentity = MatrixIdentity();
                             DrawMeshInstanced(ctx.floorMesh, ctx.fwdFloorMaterial, &floorIdentity,
                                               1);

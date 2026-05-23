@@ -15,6 +15,8 @@ struct EngineState {
     int activeLightCount       = Config::DefaultState::ActiveLightCount;
     float lightIntensity       = Config::EngineSettings::LightIntensity;
     float ambientLightStrength = Config::EngineSettings::AmbientLightStrength;
+    int renderWidth            = Config::EngineSettings::ScreenWidth;
+    int renderHeight           = Config::EngineSettings::ScreenHeight;
 
     // NPR Toggles
     bool enableOutlines = Config::DefaultState::EnableOutlines;
@@ -32,6 +34,7 @@ struct EngineState {
     bool useClusteredStyles  = Config::DefaultState::UseClusteredStyles;
     bool useLightSingularity = Config::DefaultState::UseLightSingularity;
     bool useNprRoom          = Config::DefaultState::UseNprRoom;
+    bool renderFloor         = Config::DefaultState::RenderFloor;
 
     // System Flags
     bool requestScreenshot = false;

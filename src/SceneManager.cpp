@@ -95,13 +95,11 @@ void SceneManager::RebuildScene(const EngineState &state) {
     if (state.useNprRoom) {
         GenerateNprRoomScene(state.activeLightCount);
     } else {
-        GenerateStandardScene(state.objectSphereRadius, state.useClusteredStyles,
-                              state.activeObstacleCount, state.activeLightCount);
+        GenerateStandardScene(state.objectSphereRadius, state.useClusteredStyles);
     }
 }
 
-void SceneManager::GenerateStandardScene(float sphereRadius, bool clustered, int maxObstacles,
-                                         int maxLights) {
+void SceneManager::GenerateStandardScene(const float sphereRadius, const bool clustered) {
     SetRandomSeed(1337);
 
     masterObstacleTransforms.clear();
@@ -243,7 +241,9 @@ void SceneManager::GenerateNprRoomScene(const int lightCount) {
 void SceneManager::UpdateVisibility(CameraController &camera, const EngineState &state,
                                     int screenWidth, int screenHeight) {
     double aspect   = static_cast<double>(screenWidth) / static_cast<double>(screenHeight);
-    Matrix proj     = MatrixPerspective(camera.GetCamera().fovy * DEG2RAD, aspect, 0.01, 1000.0);
+    Matrix proj     = MatrixPerspective(camera.GetCamera().fovy * DEG2RAD, aspect,
+                                        Config::EngineSettings::CameraNearPlane,
+                                        Config::EngineSettings::CameraFarPlane);
     Matrix view     = GetCameraMatrix(camera.GetCamera());
     Matrix viewProj = MatrixMultiply(view, proj);
 
@@ -266,8 +266,8 @@ void SceneManager::UpdateVisibility(CameraController &camera, const EngineState 
             visibleObstacleStyleIds.push_back(masterObstacleStyleIds[i]);
 
             if (state.activeRenderPath == RenderPath::Forward) {
-                int currentStyle = static_cast<int>(masterObstacleStyleIds[i]);
-                if (currentStyle == 2) {
+                if (int currentStyle = static_cast<int>(masterObstacleStyleIds[i]);
+                    currentStyle == 2) {
                     if (state.enableGooch)
                         fwdTransformsGooch.push_back(masterObstacleTransforms[i]);
                     else

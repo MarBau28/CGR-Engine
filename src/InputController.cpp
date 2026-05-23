@@ -53,6 +53,8 @@ InputEventFlags InputController::ProcessInputs(EngineState &state, CameraControl
 
     if (IsKeyPressed(KEY_O) && !state.useNprRoom)
         state.enableOutlines = !state.enableOutlines;
+    if (IsKeyPressed(KEY_F))
+        state.renderFloor = !state.renderFloor;
     if (IsKeyPressed(KEY_K))
         state.enableKuwahara = !state.enableKuwahara;
     if (IsKeyPressed(KEY_G))
@@ -91,6 +93,38 @@ InputEventFlags InputController::ProcessInputs(EngineState &state, CameraControl
     }
     if (IsKeyPressed(KEY_Z) && !state.useNprRoom) {
         state.currentLodIndex = std::max(0, (state.currentLodIndex - 1));
+    }
+
+    if (IsKeyPressed(KEY_PAGE_UP)) {
+        if (state.renderWidth == 854) {
+            state.renderWidth  = 1280;
+            state.renderHeight = 720;
+        } else if (state.renderWidth == 1280) {
+            state.renderWidth  = 1920;
+            state.renderHeight = 1080;
+        } else if (state.renderWidth == 1920) {
+            state.renderWidth  = 2560;
+            state.renderHeight = 1440;
+        } else if (state.renderWidth == 2560) {
+            state.renderWidth  = 3840;
+            state.renderHeight = 2160;
+        }
+        flags.triggerResolutionRebuild = true;
+    }
+    if (IsKeyPressed(KEY_PAGE_DOWN)) {
+        if (state.renderWidth == 3840) {
+            state.renderWidth  = 2560;
+            state.renderHeight = 1440;
+        } else if (state.renderWidth == 2560) {
+            state.renderWidth  = 1920;
+            state.renderHeight = 1080;
+        } else if (state.renderWidth == 1920) {
+            state.renderWidth  = 1280;
+            state.renderHeight = 720;
+        } else if (state.renderWidth == 1280) {
+            state.renderWidth  = 854;
+            state.renderHeight = 480;
+        }
     }
 
     const float previousRadius = state.objectSphereRadius;

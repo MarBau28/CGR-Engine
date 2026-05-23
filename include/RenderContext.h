@@ -91,5 +91,6 @@ struct RenderContext {
     void Initialize(const EngineState &engineState, const SceneManager &sceneManager,
                     int renderWidth, int renderHeight);
     void RebuildHDRTargets(bool use16BitHDR, int renderWidth, int renderHeight);
+    void ResizeTargets(int newWidth, int newHeight, bool use16BitHDR);
     void Destroy() const;
 };
