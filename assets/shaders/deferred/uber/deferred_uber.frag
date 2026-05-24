@@ -326,24 +326,23 @@ void main()
                 for (int y = 0; y <= radius; y++) {
                     for (int x = 0; x <= radius; x++) {
                         vec2 offset = vec2(float(x) * offsets[i].x, float(y) * offsets[i].y);
+                        //vec3 col = texture(texture0, fragTexCoord + offset * texelSize).rgb;
                         vec2 sampleUV = fragTexCoord + offset * texelSize;
 
-                        // Fetch neighbor's spatial and identity data
+                        // Fetch neighbor's spatial and identity data (for outline beeding fix)
                         vec4 neighborNormalData = texture(gNormalTex, sampleUV);
                         int neighborStyleID = int(round(neighborNormalData.a * 255.0));
-                        float neighborDepth = texture(gDepthTex, sampleUV).r;
 
                         vec3 col;
 
                         // Validate Neighbor (use small raw depth delta to detect overlapping cubes of same StyleID)
-                        if (neighborStyleID != styleID || abs(neighborDepth - depth) > 0.001) {
+                        if (neighborStyleID != styleID) {
                             // Invalid: Clamp to center pixel to prevent variance spikes and bleeding
                             col = albedo;
                         } else {
                             // Valid: Sample actual neighbor albedo
                             col = texture(texture0, sampleUV).rgb;
                         }
-
 
                         sum += col;
                         sumSq += col * col;

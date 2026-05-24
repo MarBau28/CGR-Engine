@@ -559,7 +559,7 @@ int main() {
                         }
                         EndShaderMode();
 
-                        // Inverted Hull Outline Pass (Drawn last for Toon objects)
+                        // Inverted Hull Outline Pass
                         if (engineState.enableOutlines && outlineCount > 0) {
                             BeginShaderMode(ctx.forwardOutlineShader);
                             {

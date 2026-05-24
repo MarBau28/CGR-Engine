@@ -67,7 +67,7 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuProf,
     DrawText(modeString, valueX, textY, fontMd, colSpecial);
     textY += spacing;
 
-    DrawText("Render Resolution", textX, textY, fontMd, colText);
+    DrawText("Resolution", textX, textY, fontMd, colText);
     DrawText(TextFormat("%d x %d", state.renderWidth, state.renderHeight), valueX, textY, fontMd,
              colWarning);
     textY += spacing;
@@ -78,8 +78,8 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuProf,
     textY += spacing;
 
     DrawText("Test Environment", textX, textY, fontMd, colText);
-    DrawText(state.useNprRoom ? "NPR Room (Synthetic)" : "Open World (Organic)", valueX, textY,
-             fontMd, state.useNprRoom ? colWarning : colSpecial2);
+    DrawText(state.useNprRoom ? "NPR Room" : "Open World", valueX, textY, fontMd,
+             state.useNprRoom ? colWarning : colSpecial2);
     textY += spacing + pad;
 
     DrawText("NPR PIPELINE STATE", textX, textY, fontSm, colMuted);
@@ -162,7 +162,7 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuProf,
              fontMd, colSpecial2);
     textY += spacing;
 
-    DrawText("Light Topology", textX, textY, fontMd, colText);
+    DrawText("Light Distribution", textX, textY, fontMd, colText);
     DrawText(state.useLightSingularity ? "Singularity (Stacked)" : "Uniform (Scattered)", valueX,
              textY, fontMd, colSpecial2);
     textY += spacing;
@@ -240,7 +240,7 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuProf,
     DrawText("Obstacles Count", textX, textY, fontMd, colText);
     DrawText("[4 / 6]", valueX, textY, fontMd, colAction);
     textY += spacing;
-    DrawText("Lights Count", textX, textY, fontMd, colText);
+    DrawText("Light Count", textX, textY, fontMd, colText);
     DrawText("[5 / 8]", valueX, textY, fontMd, colAction);
     textY += spacing;
     DrawText("Light Intensity", textX, textY, fontMd, colText);

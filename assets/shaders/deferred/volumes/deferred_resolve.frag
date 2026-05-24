@@ -21,7 +21,7 @@ uniform int kuwaharaRadius;
 uniform float kuwaharaIntensity;
 
 // G-Buffer & Light Volume Inputs
-uniform sampler2D litSceneTex; // Fully accumulated lighting from Phase Volume pass
+uniform sampler2D litSceneTex; // Fully accumulated lighting from Volume-pass
 uniform sampler2D texture0;    // Base Albedo
 uniform sampler2D gNormalTex;  // Normal (RGB) + StyleID (Alpha)
 uniform sampler2D gDepthTex;   // Hardware Depth buffer
@@ -204,15 +204,19 @@ void main()
                         vec2 offset = vec2(float(x) * offsets[i].x, float(y) * offsets[i].y);
                         vec2 sampleUV = fragTexCoord + offset * texelSize;
 
-                        // Fetch neighbor's spatial and identity data
+                        //// Sample the fully lit color + ambient for this pixel
+                        //vec3 sampledLit = texture(litSceneTex, sampleUV).rgb;
+                        //vec3 sampledAlbedo = texture(texture0, sampleUV).rgb;
+                        //vec3 sampledAmbient = sampledAlbedo * ambientLightStrength;
+                        //vec3 col = sampledLit + sampledAmbient;
+
+                        // Fetch neighbor's spatial and identity data (for outline beeding fix)
                         vec4 neighborNormalData = texture(gNormalTex, sampleUV);
                         int neighborStyleID = int(round(neighborNormalData.a * 255.0));
-                        float neighborDepth = texture(gDepthTex, sampleUV).r;
-
                         vec3 col;
 
                         // Validate Neighbor
-                        if (neighborStyleID != styleID || abs(neighborDepth - depth) > 0.001) {
+                        if (neighborStyleID != styleID) {
                             // Invalid: Clamp to the fully lit center pixel
                             col = centerCol;
                         } else {
