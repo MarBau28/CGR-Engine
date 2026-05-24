@@ -294,7 +294,7 @@ void main()
 
     } else if (styleID == 4) {
 
-        // KUWAHARA FILTER
+        // KUWAHARA FILTER (Pre-Lit)
         // -----------------------------------------------------------------------
 
         if (enableKuwahara == 1) {
@@ -307,7 +307,10 @@ void main()
                 variances[i] = vec3(0.0);
             }
 
-            float samples = float((kuwaharaRadius + 1) * (kuwaharaRadius + 1));
+            //float radius = clamp(kuwaharaRadius / linearDepth, 0.0, maxRadius);
+            float radius = kuwaharaRadius;
+
+            float samples = float((radius + 1) * (radius + 1));
 
             // Quadrant Offsets: Top-Left, Top-Right, Bottom-Left, Bottom-Right
             vec2 offsets[4] = vec2[](
@@ -320,10 +323,27 @@ void main()
                 vec3 sum = vec3(0.0);
                 vec3 sumSq = vec3(0.0);
 
-                for (int y = 0; y <= kuwaharaRadius; y++) {
-                    for (int x = 0; x <= kuwaharaRadius; x++) {
+                for (int y = 0; y <= radius; y++) {
+                    for (int x = 0; x <= radius; x++) {
                         vec2 offset = vec2(float(x) * offsets[i].x, float(y) * offsets[i].y);
-                        vec3 col = texture(texture0, fragTexCoord + offset * texelSize).rgb;
+                        vec2 sampleUV = fragTexCoord + offset * texelSize;
+
+                        // Fetch neighbor's spatial and identity data
+                        vec4 neighborNormalData = texture(gNormalTex, sampleUV);
+                        int neighborStyleID = int(round(neighborNormalData.a * 255.0));
+                        float neighborDepth = texture(gDepthTex, sampleUV).r;
+
+                        vec3 col;
+
+                        // Validate Neighbor (use small raw depth delta to detect overlapping cubes of same StyleID)
+                        if (neighborStyleID != styleID || abs(neighborDepth - depth) > 0.001) {
+                            // Invalid: Clamp to center pixel to prevent variance spikes and bleeding
+                            col = albedo;
+                        } else {
+                            // Valid: Sample actual neighbor albedo
+                            col = texture(texture0, sampleUV).rgb;
+                        }
+
 
                         sum += col;
                         sumSq += col * col;

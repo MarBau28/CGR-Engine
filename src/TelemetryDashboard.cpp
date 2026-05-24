@@ -56,7 +56,7 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuProf,
     DrawText("ARCHITECTURE", textX, textY, fontSm, colMuted);
     textY += static_cast<int>(18 * uiScale);
 
-    DrawText("Pipeline-Mode", textX, textY, fontMd, colText);
+    DrawText("Render-Pipeline", textX, textY, fontMd, colText);
     auto modeString = "Unknown";
     if (state.activeRenderPath == RenderPath::DeferredUber)
         modeString = "Deferred (Uber-Shader)";

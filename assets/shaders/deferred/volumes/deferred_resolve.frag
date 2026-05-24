@@ -172,12 +172,15 @@ void main()
             vec3 means[4];
             vec3 variances[4];
 
+            //float radius = clamp(kuwaharaRadius / linearDepth, 0.0, maxRadius);
+            float radius = kuwaharaRadius;
+
             for (int i = 0; i < 4; i++) {
                 means[i] = vec3(0.0);
                 variances[i] = vec3(0.0);
             }
 
-            float samples = float((kuwaharaRadius + 1) * (kuwaharaRadius + 1));
+            float samples = float((radius + 1) * (radius + 1));
 
             // Quadrant Offsets
             vec2 offsets[4] = vec2[](
@@ -188,22 +191,37 @@ void main()
             // Pre-calculate ambient to include in the variance sampling
             vec3 ambient = albedo * ambientLightStrength;
 
+            // Pre-calculate the fully lit center pixel to use as a fallback
+            vec3 centerCol = texture(litSceneTex, fragTexCoord).rgb + (albedo * ambientLightStrength);
+
             // Calculate Mean and Variance for all 4 quadrants
             for (int i = 0; i < 4; i++) {
                 vec3 sum = vec3(0.0);
                 vec3 sumSq = vec3(0.0);
 
-                for (int y = 0; y <= kuwaharaRadius; y++) {
-                    for (int x = 0; x <= kuwaharaRadius; x++) {
+                for (int y = 0; y <= radius; y++) {
+                    for (int x = 0; x <= radius; x++) {
                         vec2 offset = vec2(float(x) * offsets[i].x, float(y) * offsets[i].y);
                         vec2 sampleUV = fragTexCoord + offset * texelSize;
 
-                        // Sample the fully lit color + ambient for this pixel
-                        vec3 sampledLit = texture(litSceneTex, sampleUV).rgb;
-                        vec3 sampledAlbedo = texture(texture0, sampleUV).rgb;
-                        vec3 sampledAmbient = sampledAlbedo * ambientLightStrength;
+                        // Fetch neighbor's spatial and identity data
+                        vec4 neighborNormalData = texture(gNormalTex, sampleUV);
+                        int neighborStyleID = int(round(neighborNormalData.a * 255.0));
+                        float neighborDepth = texture(gDepthTex, sampleUV).r;
 
-                        vec3 col = sampledLit + sampledAmbient;
+                        vec3 col;
+
+                        // Validate Neighbor
+                        if (neighborStyleID != styleID || abs(neighborDepth - depth) > 0.001) {
+                            // Invalid: Clamp to the fully lit center pixel
+                            col = centerCol;
+                        } else {
+                            // Valid: Sample actual neighbor lit color + ambient
+                            vec3 sampledLit = texture(litSceneTex, sampleUV).rgb;
+                            vec3 sampledAlbedo = texture(texture0, sampleUV).rgb;
+                            vec3 sampledAmbient = sampledAlbedo * ambientLightStrength;
+                            col = sampledLit + sampledAmbient;
+                        }
 
                         sum += col;
                         sumSq += col * col;
@@ -213,18 +231,6 @@ void main()
                 means[i] = sum / samples;
                 variances[i] = abs(sumSq / samples - means[i] * means[i]);
             }
-
-            //            // Find quadrant with the minimum variance
-            //            float minVar = 1e6;
-            //            vec3 finalPainterlyColor = vec3(0.0);
-            //
-            //            for (int i = 0; i < 4; i++) {
-            //                float v = variances[i].r + variances[i].g + variances[i].b;
-            //                if (v < minVar) {
-            //                    minVar = v;
-            //                    finalPainterlyColor = means[i];
-            //                }
-            //            }
 
             // Generalized Kuwahara (Weighted Sum)
             float weightSum = 0.0;
