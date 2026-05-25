@@ -64,6 +64,10 @@ class SceneManager {
         return masterObstacleStyleIds;
     }
 
+    // Calculates the volumetric overlap of instances
+    [[nodiscard]] float CalculateTheoreticalOverdraw(const EngineState &state,
+                                                     const Camera3D &camera) const;
+
   private:
     // Master Data (Immutable during a single rendering frame)
     std::vector<Matrix> masterObstacleTransforms;
@@ -71,6 +75,7 @@ class SceneManager {
     std::vector<BoundingSphere> masterObstacleSpheres;
     std::vector<Vector3> masterLightPositions;
     std::vector<Matrix> masterLightProxyTransforms;
+    std::vector<BoundingSphere> visibleObstacleSpheres;
 
     int actualGeneratedLights = 0;
 
@@ -93,7 +98,4 @@ class SceneManager {
 
     // Returns the true obstacle count depending on the active environment
     [[nodiscard]] int GetTotalObstacleCount(const EngineState &state) const;
-
-    // Calculates the volumetric overlap of instances
-    [[nodiscard]] float CalculateTheoreticalOverdraw(const EngineState &state) const;
 };

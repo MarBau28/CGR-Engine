@@ -2,14 +2,74 @@
 #include "../include/Config.h"
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <format>
 #include <rlgl.h>
 
-void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuProf,
+void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuLogicProf,
+                              const CpuProfiler &cpuRenderProf, double trueFrameDeltaMs,
                               const GpuProfiler &geomProf, const GpuProfiler &lightProf,
-                              const CameraController &camCtrl, const SceneManager &sceneManager,
-                              int currentMeshTriangleCount) {
+                              const GpuProfiler &masterGpuProfiler, const CameraController &camCtrl,
+                              const SceneManager &sceneManager, int currentMeshTriangleCount,
+                              float currentOverdraw) {
+    // UI SMOOTHING BUFFER (250ms Update Window)
+    // ---------------------------------------------------------------------------------------------
+
+    // Persistent state across frames
+    static double accumTime     = 0.0;
+    static int accumFrames      = 0;
+    static double accumCpuLogic = 0.0, accumCpuRender = 0.0;
+    static double accumGeom = 0.0, accumLight = 0.0, accumGpuAll = 0.0;
+
+    // Displayed values
+    static double dispCpuLogic = 0.0, dispCpuRender = 0.0;
+    static double dispGeom = 0.0, dispLight = 0.0, dispMasterGpu = 0.0;
+    static double dispLatency = 0.0;
+    static int dispFps        = 0;
+
+    // Accumulate raw granular data from the current frame
+    accumTime += trueFrameDeltaMs;
+    accumFrames++;
+    accumCpuLogic += cpuLogicProf.elapsedMs;
+    accumCpuRender += cpuRenderProf.elapsedMs;
+    accumGeom += geomProf.GetLastMeasuredMs();
+    accumLight += lightProf.GetLastMeasuredMs();
+    accumGpuAll += masterGpuProfiler.GetLastMeasuredMs();
+
+    // Flush and update the display metrics every 100 milliseconds
+    if (accumTime >= 100.0) {
+        dispCpuLogic  = accumCpuLogic / accumFrames;
+        dispCpuRender = accumCpuRender / accumFrames;
+        dispGeom      = accumGeom / accumFrames;
+        dispLight     = accumLight / accumFrames;
+        dispMasterGpu = accumGpuAll / accumFrames;
+        dispLatency   = accumTime / accumFrames;
+
+        double safeLatency = std::max(dispLatency, 0.001);
+        dispFps            = static_cast<int>(std::round(1000.0 / safeLatency));
+
+        // Reset buffer
+        accumTime      = 0.0;
+        accumFrames    = 0;
+        accumCpuLogic  = 0.0;
+        accumCpuRender = 0.0;
+        accumGeom      = 0.0;
+        accumLight     = 0.0;
+        accumGpuAll    = 0.0;
+    }
+
+    // Fallback to prevent 0.0 values during the very first 100ms of engine boot
+    if (dispFps == 0 && trueFrameDeltaMs > 0.0) {
+        dispCpuLogic  = cpuLogicProf.elapsedMs;
+        dispCpuRender = cpuRenderProf.elapsedMs;
+        dispGeom      = geomProf.GetLastMeasuredMs();
+        dispLight     = lightProf.GetLastMeasuredMs();
+        dispMasterGpu = masterGpuProfiler.GetLastMeasuredMs();
+        dispLatency   = trueFrameDeltaMs;
+        dispFps       = static_cast<int>(std::round(1000.0 / trueFrameDeltaMs));
+    }
+
     // GENERAL UI SETUP
     // ---------------------------------------------------------------------------------------------
 
@@ -19,11 +79,11 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuProf,
     int fontLg  = static_cast<int>(24 * uiScale);
     int fontMd  = static_cast<int>(18 * uiScale);
     int fontSm  = static_cast<int>(14 * uiScale);
-    int pad     = static_cast<int>(20 * uiScale);
+    int pad     = static_cast<int>(15 * uiScale);
     int spacing = static_cast<int>(26 * uiScale);
 
     int panelWidth  = static_cast<int>(550 * uiScale);
-    int panelHeight = static_cast<int>(1250 * uiScale);
+    int panelHeight = static_cast<int>(1300 * uiScale);
     int panelX      = pad;
     int panelY      = pad;
 
@@ -113,32 +173,43 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuProf,
     DrawText("SCENE DATA", textX, textY, fontSm, colMuted);
     textY += static_cast<int>(18 * uiScale);
 
-    int currentFps = GetFPS();
-    Color fpsColor = currentFps >= 60 ? colGood : (currentFps >= 30 ? colWarning : colBad);
-    DrawText("Framerate", textX, textY, fontMd, colText);
-    DrawText(TextFormat("%d FPS", currentFps), valueX, textY, fontMd, fpsColor);
+    Color fpsColor = dispFps >= 60 ? colGood : (dispFps >= 30 ? colWarning : colBad);
+    DrawText("Framerate (Avg.)", textX, textY, fontMd, colText);
+    DrawText(TextFormat("%d FPS", dispFps), valueX, textY, fontMd, fpsColor);
+    textY += spacing;
+
+    DrawText("Frame Latency", textX, textY, fontMd, colText);
+    DrawText(TextFormat("%.2f ms", dispLatency), valueX, textY, fontMd, fpsColor);
     textY += spacing;
 
     if (state.activeRenderPath == RenderPath::Forward) {
-        DrawText("GPU Geometry", textX, textY, fontMd, colText);
-        DrawText("N/A (Unified)", valueX, textY, fontMd, colMuted);
-        textY += spacing;
-
-        DrawText("GPU forward (All)", textX, textY, fontMd, colText);
-        DrawText(TextFormat("%.3f ms", lightProf.elapsedMs), valueX, textY, fontMd, colSpecial3);
+        DrawText("GPU Forward (geom + light)", textX, textY, fontMd, colText);
+        DrawText(TextFormat("%.3f ms", dispLight), valueX, textY, fontMd, colSpecial3);
         textY += spacing;
     } else {
         DrawText("GPU Geometry", textX, textY, fontMd, colText);
-        DrawText(TextFormat("%.3f ms", geomProf.elapsedMs), valueX, textY, fontMd, colSpecial3);
+        DrawText(TextFormat("%.3f ms", dispGeom), valueX, textY, fontMd, colSpecial3);
         textY += spacing;
 
         DrawText("GPU Light + NPR", textX, textY, fontMd, colText);
-        DrawText(TextFormat("%.3f ms", lightProf.elapsedMs), valueX, textY, fontMd, colSpecial3);
+        DrawText(TextFormat("%.3f ms", dispLight), valueX, textY, fontMd, colSpecial3);
         textY += spacing;
     }
 
-    DrawText("CPU Bench", textX, textY, fontMd, colText);
-    DrawText(TextFormat("%.3f ms", cpuProf.elapsedMs), valueX, textY, fontMd, colSpecial3);
+    DrawText("GPU Complete", textX, textY, fontMd, colText);
+    DrawText(TextFormat("%.3f ms", dispMasterGpu), valueX, textY, fontMd, colSpecial3);
+    textY += spacing;
+
+    DrawText("CPU Logic (Prep)", textX, textY, fontMd, colText);
+    DrawText(TextFormat("%.3f ms", dispCpuLogic), valueX, textY, fontMd, colSpecial3);
+    textY += spacing;
+
+    DrawText("CPU Render (API)", textX, textY, fontMd, colText);
+    DrawText(TextFormat("%.3f ms", dispCpuRender), valueX, textY, fontMd, colSpecial3);
+    textY += spacing;
+
+    DrawText("Est. Overdraw-Factor", textX, textY, fontMd, colText);
+    DrawText(TextFormat("%.2fx", currentOverdraw), valueX, textY, fontMd, colSpecial3);
     textY += spacing;
 
     DrawText("Camera-Mode", textX, textY, fontMd, colText);

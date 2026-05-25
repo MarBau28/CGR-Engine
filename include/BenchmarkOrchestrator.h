@@ -4,62 +4,94 @@
 #include "EngineState.h"
 #include "Profilers.h"
 #include "Telemetry.h"
+#include <queue>
+#include <string>
 #include <vector>
 
-// The specific thesis evaluation suites
 enum class BenchmarkSuite {
     Inactive,
-    SuiteA_Geom,        // Rasterization Stress
-    SuiteB_DrawCall,    // Vertex/CPU Limit
-    SuiteC_Entropy,     // Warp Divergence vs State Change
-    SuiteD_FillRate,    // BRDF Scalability
-    SuiteE_Singularity, // 16-bit HDR Bandwidth Death
-    SuiteF_Spatial,     // Kuwahara Filter Cost
-    SuiteG_Synthesis,   // Real-World Mixed Load
-    SuiteH_Overdraw,    // The Overdraw Crucible
+    Suite_5_1_1_LodMicroGeom,
+    Suite_5_1_2_ObjectCount,
+    Suite_5_1_3_OverdrawDensity,
+    Suite_5_2_1_ResolutionScaling,
+    Suite_5_2_2_BaseBandwidthTax,
+    Suite_5_3_1_LightCount,
+    Suite_5_3_2_LightIntensity,
+    Suite_5_3_3_LightSingularity,
+    Suite_5_4_1_SpatialEntropy,
+    Suite_5_4_2_StyleCombinatorics,
+    Suite_5_4_3_KernelBandwidth,
+    Suite_5_5_Pass1_GeometryBaseline,
+    Suite_5_5_Pass2_ShadingTax,
+    Suite_5_5_Pass3_ParityFlythrough,
+    Suite_5_5_Pass4_DeferredMaxFidelity,
     Complete
+};
+
+enum class BenchPhase { Warmup, Capture };
+
+struct FrameRecord {
+    int frameNumber;
+    double cpuLogicMs;
+    double cpuRenderMs;
+    double totalFrameTimeMs;
+    double fps;
+    int activeInstances;
+    int activeTris;
+    double currentOverdraw;
+    RenderPath activeRenderPath;
+    std::string architecture;
+    float stepValue;
+    BenchmarkSuite suite;
 };
 
 class BenchmarkOrchestrator {
   public:
-    // Requires references to ALL measurement devices
-    BenchmarkOrchestrator(CsvTelemetryWriter &telemetry, CpuProfiler &cpuProf,
-                          GpuProfiler &geomProf, GpuProfiler &lightProf, CameraController &camCtrl);
+    BenchmarkOrchestrator(CsvTelemetryWriter &telemetry, CpuProfiler &cpuLogicProfiler,
+                          CpuProfiler &cpuRenderProfiler, GpuProfiler &geomProf,
+                          GpuProfiler &lightProf, GpuProfiler &masterGpuProf,
+                          CameraController &camCtrl);
 
     void Start(BenchmarkSuite suite);
-
-    // Called at the end of the frame. Handles warmup, recording, and phase transitions.
     void UpdateAndRecord(double totalFrameTimeMs, int activeTris, double currentOverdraw);
+    void EndBenchmark();
 
     [[nodiscard]] bool IsActive() const;
-    [[nodiscard]] bool
-    DidStateChangeThisFrame() const; // Signals main.cpp to trigger GenerateScene()
+    [[nodiscard]] bool DidStateChangeThisFrame() const;
     [[nodiscard]] const EngineState &GetCurrentState() const;
 
   private:
+    void ApplySuiteState();
+    void AdvanceState();
+
     CsvTelemetryWriter &telemetryWriter;
-    CpuProfiler &cpuProfiler;
+    CpuProfiler &cpuLogicProfiler;
+    CpuProfiler &cpuRenderProfiler;
     GpuProfiler &geomProfiler;
     GpuProfiler &lightProfiler;
+    GpuProfiler &masterGpuProfiler;
     CameraController &cameraController;
 
     BenchmarkSuite currentSuite;
+    BenchPhase currentPhase;
     EngineState currentState;
 
-    int warmupFrames           = 60;
-    int recordFrames           = 500;
-    int currentFrameCount      = 0;
-    bool isWarmingUp           = false;
-    bool stateChangedThisFrame = false;
+    bool stateChangedThisFrame;
 
-    // Phase progression
-    int sweepIndex = 0;
-    std::vector<int> currentSweepArray; // Holds the variable being scaled (e.g., LODs, Instances)
+    // Phase Tracking
+    double phaseStartTime;
+    double warmupDuration;
+    double captureDuration;
+    int frameCounter;
 
-    // Accumulators
-    double accumCpu, accumGeom, accumLight, accumTotal;
-    int recordedFrames;
+    bool useFrameLimit   = true;
+    int targetFrameCount = 1000;
 
-    void ApplySuiteState();
-    void EndBenchmark();
+    std::vector<float> stepValues;
+    int currentStepIndex;
+
+    std::vector<RenderPath> targetPipelines;
+    int currentPipelineIndex;
+    std::queue<FrameRecord> pendingFrames;
+    void FlushTelemetryQueue();
 };

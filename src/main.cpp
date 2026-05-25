@@ -29,24 +29,30 @@ int main() {
     InputController inputController;
 
     // Hardware profilers and telemetry writers
-    CpuProfiler cpuProfiler;
+    CpuProfiler cpuLogicProfiler;
+    CpuProfiler cpuRenderProfiler;
     GpuProfiler geomProfiler;
     GpuProfiler lightProfiler;
+    GpuProfiler masterGpuProfiler;
     CsvTelemetryWriter telemetryWriter;
 
     // Orchestrator governs deterministic state during active test suites
-    BenchmarkOrchestrator benchController(telemetryWriter, cpuProfiler, geomProfiler, lightProfiler,
+    BenchmarkOrchestrator benchController(telemetryWriter, cpuLogicProfiler, cpuRenderProfiler,
+                                          geomProfiler, lightProfiler, masterGpuProfiler,
                                           cameraController);
 
     // Context & Window Creation
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_MAXIMIZED);
+    ClearWindowState(FLAG_VSYNC_HINT);
     InitWindow(Config::EngineSettings::ScreenWidth, Config::EngineSettings::ScreenHeight, "HyDra");
+    SetTargetFPS(0);
     rlSetClipPlanes(Config::EngineSettings::CameraNearPlane,
                     Config::EngineSettings::CameraFarPlane);
 
     // Hardware Profilers Init
     geomProfiler.Init();
     lightProfiler.Init();
+    masterGpuProfiler.Init();
 
     // RENDER PIPELINE SETUP
     // ---------------------------------------------------------------------------------------------
@@ -65,7 +71,16 @@ int main() {
     // MAIN GAME LOOP
     // ---------------------------------------------------------------------------------------------
 
+    // timer for evaluating "true" FPS
+    auto previousTime = std::chrono::high_resolution_clock::now();
+
     while (!WindowShouldClose()) {
+        // Measure complete and correct frame times
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        double trueFrameDeltaMs =
+            std::chrono::duration<double, std::milli>(currentTime - previousTime).count();
+        previousTime = currentTime;
+
         // Screen Resolution setup
         const Rectangle screenDestRec = {0.0f, 0.0f, static_cast<float>(GetScreenWidth()),
                                          static_cast<float>(GetScreenHeight())};
@@ -91,7 +106,7 @@ int main() {
         // Benchmark Boot Sequence
         if (triggerBenchmarkStart) {
             if (telemetryWriter.Initialize("hydra_benchmark_results.csv")) {
-                benchController.Start(BenchmarkSuite::SuiteA_Geom);
+                benchController.Start(BenchmarkSuite::Suite_5_1_1_LodMicroGeom);
             }
         }
 
@@ -131,10 +146,12 @@ int main() {
                               engineState.use16BitHDR);
         }
 
+        // profiling and synchronization
+        masterGpuProfiler.AwaitCapacity(); // Halt the thread the GPU is 4 frames behind
+        cpuLogicProfiler.Begin();
+
         // CPU CULLING & DATA PREP
         // -----------------------------------------------------------------------------------------
-
-        cpuProfiler.Begin();
 
         // Extract frustum planes and populate visibility arrays to avoid drawing occluded objects
         sceneManager.UpdateVisibility(cameraController, engineState);
@@ -179,17 +196,23 @@ int main() {
         Mesh &currentMesh   = ctx.lodMeshes[engineState.currentLodIndex];
         int activeTriangles = currentMesh.triangleCount * actualVisibleCount;
 
+        cpuLogicProfiler.End();
+
         // RENDER EXECUTION
         // -----------------------------------------------------------------------------------------
 
+        cpuRenderProfiler.Begin();
+
         BeginDrawing();
         {
+            rlDrawRenderBatchActive();
+            masterGpuProfiler.Begin();
+
             // GEOMETRY PASS (G-BUFFER)
             // -------------------------------------------------------------------------------------
 
             if (engineState.activeRenderPath == RenderPath::DeferredUber ||
                 engineState.activeRenderPath == RenderPath::DeferredVolume) {
-                rlDrawRenderBatchActive();
                 rlEnableFramebuffer(ctx.FboId);
                 rlViewport(0, 0, engineState.renderWidth, engineState.renderHeight);
                 rlActiveDrawBuffers(2); // Albedo (Color0) + Normals (Color1)
@@ -239,13 +262,11 @@ int main() {
                 EndMode3D();
 
                 rlDrawRenderBatchActive();
-                GpuProfiler::End();
+                geomProfiler.End();
 
                 rlEnableColorBlend();
                 rlDisableFramebuffer();
                 rlViewport(0, 0, GetRenderWidth(), GetRenderHeight());
-            } else {
-                geomProfiler.elapsedMs = 0.0; // Geometry cost is unified into forward pass
             }
 
             // LIGHTING & RESOLVE PASSES
@@ -316,7 +337,7 @@ int main() {
                     EndShaderMode();
 
                     rlDrawRenderBatchActive();
-                    GpuProfiler::End();
+                    lightProfiler.End();
                 }
                 EndTextureMode();
 
@@ -420,7 +441,7 @@ int main() {
                     EndShaderMode();
 
                     rlDrawRenderBatchActive();
-                    GpuProfiler::End();
+                    lightProfiler.End();
                 }
                 EndTextureMode();
 
@@ -442,8 +463,9 @@ int main() {
                 ClearBackground(bgCol);
 
                 rlDrawRenderBatchActive();
-                lightProfiler
-                    .Begin(); // Tracks both Geometry & Lighting simultaneously in forward mode
+
+                // Tracks both Geometry & Lighting simultaneously in forward mode
+                lightProfiler.Begin();
 
                 BeginMode3D(camera);
                 {
@@ -579,7 +601,7 @@ int main() {
                 EndMode3D();
 
                 rlDrawRenderBatchActive();
-                GpuProfiler::End();
+                lightProfiler.End();
 
                 rlDisableFramebuffer();
                 rlViewport(0, 0, GetRenderWidth(), GetRenderHeight());
@@ -603,27 +625,47 @@ int main() {
             }
             EndShaderMode();
 
+            rlDrawRenderBatchActive();
+            masterGpuProfiler.End();
+
             // UI & DASHBOARD OVERLAY
             // -------------------------------------------------------------------------------------
 
-            TelemetryDashboard::Draw(engineState, cpuProfiler, geomProfiler, lightProfiler,
-                                     cameraController, sceneManager, currentMesh.triangleCount);
+            // Pre-calculate overdraw
+            const double currentOverdraw =
+                sceneManager.CalculateTheoreticalOverdraw(engineState, camera);
+
+            TelemetryDashboard::Draw(
+                engineState, cpuLogicProfiler, cpuRenderProfiler, trueFrameDeltaMs, geomProfiler,
+                lightProfiler, masterGpuProfiler, cameraController, sceneManager,
+                currentMesh.triangleCount, static_cast<float>(currentOverdraw));
         }
         EndDrawing();
 
         // PROFILING & BENCHMARKING
         // -----------------------------------------------------------------------------------------
 
-        // Poll GPU Queries safely
-        geomProfiler.Update();
-        lightProfiler.Update();
-        cpuProfiler.End();
+        cpuRenderProfiler.End();
 
+        // Update and record benchmark for Frame
         if (benchController.IsActive()) {
-            // Note: Theoretical overdraw is managed by the orchestrator/scene manager logically.
-            double currentOverdraw = 0.0;
-            benchController.UpdateAndRecord(GetFrameTime() * 1000.0, activeTriangles,
-                                            currentOverdraw);
+            const double currentOverdraw =
+                sceneManager.CalculateTheoreticalOverdraw(engineState, camera);
+            benchController.UpdateAndRecord(trueFrameDeltaMs, activeTriangles, currentOverdraw);
+        } else {
+            // Drain the GPU query queues during standard execution so the UI updates
+            double dummyMs = 0.0;
+
+            // Drain Queries
+            while (geomProfiler.IsOldestReady()) {
+                geomProfiler.TryGetOldestResult(dummyMs, false);
+            }
+            while (lightProfiler.IsOldestReady()) {
+                lightProfiler.TryGetOldestResult(dummyMs, false);
+            }
+            while (masterGpuProfiler.IsOldestReady()) {
+                masterGpuProfiler.TryGetOldestResult(dummyMs, false);
+            }
         }
     }
 

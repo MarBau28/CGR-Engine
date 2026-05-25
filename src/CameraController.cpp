@@ -106,3 +106,21 @@ void CameraController::UpdateFreeFlight() {
 
     UpdateCameraPro(&camera, {0.0f, 0.0f, 0.0f}, rotation, zoom);
 }
+
+void CameraController::UpdateCinematic() {
+    // Parametric time variable
+    const double t = (GetTime() - cinematicStartTime) * 0.15;
+    // Fixed spatial scale of the flight path
+    constexpr float pathScale = 150.0f;
+
+    // Parametric equations for smooth traversal
+    camera.position.x = pathScale * static_cast<float>(sin(t));
+    camera.position.y = 50.0f + 25.0f * static_cast<float>(sin(t * 1.5));
+    camera.position.z = pathScale * static_cast<float>(sin(t) * cos(t));
+
+    // Look slightly ahead on the curve to simulate flight
+    const double tAhead = t + 0.1;
+    camera.target.x     = pathScale * static_cast<float>(sin(tAhead));
+    camera.target.y     = 50.0f + 25.0f * static_cast<float>(sin(tAhead * 1.5));
+    camera.target.z     = pathScale * static_cast<float>(sin(tAhead) * cos(tAhead));
+}

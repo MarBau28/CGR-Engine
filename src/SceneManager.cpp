@@ -253,6 +253,7 @@ void SceneManager::UpdateVisibility(CameraController &camera, const EngineState 
     // Cull Obstacles
     visibleObstacleTransforms.clear();
     visibleObstacleStyleIds.clear();
+    visibleObstacleSpheres.clear();
     fwdTransformsBlinn.clear();
     fwdTransformsGooch.clear();
     fwdTransformsToon.clear();
@@ -264,6 +265,7 @@ void SceneManager::UpdateVisibility(CameraController &camera, const EngineState 
         if (cameraFrustum.IsSphereVisible(masterObstacleSpheres[i])) {
             visibleObstacleTransforms.push_back(masterObstacleTransforms[i]);
             visibleObstacleStyleIds.push_back(masterObstacleStyleIds[i]);
+            visibleObstacleSpheres.push_back(masterObstacleSpheres[i]);
 
             if (state.activeRenderPath == RenderPath::Forward) {
                 if (int currentStyle = static_cast<int>(masterObstacleStyleIds[i]);
@@ -346,16 +348,65 @@ int SceneManager::GetTotalObstacleCount(const EngineState &state) const {
                             : state.activeObstacleCount;
 }
 
-float SceneManager::CalculateTheoreticalOverdraw(const EngineState &state) const {
-    const int instanceCount           = GetTotalObstacleCount(state);
-    constexpr float avgObstacleRadius = 0.6495f * 2.0f;
-    constexpr float singleVolume =
-        (4.0f / 3.0f) * PI * (avgObstacleRadius * avgObstacleRadius * avgObstacleRadius);
-    const float spawnVolume =
-        (2.0f / 3.0f) * PI *
-        (state.objectSphereRadius * state.objectSphereRadius * state.objectSphereRadius);
-
-    if (spawnVolume <= 0.0f)
+float SceneManager::CalculateTheoreticalOverdraw(const EngineState &state,
+                                                 const Camera3D &camera) const {
+    if (state.objectSphereRadius <= 0.0f)
         return 0.0f;
-    return (singleVolume * static_cast<float>(instanceCount)) / spawnVolume;
+
+    float totalScreenSpaceArea = 0.0f;
+    const float fovRad         = (camera.fovy * DEG2RAD) / 2.0f;
+    const float tanFov         = std::tan(fovRad);
+    const auto screenHeight    = static_cast<float>(state.renderHeight);
+    const auto screenArea      = static_cast<float>(state.renderWidth * state.renderHeight);
+
+    // View-Dependent Geometry Footprint
+    for (const auto &[center, radius] : visibleObstacleSpheres) {
+        float dist = Vector3Distance(camera.position, center);
+        dist = std::max(dist, Config::EngineSettings::CameraNearPlane); // Prevent division by zero
+
+        const float projectedRadius = (radius * screenHeight) / (2.0f * dist * tanFov);
+        totalScreenSpaceArea += PI * (projectedRadius * projectedRadius);
+    }
+
+    // View-Dependent Light Footprint
+    if (state.activeRenderPath == RenderPath::DeferredVolume ||
+        state.activeRenderPath == RenderPath::DeferredUber) {
+        const float c = Config::EngineSettings::AttenuationConstant -
+                        (state.lightIntensity / Config::EngineSettings::MinLightThreshold);
+        float dynamicMaxRadius = 0.0f;
+
+        if (state.lightIntensity > 0.0f) {
+            dynamicMaxRadius =
+                (-Config::EngineSettings::AttenuationLinear +
+                 std::sqrt(Config::EngineSettings::AttenuationLinear *
+                               Config::EngineSettings::AttenuationLinear -
+                           (4.0f * Config::EngineSettings::AttenuationQuadratic * c))) /
+                (2.0f * Config::EngineSettings::AttenuationQuadratic);
+        }
+
+        if (state.useLightSingularity) {
+            if (!visibleLightVolumeTransforms.empty()) {
+                constexpr Vector3 singularityPos = {0.0f, 10.0f, 0.0f};
+                float dist                       = Vector3Distance(camera.position, singularityPos);
+                dist = std::max(dist, Config::EngineSettings::CameraNearPlane);
+
+                const float projectedRadius =
+                    (dynamicMaxRadius * screenHeight) / (2.0f * dist * tanFov);
+                totalScreenSpaceArea += PI * (projectedRadius * projectedRadius);
+            }
+        } else {
+            for (const Vector3 &lightPos : visibleLightPositions) {
+                float dist = Vector3Distance(camera.position, lightPos);
+                dist       = std::max(dist, Config::EngineSettings::CameraNearPlane);
+
+                const float projectedRadius =
+                    (dynamicMaxRadius * screenHeight) / (2.0f * dist * tanFov);
+                totalScreenSpaceArea += PI * (projectedRadius * projectedRadius);
+            }
+        }
+    }
+
+    // Overdraw Factor = (Total Area of all drawn objects) / (Actual Screen Area)
+    // 1.0 = Screen is exactly covered once. 3.5 = Every pixel is shaded 3.5 times on average.
+    return totalScreenSpaceArea / screenArea;
 }

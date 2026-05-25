@@ -62,7 +62,7 @@ InputEventFlags InputController::ProcessInputs(EngineState &state, CameraControl
     if (IsKeyPressed(KEY_T))
         state.enableToon = !state.enableToon;
 
-    if (IsKeyPressed(KEY_RIGHT) && state.kuwaharaRadius < 8)
+    if (IsKeyPressed(KEY_RIGHT) && state.kuwaharaRadius < 16)
         state.kuwaharaRadius++;
     if (IsKeyPressed(KEY_LEFT) && state.kuwaharaRadius > 1)
         state.kuwaharaRadius--;
@@ -135,12 +135,12 @@ InputEventFlags InputController::ProcessInputs(EngineState &state, CameraControl
     }
 
     obsInput.Update(KEY_SIX, KEY_KP_6, KEY_FOUR, KEY_KP_4, state.activeObstacleCount, 100, 5000.0f,
-                    1, Config::EngineSettings::MAX_OBSTACLES);
+                    0, Config::EngineSettings::MAX_OBSTACLES);
 
     const int previousLightCount = state.activeLightCount;
     const int maxAllowedLights   = state.useNprRoom ? 500 : actualGeneratedLights;
     lightInput.Update(KEY_EIGHT, KEY_KP_8, KEY_FIVE, KEY_KP_5, state.activeLightCount, 10, 200.0f,
-                      1, maxAllowedLights);
+                      0, maxAllowedLights);
 
     if (state.useNprRoom && state.activeLightCount != previousLightCount) {
         flags.triggerSceneRebuild = true;

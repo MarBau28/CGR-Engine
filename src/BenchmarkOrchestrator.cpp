@@ -1,133 +1,104 @@
 #include "../include/BenchmarkOrchestrator.h"
+#include <glad/glad.h>
 #include <iostream>
+#include <raylib.h>
+#include <rlgl.h>
 
-BenchmarkOrchestrator::BenchmarkOrchestrator(CsvTelemetryWriter &telemetry, CpuProfiler &cpuProf,
-                                             GpuProfiler &geomProf, GpuProfiler &lightProf,
+BenchmarkOrchestrator::BenchmarkOrchestrator(CsvTelemetryWriter &telemetry,
+                                             CpuProfiler &cpuLogicProfiler,
+                                             CpuProfiler &cpuRenderProfiler, GpuProfiler &geomProf,
+                                             GpuProfiler &lightProf, GpuProfiler &masterGpuProf,
                                              CameraController &camCtrl)
-    : telemetryWriter(telemetry), cpuProfiler(cpuProf), geomProfiler(geomProf),
-      lightProfiler(lightProf), cameraController(camCtrl), currentSuite(BenchmarkSuite::Inactive),
-      accumCpu(0), accumGeom(0), accumLight(0), accumTotal(0), recordedFrames(0) {}
+    : telemetryWriter(telemetry), cpuLogicProfiler(cpuLogicProfiler),
+      cpuRenderProfiler(cpuRenderProfiler), geomProfiler(geomProf), lightProfiler(lightProf),
+      masterGpuProfiler(masterGpuProf), cameraController(camCtrl),
+      currentSuite(BenchmarkSuite::Inactive), currentPhase(BenchPhase::Warmup),
+      stateChangedThisFrame(false), phaseStartTime(0.0), warmupDuration(3.0), captureDuration(5.0),
+      frameCounter(0), currentStepIndex(0), currentPipelineIndex(0) {}
 
 void BenchmarkOrchestrator::Start(BenchmarkSuite suite) {
     if (currentSuite != BenchmarkSuite::Inactive)
         return;
 
-    currentSuite = suite;
-    sweepIndex   = 0;
-    currentSweepArray.clear();
+    currentSuite         = suite;
+    currentStepIndex     = 0;
+    currentPipelineIndex = 0;
+    stepValues.clear();
 
-    // Lock camera for exact view-matrix reproduction across tests
+    // Default architectural sweep; dynamically constrained per suite definition
+    targetPipelines = {RenderPath::Forward, RenderPath::DeferredUber, RenderPath::DeferredVolume};
     cameraController.SetLocked(true);
-    cameraController.SetDeterministicState({50.0f, 30.0f, 50.0f}, {0.0f, 0.0f, 0.0f}, 45.0f);
 
-    // Setup scaling parameters for the requested suite
     switch (suite) {
-    case BenchmarkSuite::SuiteA_Geom:
-        currentSweepArray = {0, 1, 2, 3, 4};
-        break; // LOD sweep
-    case BenchmarkSuite::SuiteB_DrawCall:
-        currentSweepArray = {1000, 5000, 10000, 25000, 50000};
-        break; // Instances
-    case BenchmarkSuite::SuiteC_Entropy:
-        currentSweepArray = {0, 1};
-        break; // 0=Random, 1=Clustered
-    case BenchmarkSuite::SuiteD_FillRate:
-    case BenchmarkSuite::SuiteE_Singularity:
-        currentSweepArray = {10, 50, 100, 250, 500};
-        break; // Light count / Collapsed light count
-    case BenchmarkSuite::SuiteF_Spatial:
-        currentSweepArray = {2, 4, 6, 8};
-        break; // Kuwahara radii
-    case BenchmarkSuite::SuiteG_Synthesis:
-        currentSweepArray = {1000, 5000, 10000, 25000};
-        break; // Mixed load scaling
-    case BenchmarkSuite::SuiteH_Overdraw:
-        currentSweepArray = {250, 200, 150, 100, 50};
-        break; // Decreasing cloud radius
+    // TODO: Implement specific independent variable population per thesis definition
     default:
         EndBenchmark();
         return;
     }
 
     ApplySuiteState();
-    std::cout << "Benchmark Started: Suite ID " << static_cast<int>(suite) << "\n";
+    std::cout << "[ORCHESTRATOR] Benchmark sequence initialized. Suite ID: "
+              << static_cast<int>(suite) << "\n";
 }
 
 void BenchmarkOrchestrator::ApplySuiteState() {
-    // Reset baseline to prevent cross-contamination
-    currentState.enableOutlines      = false;
-    currentState.enableKuwahara      = false;
-    currentState.enableGooch         = false;
-    currentState.enableToon          = false;
-    currentState.useNprRoom          = false;
-    currentState.useClusteredStyles  = false;
-    currentState.useLightSingularity = false;
+    // Zero-state initialization to prevent variable carryover across architectural sweeps
+    currentState.activeLightCount     = 0;
+    currentState.ambientLightStrength = 1.0f;
+    currentState.enableOutlines       = false;
+    currentState.enableKuwahara       = false;
+    currentState.enableGooch          = false;
+    currentState.enableToon           = false;
+    currentState.useClusteredStyles   = false;
+    currentState.use16BitHDR          = true;
 
-    // Set static defaults
-    currentState.activeObstacleCount = 5000;
-    currentState.activeLightCount    = 100;
-    currentState.currentLodIndex     = 0;
-    currentState.objectSphereRadius  = 200.0f;
-    currentState.kuwaharaRadius      = 4;
+    currentState.activeRenderPath = targetPipelines[currentPipelineIndex];
 
-    const int currentSweepValue = currentSweepArray[sweepIndex];
-
-    switch (currentSuite) {
-    case BenchmarkSuite::SuiteA_Geom:
-        currentState.activeRenderPath = RenderPath::DeferredUber;
-        currentState.currentLodIndex  = currentSweepValue;
-        break;
-    case BenchmarkSuite::SuiteB_DrawCall:
-        currentState.activeRenderPath    = RenderPath::Forward;
-        currentState.activeObstacleCount = currentSweepValue;
-        break;
-    case BenchmarkSuite::SuiteC_Entropy:
-        currentState.activeRenderPath   = RenderPath::DeferredUber;
-        currentState.useNprRoom         = true;
-        currentState.useClusteredStyles = (currentSweepValue == 1);
-        break;
-    case BenchmarkSuite::SuiteD_FillRate:
-        currentState.activeRenderPath    = RenderPath::DeferredVolume;
-        currentState.activeObstacleCount = 1;
-        currentState.activeLightCount    = currentSweepValue;
-        break;
-    case BenchmarkSuite::SuiteE_Singularity:
-        currentState.activeRenderPath    = RenderPath::DeferredVolume;
-        currentState.activeObstacleCount = 1;
-        currentState.useLightSingularity = true;
-        currentState.activeLightCount    = currentSweepValue;
-        break;
-    case BenchmarkSuite::SuiteF_Spatial:
-        currentState.activeRenderPath = RenderPath::DeferredUber;
-        currentState.enableKuwahara   = true;
-        currentState.kuwaharaRadius   = currentSweepValue;
-        break;
-    case BenchmarkSuite::SuiteG_Synthesis:
-        currentState.activeRenderPath    = RenderPath::DeferredUber;
-        currentState.currentLodIndex     = 1;
-        currentState.enableGooch         = true;
-        currentState.enableToon          = true;
-        currentState.enableKuwahara      = true;
-        currentState.activeObstacleCount = currentSweepValue;
-        break;
-    case BenchmarkSuite::SuiteH_Overdraw:
-        currentState.activeRenderPath    = RenderPath::DeferredUber;
-        currentState.activeObstacleCount = 10000;
-        currentState.objectSphereRadius  = static_cast<float>(currentSweepValue);
-        break;
-    default:
-        break;
-    }
-
-    currentFrameCount     = 0;
-    isWarmingUp           = true;
+    // Reset phase clocks and structural flags
+    warmupDuration        = 10.0;
+    phaseStartTime        = GetTime();
+    currentPhase          = BenchPhase::Warmup;
+    frameCounter          = 0;
     stateChangedThisFrame = true;
 
-    accumCpu       = 0.0;
-    accumGeom      = 0.0;
-    accumLight     = 0.0;
-    accumTotal     = 0.0;
-    recordedFrames = 0;
+    if (currentSuite == BenchmarkSuite::Suite_5_5_Pass1_GeometryBaseline ||
+        currentSuite == BenchmarkSuite::Suite_5_5_Pass2_ShadingTax ||
+        currentSuite == BenchmarkSuite::Suite_5_5_Pass3_ParityFlythrough ||
+        currentSuite == BenchmarkSuite::Suite_5_5_Pass4_DeferredMaxFidelity) {
+        // Spatial Sweep: Measures the entire path chronologically
+        useFrameLimit   = false;
+        captureDuration = 15.0;
+    } else {
+        // Parameter Sweep: Measures a mathematically identical sample size
+        useFrameLimit    = true;
+        targetFrameCount = 1000;
+    }
+
+    // TODO: Implement suite-specific variable mutation and camera transformations here
+
+    // Reset phase clocks and structural flags
+    // warmupDuration        = 3.0;
+    // captureDuration       = 5.0;
+    // phaseStartTime        = GetTime();
+    // currentPhase          = BenchPhase::Warmup;
+    // frameCounter          = 0;
+    // stateChangedThisFrame = true;
+}
+
+void BenchmarkOrchestrator::AdvanceState() {
+    currentPipelineIndex++;
+
+    if (currentPipelineIndex >= targetPipelines.size()) {
+        currentPipelineIndex = 0;
+        currentStepIndex++;
+
+        if (currentStepIndex >= stepValues.size()) {
+            EndBenchmark();
+            return;
+        }
+    }
+
+    ApplySuiteState();
 }
 
 void BenchmarkOrchestrator::UpdateAndRecord(const double totalFrameTimeMs, const int activeTris,
@@ -135,60 +106,131 @@ void BenchmarkOrchestrator::UpdateAndRecord(const double totalFrameTimeMs, const
     if (currentSuite == BenchmarkSuite::Inactive)
         return;
 
-    stateChangedThisFrame = false; // Reset the flag immediately
-    currentFrameCount++;
+    stateChangedThisFrame    = false;
+    const double currentTime = GetTime();
+    const double elapsedTime = currentTime - phaseStartTime;
 
-    if (isWarmingUp) {
-        if (currentFrameCount >= warmupFrames) {
-            isWarmingUp       = false;
-            currentFrameCount = 0;
+    if (currentPhase == BenchPhase::Warmup) {
+        if (elapsedTime >= warmupDuration) {
+            rlDrawRenderBatchActive();
+            glFinish();
+
+            // Drain all remaining queries forced to completion by glFinish
+            geomProfiler.Reset();
+            lightProfiler.Reset();
+            masterGpuProfiler.Reset();
+
+            currentPhase   = BenchPhase::Capture;
+            phaseStartTime = GetTime();
+            frameCounter   = 0;
+            // Purge queue to ensure zero carryover
+            while (!pendingFrames.empty())
+                pendingFrames.pop();
         }
-    } else {
-        // Recording Phase
-        accumCpu += cpuProfiler.elapsedMs;
-        accumGeom += geomProfiler.elapsedMs;
-        accumLight += lightProfiler.elapsedMs;
-        accumTotal += totalFrameTimeMs;
-        recordedFrames++;
+    } else if (currentPhase == BenchPhase::Capture) {
+        frameCounter++;
 
-        if (currentFrameCount >= recordFrames) {
-            const double avgCpu   = accumCpu / recordedFrames;
-            const double avgGeom  = accumGeom / recordedFrames;
-            const double avgLight = accumLight / recordedFrames;
-            const double avgTotal = accumTotal / recordedFrames;
+        const std::string archStr =
+            currentState.activeRenderPath == RenderPath::Forward
+                ? "Forward"
+                : (currentState.activeRenderPath == RenderPath::DeferredUber ? "Deferred_Uber"
+                                                                             : "Deferred_Volume");
 
-            const std::string archStr =
-                currentState.activeRenderPath == RenderPath::Forward
-                    ? "forward"
-                    : (currentState.activeRenderPath == RenderPath::DeferredUber
-                           ? "Deferred_Uber"
-                           : "Deferred_Volume");
+        const double safeTime   = std::max(totalFrameTimeMs, 0.001);
+        const double currentFps = 1000.0 / safeTime;
 
-            const int lightTop = currentState.useLightSingularity ? 1 : 0;
-            const int styleTop =
-                currentState.useNprRoom ? 2 : (currentState.useClusteredStyles ? 1 : 0);
+        // Queue up the raw CPU metrics for this frame
+        pendingFrames.push(FrameRecord{
+            frameCounter, cpuLogicProfiler.elapsedMs, cpuRenderProfiler.elapsedMs, totalFrameTimeMs,
+            currentFps, currentState.activeObstacleCount, activeTris, currentOverdraw,
+            currentState.activeRenderPath, archStr, stepValues[currentStepIndex], currentSuite});
 
-            telemetryWriter.AppendRow(
-                "Suite_" + std::to_string(static_cast<int>(currentSuite)), archStr, avgCpu, avgGeom,
-                avgLight, avgTotal, currentState.activeObstacleCount, currentState.currentLodIndex,
-                activeTris, currentState.activeLightCount, lightTop, styleTop,
-                currentState.kuwaharaRadius, currentOverdraw);
+        // Process resolved frames opportunistically (Non-Blocking)
+        while (!pendingFrames.empty()) {
+            const auto &[recFrameNumber, recCpuLogicMs, recCpuRenderMs, recTotalFrameTimeMs, recFps,
+                         recActiveInstances, recActiveTris, recCurrentOverdraw, recActiveRenderPath,
+                         recArchitecture, recStepValue, recSuite] = pendingFrames.front();
+            const bool isDeferred = (recActiveRenderPath != RenderPath::Forward);
 
-            sweepIndex++;
-            if (sweepIndex >= currentSweepArray.size()) {
-                EndBenchmark();
+            // Check if hardware queries are naturally ready
+            const bool geomReady       = !isDeferred || geomProfiler.IsOldestReady();
+            const bool lightReady      = lightProfiler.IsOldestReady();
+            const bool masterReady     = masterGpuProfiler.IsOldestReady();
+            const bool allQueriesReady = (geomReady && lightReady && masterReady);
+            const bool emergencyStallRequired =
+                (pendingFrames.size() >= GpuProfiler::MAX_IN_FLIGHT);
+
+            // Wait for all three profilers to report naturally, OR force the wait to clear capacity
+            if (allQueriesReady || emergencyStallRequired) {
+                double geomMs = 0.0, lightMs = 0.0, totalGpuMs = 0.0;
+
+                // Pass 'forceWait' down to TryGetOldestResult so the thread explicitly blocks
+                // and correctly waits for the OpenGL queries to resolve before extracting.
+                if (isDeferred)
+                    geomProfiler.TryGetOldestResult(geomMs, emergencyStallRequired);
+
+                lightProfiler.TryGetOldestResult(lightMs, emergencyStallRequired);
+                masterGpuProfiler.TryGetOldestResult(totalGpuMs, emergencyStallRequired);
+
+                telemetryWriter.AppendRow("Suite_" + std::to_string(static_cast<int>(recSuite)),
+                                          recArchitecture, recStepValue, recFrameNumber,
+                                          recCpuLogicMs, recCpuRenderMs, geomMs, lightMs,
+                                          totalGpuMs, recTotalFrameTimeMs, recFps,
+                                          recActiveInstances, recActiveTris, recCurrentOverdraw);
+
+                pendingFrames.pop();
             } else {
-                ApplySuiteState(); // Steps to the next phase
+                break; // GPU data for the oldest frame is not ready; Pause writes
             }
         }
+
+        // Phase completion and flush
+        bool isPhaseComplete = false;
+
+        if (useFrameLimit) {
+            isPhaseComplete = (frameCounter >= targetFrameCount);
+        } else {
+            isPhaseComplete = (elapsedTime >= captureDuration);
+        }
+
+        if (isPhaseComplete) {
+            // Gracefully blocks to drain remaining frames at the end of a suite
+            FlushTelemetryQueue();
+            AdvanceState();
+        }
+    }
+}
+
+void BenchmarkOrchestrator::FlushTelemetryQueue() {
+    // Force a blocking wait to extract all remaining frames before state mutates
+    while (!pendingFrames.empty()) {
+        const auto &[frameNumber, cpuLogicMs, cpuRenderMs, totalFrameTimeMs, fps, activeInstances,
+                     activeTris, currentOverdraw, activeRenderPath, architecture, stepValue,
+                     suite] = pendingFrames.front();
+
+        const bool isDeferred = (activeRenderPath != RenderPath::Forward);
+
+        double geomMs = 0.0, lightMs = 0.0, totalGpuMs = 0.0;
+
+        if (isDeferred)
+            geomProfiler.TryGetOldestResult(geomMs, true);
+        lightProfiler.TryGetOldestResult(lightMs, true);
+        masterGpuProfiler.TryGetOldestResult(totalGpuMs, true);
+
+        telemetryWriter.AppendRow("Suite_" + std::to_string(static_cast<int>(suite)), architecture,
+                                  stepValue, frameNumber, cpuLogicMs, cpuRenderMs, geomMs, lightMs,
+                                  totalGpuMs, totalFrameTimeMs, fps, activeInstances, activeTris,
+                                  currentOverdraw);
+
+        pendingFrames.pop();
     }
 }
 
 void BenchmarkOrchestrator::EndBenchmark() {
     telemetryWriter.Close();
     cameraController.SetLocked(false);
-    currentSuite = BenchmarkSuite::Complete; // Signal main loop it finished
-    std::cout << "Benchmark Suite Complete.\n";
+    currentSuite = BenchmarkSuite::Complete;
+    std::cout << "[ORCHESTRATOR] Suite execution completed. Telemetry flushed.\n";
 }
 
 bool BenchmarkOrchestrator::IsActive() const {

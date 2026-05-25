@@ -23,8 +23,10 @@ class CameraController {
     Camera3D camera{};
     CameraState currentState;
     bool isLocked;
+    double cinematicStartTime;
 
     // Internal Input Handlers
     void UpdateOrbital();
     void UpdateFreeFlight();
+    void UpdateCinematic();
 };
