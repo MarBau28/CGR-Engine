@@ -1,0 +1,174 @@
+\documentclass[
+    12pt,                        % Schriftgröße
+    ngerman,                     % Neue deutsche Rechtschreibung
+    a4paper,                     % Papierformat
+    oneside,                     % Einseitig
+    titlepage,                   % Eigene Titelseite
+    parskip=half,                % Halbe Zeile Abstand zwischen Absätzen
+    headings=normal,             % Überschriften nicht zu riesig
+    bibliography=totoc,          % Literaturverzeichnis ins Inhaltsverzeichnis
+    listof=totoc,                % Abbildungs-/Tabellenverzeichnis ins Inhaltsverzeichnis
+    numbers=noenddot             % Kein Punkt am Ende der Kapitelnummer
+]{scrreprt}
+
+% --- Encoding & Sprache ---
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{babel}
+\usepackage{csquotes}
+
+% --- Typografie & Layout ---
+
+\usepackage{newpxtext,newpxmath}
+\linespread{1.05}
+\usepackage{microtype}
+\usepackage[left=3cm,right=2.5cm,top=2.5cm,bottom=2.5cm]{geometry}
+\usepackage{setspace}
+\setstretch{1.15}
+
+% --- Grafiken & Tabellen ---
+
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{scrhack}
+\usepackage{booktabs}
+
+% --- Code Listings (C++ & GLSL) ---
+
+\usepackage{listings}
+\usepackage{xcolor}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{engineStyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{blue}\bfseries,
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    frame=leftline,
+    rulecolor=\color{black}
+}
+\lstset{style=engineStyle}
+
+% Spezifische GLSL Definition
+\lstdefinelanguage{GLSL}{
+    morekeywords={attribute, const, uniform, varying, layout, centroid, flat, smooth, noperspective, break, continue,
+    do, for, while, switch, case, default, if, else, in, out, inout, float, int, void, bool, true, false, invariant,
+    discard, return, mat2, mat3, mat4, vec2, vec3, vec4, ivec2, ivec3, ivec4, sampler2D},
+    morecomment=[l]{//},
+    morecomment=[s]{/*}{*/},
+    morestring=[b]",
+}
+
+% --- Literaturverzeichnis (APA Style) ---
+
+\usepackage[backend=biber,style=apa]{biblatex}
+\addbibresource{Verzeichnisse/literatur.bib}
+
+% --- Hyperlinks ---
+
+\usepackage[hidelinks]{hyperref}
+
+
+% ==============================================================================
+
+
+\begin{document}
+
+    % Zone 1: Keine Seitenzahlen
+    \pagenumbering{gobble}
+
+% --- Deckblatt (Dummy) ---
+
+    \begin{titlepage}
+        Deckblatt Placeholder
+    \end{titlepage}
+
+% --- Eidesstattliche Erklärung (Dummy) ---
+
+
+    \chapter*{Eidesstattliche Erklärung}
+
+    Placeholder
+
+    \clearpage
+
+    % Zone 2: Große römische Zahlen (I, II, III...)
+    \pagenumbering{Roman}
+
+% --- Abstract ---
+
+
+    \chapter*{Kurzfassung}
+
+    \addcontentsline{toc}{chapter}{Kurzfassung}
+    Abstract (100 bis 250 Worte; Ergebnisse in einem Satz)
+
+    \clearpage
+
+% --- Inhaltsverzeichnis ---
+
+    \tableofcontents
+    \clearpage
+    \listoffigures
+    \clearpage
+    \lstlistoflistings
+    \clearpage
+
+% ZONE 3: Arabische Zahlen (1, 2, 3...)
+    \pagenumbering{arabic}
+
+% --- Hauptteil ---
+
+    % 3-5 Seiten
+%    \input{Kapitel/01_Einführung}
+
+    % 6-9 Seiten
+%    \input{Kapitel/02_Grundlagen_Vorarbeiten}
+
+    % 5-8 Seiten
+    \input{Kapitel/03_Stand_der_Technik}
+
+    % 15-20 Seiten
+%    \input{Kapitel/04_Konzeption_&_Realisierung}
+
+    % 12-15 Seiten
+%    \input{Kapitel/05_Evaluation}
+
+    % 6-9 Seiten
+%    \input{Kapitel/06_Diskussion}
+
+    % 2-3 Seiten
+%    \input{Kapitel/07_Fazit_Ausblick}
+
+    \clearpage
+
+    % Zone 4: Kleine römische Zahlen (i, ii, iii...)
+    \setcounter{page}{1}
+    \pagenumbering{roman}
+
+% --- Literatur & Anhang ---
+
+    \printbibliography
+    \clearpage
+
+    \appendix
+
+%    \input{Kapitel/09_Anhang}
+
+\end{document}

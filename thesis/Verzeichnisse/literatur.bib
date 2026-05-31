@@ -1,0 +1,80 @@
+@article{burnsVisibilityBufferCacheFriendly2013,
+  title = {The {{Visibility Buffer}}: {{A Cache-Friendly Approach}} to {{Deferred Shading}}},
+  author = {Burns, Christopher A and Hunt, Warren A},
+  date = {2013},
+  volume = {2},
+  number = {2},
+  abstract = {Forward rendering pipelines shade fragments in triangle-submission order. Consequently, non-visible fragments are often wastefully shaded before being subsequently occluded—a phenomenon known as over-shading. A popular way to avoid over-shading is to only compute surface attributes for each fragment during a forward pass and store them in a buffer. Lighting is performed in a subsequent pass, consuming the attributes buffer. This strategy is commonly known as deferred shading.},
+  langid = {english},
+  file = {/home/marvin/Zotero/storage/BBVH6KUU/Burns and Hunt - 2013 - The Visibility Buffer A Cache-Friendly Approach to Deferred Shading.pdf}
+}
+
+@inproceedings{fatahalianReducingShadingGPUs2010,
+  title = {Reducing Shading on {{GPUs}} Using Quad-Fragment Merging},
+  booktitle = {{{ACM SIGGRAPH}} 2010 Papers},
+  author = {Fatahalian, Kayvon and Boulos, Solomon and Hegarty, James and Akeley, Kurt and Mark, William R. and Moreton, Henry and Hanrahan, Pat},
+  date = {2010-07-26},
+  series = {{{SIGGRAPH}} '10},
+  pages = {1--8},
+  publisher = {Association for Computing Machinery},
+  location = {New York, NY, USA},
+  doi = {10.1145/1833349.1778804},
+  url = {https://dl.acm.org/doi/10.1145/1833349.1778804},
+  urldate = {2026-05-31},
+  abstract = {Current GPUs perform a significant amount of redundant shading when surfaces are tessellated into small triangles. We address this inefficiency by augmenting the GPU pipeline to gather and merge rasterized fragments from adjacent triangles in a mesh. This approach has minimal impact on output image quality, is amenable to implementation in fixed-function hardware, and, when rendering pixel-sized triangles, requires only a small amount of buffering to reduce overall pipeline shading work by a factor of eight. We find that a fragment-shading pipeline with this optimization is competitive with the REYES pipeline approach of shading at micropolygon vertices and, in cases of complex occlusion, can perform up to two times less shading work.},
+  isbn = {978-1-4503-0210-4},
+  file = {/home/marvin/Zotero/storage/R8659T6E/Fatahalian et al. - 2010 - Reducing shading on GPUs using quad-fragment merging.pdf}
+}
+
+@inproceedings{liktorDecoupledDeferredShading2012,
+  title = {Decoupled Deferred Shading for Hardware Rasterization},
+  booktitle = {Proceedings of the {{ACM SIGGRAPH Symposium}} on {{Interactive 3D Graphics}} and {{Games}}},
+  author = {Liktor, Gábor and Dachsbacher, Carsten},
+  date = {2012-03-09},
+  series = {{{I3D}} '12},
+  pages = {143--150},
+  publisher = {Association for Computing Machinery},
+  location = {New York, NY, USA},
+  doi = {10.1145/2159616.2159640},
+  url = {https://dl.acm.org/doi/10.1145/2159616.2159640},
+  urldate = {2026-05-31},
+  abstract = {In this paper we present decoupled deferred shading: a rendering technique based on a new data structure called compact geometry buffer, which stores shading samples independently from the visibility. This enables caching and efficient reuse of shading computation, e.g. for stochastic rasterization techniques. In contrast to previous methods, our decoupled shading can be efficiently implemented on current graphics hardware. We describe two variants which differ in the way the shading samples are cached: the first maintains a single cache for the entire image in global memory, while the second pursues a tile-based approach leveraging local memory of the GPU's multiprocessors. We demonstrate the application of decoupled deferred shading to speed up the rendering in applications with stochastic supersampling, depth of field, and motion blur.},
+  isbn = {978-1-4503-1194-6},
+  file = {/home/marvin/Zotero/storage/GUZWLLG7/Liktor and Dachsbacher - 2012 - Decoupled deferred shading for hardware rasterization.pdf}
+}
+
+@inproceedings{mallettDeferredAdaptiveCompute2018,
+  title = {Deferred Adaptive Compute Shading},
+  booktitle = {Proceedings of the {{Conference}} on {{High-Performance Graphics}}},
+  author = {Mallett, Ian and Yuksel, Cem},
+  date = {2018-08-10},
+  series = {{{HPG}} '18},
+  pages = {1--4},
+  publisher = {Association for Computing Machinery},
+  location = {New York, NY, USA},
+  doi = {10.1145/3231578.3232160},
+  url = {https://dl.acm.org/doi/10.1145/3231578.3232160},
+  urldate = {2026-05-31},
+  abstract = {A primary advantage of deferred shading is eliminating wasted shading operations due to overdraw. We present a new algorithm that we call Deferred Adaptive Compute Shading, for providing further reduction in shading computations. Our method hierarchically shades the image while reducing the number of required shading operations to below one shading computation per pixel on average. We determine whether to shade a pixel or approximate it using previously shaded pixels around it, based on an estimate of the image variance at the pixel location. The algorithm is designed to dynamically reconfigure itself to achieve optimal warp coherence and measurable performance gain. We extensively evaluate our algorithm, demonstrating that it produces high-quality results and is robust and highly scalable while providing significant performance improvements in complex scenes.},
+  isbn = {978-1-4503-5896-5},
+  file = {/home/marvin/Zotero/storage/QE7LUNPR/Mallett and Yuksel - 2018 - Deferred adaptive compute shading.pdf}
+}
+
+@article{olssonClusteredDeferredForward2012,
+  title = {Clustered {{Deferred}} and {{Forward Shading}}},
+  author = {Olsson, Ola and Billeter, Markus and Assarsson, Ulf},
+  date = {2012},
+  abstract = {This paper presents and investigates Clustered Shading for deferred and forward rendering. In Clustered Shading, view samples with similar properties (e.g. 3D-position and/or normal) are grouped into clusters. This is comparable to tiled shading, where view samples are grouped into tiles based on 2D-position only. We show that Clustered Shading creates a better mapping of light sources to view samples than tiled shading, resulting in a significant reduction of lighting computations during shading. Additionally, Clustered Shading enables using normal information to perform per-cluster back-face culling of lights, again reducing the number of lighting computations. We also show that Clustered Shading not only outperforms tiled shading in many scenes, but also exhibits better worst case behaviour under tricky conditions (e.g. when looking at high-frequency geometry with large discontinuities in depth). Additionally, Clustered Shading enables real-time scenes with two to three orders of magnitudes more lights than previously feasible (up to around one million light sources).},
+  langid = {english},
+  file = {/home/marvin/Zotero/storage/52IHIJDS/Olsson et al. - 2012 - Clustered Deferred and Forward Shading.pdf}
+}
+
+@thesis{Thaler2011DeferredRendering,
+  type = {Thesis},
+  title = {Deferred Rendering},
+  author = {Thaler, Jonathan},
+  date = {2011},
+  institution = {TU Wien},
+  location = {Vienna, Austria},
+  file = {/home/marvin/Zotero/storage/DRLBCFH4/Deferred-Rendering.pdf}
+}

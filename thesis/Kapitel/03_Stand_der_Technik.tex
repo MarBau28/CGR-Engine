@@ -1,0 +1,66 @@
+\chapter{Stand der Technik und verwandte Arbeiten}
+\label{ch:std_introduction}
+
+Dieses Kapitel analysiert den aktuellen Forschungsstand zu Forward- und Deferred-Rendering-Architekturen sowie moderne
+Industriepraktiken im Bereich hybrider Architekturen und selektiver Stilisierung.
+Durch die Betrachtung bestehender Verfahren im Kontext des Non-Photorealistic Renderings (NPR) werden deren
+konzeptionelle und leistungstechnische Limitierungen aufgezeigt.
+Die Identifikation dieser Schwachstellen sowie der Mangel an empirischen Vergleichsdaten dienen der Definition der
+zugrundeliegenden Forschungslücke, legitimieren die in dieser Arbeit durchgeführte holistische Systemanalyse und
+ermöglichen die wissenschaftliche Einordnung des eigens entwickelten Evaluations-Frameworks.
+
+
+\section{Aktueller Forschungsstand zu Forward- und Deferred-Architekturen}
+\label{sec:sdt_academic_state}
+
+% Einleitung
+Deferred-Rendering Paradigmen und entsprechende architektonische Umsetzungen sind in der Forschung und praktischen
+Anwendung in der Industrie mittlerweile etablierte Standards und allgegenwärtig~\cite{}.
+Moderne Rendering Pipelines im Bereich des Echtzeit-Renderings werden zunehmend stark von komplexen
+Beleuchtungsherausforderungen getrieben, welches das effiziente Handhaben und Anwenden von dafür optimierten
+Deferred-Rendering-Architekturen in den Fokus rückt.
+Gleichzeitig werden auch im Bereich des Forward-Renderings, durch verschiedene Optimierungen, die klassischen Schwächen
+dieses Ansatzes mehr und mehr aufgeweicht.
+Die Anwendung und Entscheidung wann welcher Rendering-Ansatz verwendet wird, ist meist hoch-individuell und auf die
+spezifischen Bedürfnisse des Zielbildes ausgelegt.
+Die Forschung befasst sich hauptsächlich mit individuellen Vorschlägen zur Reduktion einzelner Schwächen der
+zugrundeliegenden Architekturen und weniger mit einer Gegenüberstellung an sich.
+
+% Diskussion aktueller Paper zur Skalierbarkeit von Forward Rendering Pipelines
+Die größten schwächen von Forward-Rendering Ansätzen werden in der Forschung mit einer zunehmenden Performancelast bei
+hoher Szene- und vor allem Beleuchtungskomplexität beschreiben.
+Forward-Ansätze grundsätzlich mit einer Komplexität von \[O(\text{Lichter} \cdot \text{Objekte})\]~\cite{}.
+Den Limitierungen zugrunde liegt die inhärente Eigenschaft von Forward-Rendering-Pipelines bei hoher Entropie
+zwangsweise eine gewisse Menge an Fragment-Overdraw zu verursachen~\cite{}.
+Diverse Ansätze, wie etwa eine einheitlicher Z-Prepass für das Entfernen von komplett verdeckten Objekte ist, im Bereich
+von Forward-Ansätzen, zwar ein allgegenwärtiger Standard~\cite{}, kann allerdings in Szenen mit hoher
+Objekt-Dichte/Anzahl und, vor allem, Lichtanzahl nicht mit der Effizient von Deferred-Ansätzen mithalten~\cite{}.
+Weitere Optimierungen im Bereich des Forward-Renderings sind etwa die Verwendung von \("\)Clustered Forward\("\) und
+\("\)Forward+\("\)~\cite{}.
+Hierbei werden Lichter in 3D-Clustern sortiert, was eine ähnliche Effizienz wie Deferred-Rendering verspricht, aber die
+Vorteile von Forward wie etwa Material-Freiheit beibehält.
+
+% Diskussion aktueller Skalierbarkeit von Deferred Rendering Pipelines und Nachteile
+Deferred-Rendering Pipelines haben sich in Umgebungen mit hoher Entropie und Belichtungskomplexität zwar
+weitestgehend als Standard durchgesetzt, besitzen allerdings Ihre eigenen Limitierungen.
+Die größten Limitierungen in Deferred-Rendering-Architekturen sind, die zunehmend große Speicher und
+Bandbreiten-Belastung (Memory Bandwidth) durch den Einsatz von G-Buffern~\cite{}.
+Auch hier bietet die Forschung diverse Ansätze, um diese inhärente Limitierung möglichst gering zu halten oder
+anderweitig zu umgehen.
+Ein moderner Ansatz zur Optimierung ist etwa die Implementation von entkoppelten Architekturen wie dem
+Visibility-Buffer, um die möglichen Probleme von Memory Bandwidth zu lösen~\cite[].
+Weitere Limitationen...
+
+% Untersuchung, wie NPR in der Wissenschaft aktuell behandelt wird
+% (meist global im Screen-Space oder klassisch im Forward-Pass).
+
+% Fazit: Feststellung, dass tiefergehende empirische Daten zur \textit{selektiven, objektbasierten}
+% Stilisierung in hybriden Architekturen unter hoher Last in der Literatur fehlen
+
+
+\section{Verfahren zur selektiven Stilisierung in der Industriepraxis}
+\label{sec:sdt_industry_state}
+
+
+\section{Limitierungen bestehender Ansätze und Identifikation der Forschungslücke}
+\label{sec:sdt_usp}

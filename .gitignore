@@ -377,3 +377,14 @@ FodyWeavers.xsd
 
 # Outputs & Runtime Data
 /outputs/
+
+# LaTeX Build Artifacts
+/thesis/build/
+/thesis/out/
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.run.xml
+*.synctex.gz
+*.pdf
