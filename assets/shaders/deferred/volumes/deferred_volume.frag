@@ -58,7 +58,7 @@ void main()
     vec4 worldPos = invViewProj * ndc;
     vec3 fragPosition = worldPos.xyz / worldPos.w;
 
-    // Software Culling: Discard pixels that fall outside the mathematical sphere radius
+    // Discard pixels that fall outside the mathematical sphere radius
     vec3 lightVector = lightCenterPos - fragPosition;
     float lightDistance = length(lightVector);
 

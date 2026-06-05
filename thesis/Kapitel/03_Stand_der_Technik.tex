@@ -14,48 +14,97 @@ ermöglichen die wissenschaftliche Einordnung des eigens entwickelten Evaluation
 \label{sec:sdt_academic_state}
 
 % Einleitung
-Deferred-Rendering Paradigmen und entsprechende architektonische Umsetzungen sind in der Forschung und praktischen
-Anwendung in der Industrie mittlerweile etablierte Standards und allgegenwärtig~\cite{}.
-Moderne Rendering Pipelines im Bereich des Echtzeit-Renderings werden zunehmend stark von komplexen
-Beleuchtungsherausforderungen getrieben, welches das effiziente Handhaben und Anwenden von dafür optimierten
-Deferred-Rendering-Architekturen in den Fokus rückt.
-Gleichzeitig werden auch im Bereich des Forward-Renderings, durch verschiedene Optimierungen, die klassischen Schwächen
-dieses Ansatzes mehr und mehr aufgeweicht.
-Die Anwendung und Entscheidung wann welcher Rendering-Ansatz verwendet wird, ist meist hoch-individuell und auf die
-spezifischen Bedürfnisse des Zielbildes ausgelegt.
-Die Forschung befasst sich hauptsächlich mit individuellen Vorschlägen zur Reduktion einzelner Schwächen der
-zugrundeliegenden Architekturen und weniger mit einer Gegenüberstellung an sich.
+Deferred-Rendering-Paradigmen stellen sowohl in der akademischen Forschung als auch in der industriellen Praxis
+etablierte Standards dar~\parencite[vgl.][S. 2]{mallettDeferredAdaptiveCompute2018}.
+Moderne Echtzeit-Rendering-Pipelines werden maßgeblich von komplexen Beleuchtungsanforderungen getrieben, wodurch das
+effiziente Handhaben von Deferred-Architekturen in den Fokus rückt.
+Gleichzeitig werden im Bereich des Forward-Renderings durch diverse Optimierungsverfahren die klassischen Schwächen
+dieses Ansatzes zunehmend
+relativiert~\parencite[vgl.]{olssonClusteredDeferredForward2012, haradaForwardBringingDeferred2012}.
+Die Wahl des Rendering-Ansatzes ist in der Praxis stark kontextabhängig und auf die spezifischen Leistungs- und
+Qualitätsanforderungen des Zielbildes ausgerichtet.
+Folglich existieren sowohl Deferred- als auch Forward-Implementierungen in modernen Engines selten in ihrer reinen
+Form~\parencite[vgl.][S. 56]{burnsVisibilityBufferCacheFriendly2013}.
+Der wissenschaftliche Diskurs fokussiert sich daher primär auf hybride Lösungsansätze und gezielte Reduktionen
+architektonischer Engpässe.
 
-% Diskussion aktueller Paper zur Skalierbarkeit von Forward Rendering Pipelines
-Die größten schwächen von Forward-Rendering Ansätzen werden in der Forschung mit einer zunehmenden Performancelast bei
-hoher Szene- und vor allem Beleuchtungskomplexität beschreiben.
-Forward-Ansätze grundsätzlich mit einer Komplexität von \[O(\text{Lichter} \cdot \text{Objekte})\]~\cite{}.
-Den Limitierungen zugrunde liegt die inhärente Eigenschaft von Forward-Rendering-Pipelines bei hoher Entropie
-zwangsweise eine gewisse Menge an Fragment-Overdraw zu verursachen~\cite{}.
-Diverse Ansätze, wie etwa eine einheitlicher Z-Prepass für das Entfernen von komplett verdeckten Objekte ist, im Bereich
-von Forward-Ansätzen, zwar ein allgegenwärtiger Standard~\cite{}, kann allerdings in Szenen mit hoher
-Objekt-Dichte/Anzahl und, vor allem, Lichtanzahl nicht mit der Effizient von Deferred-Ansätzen mithalten~\cite{}.
-Weitere Optimierungen im Bereich des Forward-Renderings sind etwa die Verwendung von \("\)Clustered Forward\("\) und
-\("\)Forward+\("\)~\cite{}.
-Hierbei werden Lichter in 3D-Clustern sortiert, was eine ähnliche Effizienz wie Deferred-Rendering verspricht, aber die
-Vorteile von Forward wie etwa Material-Freiheit beibehält.
+% Forward Rendering
+Der primäre architektonische Nachteil naiver Forward-Rendering-Ansätze liegt in der exponentiellen Leistungsdegradation
+bei hoher Geometrie- und Beleuchtungskomplexität.
+Die algorithmische Komplexität skaliert mit $\mathcal{O}(G \cdot L)$, wobei $G$ die Anzahl der Primitiven und $L$ die
+Anzahl der Lichtquellen darstellt~\parencite[vgl.][S. 1]{Thaler2011DeferredRendering}.
+Zu dieser Auswertungskomplexität addiert sich eine kombinatorische Explosion der Shader-Permutationen, sobald diverse
+Materialeigenschaften und Lichttypen in der Szene verrechnet werden müssen.
+Dieser Limitierung liegt die inhärente Eigenschaft von Forward-Pipelines zugrunde, bei hoher Szenen-Entropie
+zwangsweise eine gewisse Menge Fragment-Overdraw zu erzeugen~\parencite[vgl.][S. 1]{fatahalianReducingShadingGPUs2010}.
+Ansätze wie ein Z-Prepass zur frühzeitigen Verwerfung verdeckter Fragmente gehören in Forward-Pipelines zwar zum
+Standard~\parencite[vgl.][S. 57]{burnsVisibilityBufferCacheFriendly2013}, reichen bei hoher Objekt- und Lichtdichte
+jedoch nicht aus, um die Effizienz von Deferred-Verfahren zu
+erreichen~\parencite[vgl.][S. 4]{Thaler2011DeferredRendering}.
+Modernere Paradigmen wie \enquote{Clustered Forward} oder\enquote{Forward+} adressieren dieses Problem, indem
+Lichtquellen in 2D-Kacheln oder 3D-Clustern räumlich sortiert
+werden~\parencite[vgl.]{olssonClusteredDeferredForward2012, haradaForwardBringingDeferred2012}.
+Dies ermöglicht eine Effizienz, die Deferred-Ansätzen nahekommt, während der primäre Vorteil der Forward-Architektur,
+die hohe Flexibilität bei der Materialauswertung, erhalten bleibt.
 
-% Diskussion aktueller Skalierbarkeit von Deferred Rendering Pipelines und Nachteile
-Deferred-Rendering Pipelines haben sich in Umgebungen mit hoher Entropie und Belichtungskomplexität zwar
-weitestgehend als Standard durchgesetzt, besitzen allerdings Ihre eigenen Limitierungen.
-Die größten Limitierungen in Deferred-Rendering-Architekturen sind, die zunehmend große Speicher und
-Bandbreiten-Belastung (Memory Bandwidth) durch den Einsatz von G-Buffern~\cite{}.
-Auch hier bietet die Forschung diverse Ansätze, um diese inhärente Limitierung möglichst gering zu halten oder
-anderweitig zu umgehen.
-Ein moderner Ansatz zur Optimierung ist etwa die Implementation von entkoppelten Architekturen wie dem
-Visibility-Buffer, um die möglichen Probleme von Memory Bandwidth zu lösen~\cite[].
-Weitere Limitationen...
+% Deferred Rendering
+Deferred-Rendering-Pipelines haben sich in Umgebungen mit hoher geometrischer Komplexität und anspruchsvollen
+Beleuchtungsszenarien weitestgehend durchgesetzt, weisen jedoch ebenfalls diverse architektonische Limitierungen
+auf.
+Der signifikanteste Flaschenhals ist die hohe Auslastung der Speicherbandbreite (Memory Bandwidth), welche durch den
+permanenten Schreib- und Lesezugriff auf den G-Buffer induziert
+wird~\parencite[vgl.][S. 55]{burnsVisibilityBufferCacheFriendly2013}.
+Ein moderner Lösungsansatz ist die Implementierung entkoppelter Architekturen wie des \textit{Visibility-Buffers}
+(V-Buffer)~\parencite{burnsVisibilityBufferCacheFriendly2013}, welcher als Shading-Grundlage für
+hochkomplexe Geometrie-Pipelines wie der \textit{Nanite}-Architektur in der Unreal Engine 5
+dient~\parencite[vgl.][Folie \enquote{Visibility Buffer}]{Karis_Nanite_SIGGRAPH_Advances_2021_final}.
+Im Gegensatz zum traditionellen G-Buffer speichert der V-Buffer pro Pixel lediglich minimale geometrische Metadaten
+(wie Primitive- und Instanz-IDs) sowie den Tiefenwert.
+Die speicherintensive Materialauswertung wird vollständig in einen nachgelagerten Pass verschoben.
+Neben der Bandbreitenproblematik existieren in klassischen Deferred-Architekturen zwei weitere Nachteile: die fehlende
+native Kompatibilität mit hardwarebasiertem Multisample Anti-Aliasing (MSAA) sowie die Einschränkung bei der Darstellung
+transluzenter Oberflächen.
+Da die Beleuchtung im Screen-Space berechnet wird, sind die für MSAA erforderlichen Geometriedaten zu diesem Zeitpunkt
+verworfen.
+Stattdessen müssen temporale Post-Processing-Verfahren (wie TAA) eingesetzt
+werden~\parencite[vgl.][S. 5]{Thaler2011DeferredRendering, taaantialiasing}.
+Die Evaluierung semitransparenter Geometrie ist im reinen Deferred-Pfad nicht trivial lösbar, da ein Standard-G-Buffer
+pro Pixel nur eine diskrete Tiefenschicht vorhält.
+Dieses Defizit wird in der industriellen Praxis standardmäßig über einen nachgelagerten hybriden Forward-Pass für
+transparente Objekte gelöst~\parencite[vgl.][S. 56]{burnsVisibilityBufferCacheFriendly2013}.
 
-% Untersuchung, wie NPR in der Wissenschaft aktuell behandelt wird
-% (meist global im Screen-Space oder klassisch im Forward-Pass).
+% NPR
+Hinsichtlich des Non-Photorealistic Renderings (NPR) unterscheidet die aktuelle Literatur primär zwischen Object-Space-
+und Screen-Space-Methoden~\parencite[vgl.][S. 148]{magdicsPostprocessingNPREffects2013}.
+Object-Space-Ansätze sind in der Regel in Forward-Pipelines verankert und berechnen Stilisierungen direkt auf der
+Geometrie, was eine granulare, objektbasierte Anpassung ermöglicht.
+Bei hoher Szenenkomplexität weisen diese Verfahren jedoch eine unzureichende Skalierbarkeit auf, was primär auf den
+Fragment-Overdraw bei rechenintensiven Abstraktionseffekten zurückzuführen
+ist~\parencite[vgl.][S. 1]{fatahalianReducingShadingGPUs2010}.
+Die moderne Rendering-Forschung weicht zur Umgehung dieser Performance-Limits oft auf Screen-Space-Methoden
+(Post-Processing) aus, was architektonisch stark den Paradigmen des Deferred-Renderings entspricht.
+Wie~\textcite[S. 148]{magdicsPostprocessingNPREffects2013} beschreiben, ist diese Screen-Space-Verarbeitung zwar
+sehr efficient, löst jedoch den direkten Bezug zum individuellen 3D-Objekt auf, wodurch etwa die selektive Stilisierung
+stark erschwert wird.
+Um räumlichen Kontext zurückzugewinnen, wird in der Forschung auf hybride Ansätze wie das \enquote{2.5D NPR}
+zurückgegriffen~\parencite[vgl.][S. 17]{Thaler2011DeferredRendering}.
+Hierbei fungiert der G-Buffer als Datenquelle für geometrische Metadaten, um komplexe Effekte geometriebewusst im
+Screen-Space durchzuführen.
+Klassische Deferred-Pipelines weisen in diesem Kontext jedoch eine fundamentale Schwäche bezüglich der Materialvielfalt
+auf~\parencite[vgl.][S. 1]{haradaForwardBringingDeferred2012}.
+Wie~\textcite[Kap. 2.6]{Thaler2011DeferredRendering} beschreibt, ist das Auswerten zahlreicher spezifischer Materialien
+oder Stilisierungen in einem vereinheitlichten Screen-Space-Pass nur unter starken Performance-Einbußen durch
+\textit{Dynamic Branching} auf der GPU realisierbar.
+In der Konsequenz bleiben performante Stilisierungen bei reinem Deferred-Rendering zumeist auf globale
+Post-Processing-Filter beschränkt~\parencite[vgl.][S. 148]{magdicsPostprocessingNPREffects2013}.
 
-% Fazit: Feststellung, dass tiefergehende empirische Daten zur \textit{selektiven, objektbasierten}
-% Stilisierung in hybriden Architekturen unter hoher Last in der Literatur fehlen
+% Fazit
+Zusammenfassend lässt sich festhalten, dass die aktuelle Forschung zwar diverse architektonische Lösungen für hohe
+Geometrie- und Beleuchtungskomplexität sowohl in Forward- als auch in Deferred-Architekturen bietet, die spezifische
+Schnittmenge mit selektivem Non-Photorealistic Rendering in Deferred-Pipelines jedoch theoretischen Limitierungen
+unterliegt.
+Um zu evaluieren, ob und wie diese akademischen Hürden in der Praxis umgangen werden, ist im Folgenden ein genauerer
+Blick auf die angewandte Industriepraxis moderner Game-Engines erforderlich.
 
 
 \section{Verfahren zur selektiven Stilisierung in der Industriepraxis}

@@ -2,6 +2,7 @@
   title = {The {{Visibility Buffer}}: {{A Cache-Friendly Approach}} to {{Deferred Shading}}},
   author = {Burns, Christopher A and Hunt, Warren A},
   date = {2013},
+  journaltitle = {Journal of Computer graphics Techniques},
   volume = {2},
   number = {2},
   abstract = {Forward rendering pipelines shade fragments in triangle-submission order. Consequently, non-visible fragments are often wastefully shaded before being subsequently occluded—a phenomenon known as over-shading. A popular way to avoid over-shading is to only compute surface attributes for each fragment during a forward pass and store them in a buffer. Lighting is performed in a subsequent pass, consuming the attributes buffer. This strategy is commonly known as deferred shading.},
@@ -26,6 +27,45 @@
   file = {/home/marvin/Zotero/storage/R8659T6E/Fatahalian et al. - 2010 - Reducing shading on GPUs using quad-fragment merging.pdf}
 }
 
+@article{fonsecaDeferredShadingTutorial,
+  title = {Deferred {{Shading Tutorial}}},
+  author = {Fonseca, Francisco},
+  langid = {english},
+  file = {/home/marvin/Zotero/storage/N5C2TJ6K/Fonseca - Deferred Shading Tutorial.pdf}
+}
+
+@online{haradaForwardBringingDeferred2012,
+  title = {Forward+: {{Bringing Deferred Lighting}} to the {{Next Level}}},
+  shorttitle = {Forward+},
+  author = {Harada, Takahiro and McKee, Jay and Yang, Jason C.},
+  date = {2012},
+  eprinttype = {The Eurographics Association},
+  pages = {4 pages},
+  issn = {1017-4656},
+  doi = {10.2312/CONF/EG2012/SHORT/005-008},
+  url = {http://diglib.eg.org/handle/10.2312/conf.EG2012.short.005-008},
+  urldate = {2026-06-05},
+  abstract = {This paper presents Forward+, a method of rendering many lights by culling and storing only lights that contribute to the pixel. Forward+ is an extension to traditional forward rendering. Light culling, implemented using the compute capability of the GPU, is added to the pipeline to create lists of lights; that list is passed to the final rendering shader, which can access all information about the lights. Although Forward+ increases workload to the final shader, it theoretically requires less memory traffic compared to compute-based deferred lighting. Furthermore, it removes the major drawback of deferred techniques, which is a restriction of materials and lighting models. Experiments are performed to compare the performance of Forward+ and deferred lighting.},
+  langid = {english},
+  organization = {Eurographics 2012 - Short Papers},
+  pubstate = {prepublished},
+  keywords = {Categories and Subject Descriptors (according to ACM CCS): I.3.7 [Computer Graphics]: Three-DimensionalGraphics and Realism-Color shading shadowing and texture},
+  file = {/home/marvin/Zotero/storage/3DFCZ5X7/Harada et al. - 2012 - Forward+ Bringing Deferred Lighting to the Next Level.pdf}
+}
+
+@inproceedings{Karis_Nanite_SIGGRAPH_Advances_2021_final,
+  title = {A {{Deep Dive}} into {{Nanite Virtualized Geometry}}},
+  booktitle = {{{ACM SIGGRAPH}} 2021 {{Courses}}},
+  author = {Karis, Brian and Stubbe, Rune and Wihlidal, Graham},
+  date = {2021},
+  publisher = {Association for Computing Machinery},
+  location = {Virtual Event},
+  url = {https://advances.realtimerendering.com/s2021/Karis_Nanite_SIGGRAPH_Advances_2021_final.pdf},
+  urldate = {2026-06-05},
+  eventtitle = {{{ACM SIGGRAPH}} 2021},
+  file = {/home/marvin/Zotero/storage/8LDV289C/Karis_Nanite_SIGGRAPH_Advances_2021_final.pdf}
+}
+
 @inproceedings{liktorDecoupledDeferredShading2012,
   title = {Decoupled Deferred Shading for Hardware Rasterization},
   booktitle = {Proceedings of the {{ACM SIGGRAPH Symposium}} on {{Interactive 3D Graphics}} and {{Games}}},
@@ -41,6 +81,42 @@
   abstract = {In this paper we present decoupled deferred shading: a rendering technique based on a new data structure called compact geometry buffer, which stores shading samples independently from the visibility. This enables caching and efficient reuse of shading computation, e.g. for stochastic rasterization techniques. In contrast to previous methods, our decoupled shading can be efficiently implemented on current graphics hardware. We describe two variants which differ in the way the shading samples are cached: the first maintains a single cache for the entire image in global memory, while the second pursues a tile-based approach leveraging local memory of the GPU's multiprocessors. We demonstrate the application of decoupled deferred shading to speed up the rendering in applications with stochastic supersampling, depth of field, and motion blur.},
   isbn = {978-1-4503-1194-6},
   file = {/home/marvin/Zotero/storage/GUZWLLG7/Liktor and Dachsbacher - 2012 - Decoupled deferred shading for hardware rasterization.pdf}
+}
+
+@inproceedings{lukasczykCinemaDarkroomDeferred2020,
+  title = {Cinema {{Darkroom}}: {{A Deferred Rendering Framework}} for {{Large-Scale Datasets}}},
+  shorttitle = {Cinema {{Darkroom}}},
+  booktitle = {2020 {{IEEE}} 10th {{Symposium}} on {{Large Data Analysis}} and {{Visualization}} ({{LDAV}})},
+  author = {Lukasczyk, Jonas and Garth, Christoph and Larsen, Matthew and Engelke, Wito and Hotz, Ingrid and Rogers, David and Ahrens, James and Maciejewski, Ross},
+  date = {2020-10},
+  pages = {37--41},
+  publisher = {IEEE},
+  location = {Salt Lake City, UT, USA},
+  doi = {10.1109/LDAV51489.2020.00011},
+  url = {https://ieeexplore.ieee.org/document/9308043/},
+  urldate = {2026-06-05},
+  abstract = {This paper presents a framework that fully leverages the advantages of a deferred rendering approach for the interactive visualization of large-scale datasets. Geometry buffers (G-Buffers) are generated and stored in situ, and shading is performed post hoc in an interactive image-based rendering front end. This decoupled framework has two major advantages. First, the G-Buffers only need to be computed and stored once—which corresponds to the most expensive part of the rendering pipeline. Second, the stored G-Buffers can later be consumed in an image-based rendering front end that enables users to interactively adjust various visualization parameters—such as the applied color map or the strength of ambient occlusion—where suitable choices are often not known a priori. This paper demonstrates the use of Cinema Darkroom on several real-world datasets, highlighting CD’s ability to effectively decouple the complexity and size of the dataset from its visualization.},
+  eventtitle = {2020 {{IEEE}} 10th {{Symposium}} on {{Large Data Analysis}} and {{Visualization}} ({{LDAV}})},
+  isbn = {978-1-7281-8468-5},
+  langid = {english},
+  file = {/home/marvin/Zotero/storage/WKK3R9UP/Lukasczyk et al. - 2020 - Cinema Darkroom A Deferred Rendering Framework for Large-Scale Datasets.pdf}
+}
+
+@inproceedings{magdicsPostprocessingNPREffects2013,
+  title = {Post-Processing {{NPR}} Effects for Video Games},
+  booktitle = {Proceedings of the 12th {{ACM SIGGRAPH International Conference}} on {{Virtual-Reality Continuum}} and {{Its Applications}} in {{Industry}}},
+  author = {Magdics, Milán and Sauvaget, Catherine and García, Rubén J. and Sbert, Mateu},
+  date = {2013-11-17},
+  series = {{{VRCAI}} '13},
+  pages = {147--156},
+  publisher = {Association for Computing Machinery},
+  location = {New York, NY, USA},
+  doi = {10.1145/2534329.2534348},
+  url = {https://dl.acm.org/doi/10.1145/2534329.2534348},
+  urldate = {2026-06-05},
+  abstract = {This paper describes different interactive, non photorealistic techniques which can be easily applied to video games. Based on a study of art and games, an emphasis is put on considering NPR tools as basic elements to provide different styles and moods, to convey different emotional and experiential representations of a game. We restrict ourselves to screen based effects, which permits any existing game to use our framework with practically no integration cost. This allows us not only to comply with user preferences in rendering style, but also the creation of multiple gaming experiences out of the same game. We show the resulting effects in an in-house videogame and in standard Unity demos, and show how the users can change the style of the videogame by means of a menu.},
+  isbn = {978-1-4503-2590-5},
+  file = {/home/marvin/Zotero/storage/A55KWWNW/Magdics et al. - 2013 - Post-processing NPR effects for video games.pdf}
 }
 
 @inproceedings{mallettDeferredAdaptiveCompute2018,
@@ -67,6 +143,34 @@
   abstract = {This paper presents and investigates Clustered Shading for deferred and forward rendering. In Clustered Shading, view samples with similar properties (e.g. 3D-position and/or normal) are grouped into clusters. This is comparable to tiled shading, where view samples are grouped into tiles based on 2D-position only. We show that Clustered Shading creates a better mapping of light sources to view samples than tiled shading, resulting in a significant reduction of lighting computations during shading. Additionally, Clustered Shading enables using normal information to perform per-cluster back-face culling of lights, again reducing the number of lighting computations. We also show that Clustered Shading not only outperforms tiled shading in many scenes, but also exhibits better worst case behaviour under tricky conditions (e.g. when looking at high-frequency geometry with large discontinuities in depth). Additionally, Clustered Shading enables real-time scenes with two to three orders of magnitudes more lights than previously feasible (up to around one million light sources).},
   langid = {english},
   file = {/home/marvin/Zotero/storage/52IHIJDS/Olsson et al. - 2012 - Clustered Deferred and Forward Shading.pdf}
+}
+
+@inproceedings{schiedDeferredAttributeInterpolation2015,
+  title = {Deferred Attribute Interpolation for Memory-Efficient Deferred Shading},
+  booktitle = {Proceedings of the 7th {{Conference}} on {{High-Performance Graphics}}},
+  author = {Schied, Christoph and Dachsbacher, Carsten},
+  date = {2015-08-07},
+  series = {{{HPG}} '15},
+  pages = {43--49},
+  publisher = {Association for Computing Machinery},
+  location = {New York, NY, USA},
+  doi = {10.1145/2790060.2790066},
+  url = {https://dl.acm.org/doi/10.1145/2790060.2790066},
+  urldate = {2026-06-05},
+  abstract = {In this work we present a novel approach to deferred shading suitable for high resolution displays and high visibility sampling rates. We reduce the memory costs of deferred shading by substituting the geometry buffer with a visibility buffer that stores references into a triangle buffer. The triangle buffer is populated dynamically with all visible triangles which is compatible with the use of tessellation. Stored triangles are represented by a sample point and screen-space partial derivatives. This representation allows for efficient attribute interpolation during shading and gives shaders knowledge about the partial derivatives of all attributes. We show that the size of the visibility buffer can be further decreased by storing a linked list of visibility samples per pixel. For high-resolution displays we propose an extension of our algorithm to perform shading at reduced frequency, allowing us to reduce the sampling rate for computationally expensive, but low-frequency signals such as indirect illumination.},
+  isbn = {978-1-4503-3707-6},
+  file = {/home/marvin/Zotero/storage/NMJZ4AQ2/Schied and Dachsbacher - 2015 - Deferred attribute interpolation for memory-efficient deferred shading.pdf}
+}
+
+@inproceedings{taaantialiasing,
+  title = {High {{Quality Temporal Supersampling}}},
+  booktitle = {Advances in {{Real-Time Rendering}} in {{3D Graphics}} and {{Games}}, {{ACM SIGGRAPH}} 2014 {{Courses}}},
+  author = {Karis, Brian},
+  date = {2014},
+  publisher = {Epic Games},
+  url = {https://advances.realtimerendering.com/s2014/#_HIGH-QUALITY_TEMPORAL_SUPERSAMPLING},
+  langid = {english},
+  file = {/home/marvin/Zotero/storage/4YJSPTB4/TemporalAA.pptx}
 }
 
 @thesis{Thaler2011DeferredRendering,
