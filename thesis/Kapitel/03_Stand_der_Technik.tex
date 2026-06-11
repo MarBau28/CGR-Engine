@@ -1,5 +1,5 @@
 \chapter{Stand der Technik und verwandte Arbeiten}
-\label{ch:std_introduction}
+\label{ch:03_introduction}
 
 Dieses Kapitel analysiert den aktuellen Forschungsstand zu Forward- und Deferred-Rendering-Architekturen sowie moderne
 Industriepraktiken im Bereich hybrider Architekturen und selektiver Stilisierung.
@@ -11,7 +11,7 @@ ermöglichen die wissenschaftliche Einordnung des eigens entwickelten Evaluation
 
 
 \section{Klassische Rendering-Architekturen und deren Implikationen für das Non-Photorealistic Rendering}
-\label{sec:sdt_academic_state}
+\label{sec:03_academic_state}
 
 % Einleitung
 Deferred-Rendering-Paradigmen stellen sowohl in der akademischen Forschung als auch in der industriellen Praxis
@@ -111,7 +111,7 @@ Blick auf die angewandte Industriepraxis und moderner Game-Engines erforderlich.
 
 
 \section{Rendering-Pipelines und Stilisierung in der Industriepraxis}
-\label{sec:sdt_industry_state}
+\label{sec:03_industry_state}
 
 % Einleitung: Konflikt
 Der theoretische Konflikt zwischen der für Deferred Shading charakteristischen Homogenität des Beleuchtungspasses und
@@ -133,6 +133,15 @@ Um die Speicherbandbreite zu limitieren, werden ungenutzte Datenkanäle klassisc
 Ein exemplarisches Vorgehen zeigt das auf Toon-Rendering fokussierte Spiel \textit{Hi-Fi RUSH}: Hierbei werden regulär
 für PBR-Daten vorgesehene G-Buffer-Kanäle gezielt umgewidmet, um diese stattdessen mit spezifischen NPR-Parametern und
 ID-Masken zu belegen~\parencite[vgl.][Folie \enquote{Our G-Buffer Layout}]{gameworksToonRenderingHiFi}.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Bilder/hifirushgbuffer}
+    \caption{Speicherlayout der Hi-Fi Rush G-Buffers. Eigene Darstellung in Anlehnung
+    an \parencite[Folie \enquote{Our G-Buffer Layout}]{gameworksToonRenderingHiFi}.}
+    \label{fig:gbuffer_hifirush}
+\end{figure}
+
 Ein ähnliches Verfahren zeigt die Architektur von \textit{Uncharted 4}, in der eine komprimierte \textit{Material-ID} im
 G-Buffer mitgeführt wird, um im nachgelagerten Lighting-Pass zwischen verschiedenen Shader-Features zu
 differenzieren~\parencite[vgl.][Folie \enquote{Deferred Pipeline}]{deferredLightinginUncharted4}.
@@ -205,7 +214,7 @@ Lösung ergibt sich die Forschungslücke der vorliegenden Arbeit, welche im folg
 
 
 \section{Limitierungen bestehender Ansätze und Identifikation der Forschungslücke}
-\label{sec:sdt_usp}
+\label{sec:03_usp}
 
 % Einleitung
 Wie in den Kapiteln 3.1 und 3.2 dargelegt, bieten sowohl die Forschung als auch die Industriepraxis diverse,
