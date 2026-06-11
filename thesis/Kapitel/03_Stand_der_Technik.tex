@@ -208,43 +208,54 @@ Lösung ergibt sich die Forschungslücke der vorliegenden Arbeit, welche im folg
 \label{sec:sdt_usp}
 
 % Einleitung
-Wie in Kapitel 3.1 und 3.2 beschrieben, bietet sowohl die Forschung als auch die Industriepraxis diverse, sehr
-spezialisierte Lösungen für architekturbedingte Restriktionen klassischer Forward- und Deferred-Pipelines, besonders auf
-der Ebene der selektiven Stilisierungen im Bereich des Non-Photorealistic Renderings (NPR).
-Da eine vollumfängliche Analyse aller hochspezifischen Industrie-Workarounds den Rahmen der praktischen Machbarkeit
-sprengen würde, verortet sich die Forschungslücke der vorliegenden Arbeit stattdessen in der empirischen Rückbesinnung
-auf die architektonischen Fundamente.
-Um die systematische Verschiebung der Performance-Engpässe zu evaluieren, sollen primäre Rendering-Paradigmen,
-namentlich naives Forward Rendering, klassisches Deferred Shading mit einfachen G-Buffer-Packing (via Style-IDs
-und Uber-Shader) sowie Deferred Light Volumes als Referenz für Multi-Pass Architekturen, exemplarisch gegeneinander
-antreten.
-Das Ziel ist die Schaffung einer empirischen Basis für eine semi-holistische Entscheidungsmatrix, deren exakte
-wissenschaftliche Abgrenzung im Folgenden dargelegt wird.
+Wie in den Kapiteln 3.1 und 3.2 dargelegt, bieten sowohl die Forschung als auch die Industriepraxis diverse,
+hochspezialisierte Lösungsansätze für architekturbedingte Restriktionen klassischer Forward- und Deferred-Pipelines,
+insbesondere im Kontext der selektiven Stilisierung beim Non-Photorealistic Rendering (NPR).
+Da eine vollumfängliche Analyse sämtlicher industriespezifischer Workarounds den Untersuchungsumfang dieser Arbeit
+überschreiten würde, adressiert die vorliegende Untersuchung die bestehende Forschungslücke durch eine empirische
+Rückbesinnung auf die architektonischen Fundamente.
+Zur Evaluation der systematischen Verschiebung von Performance-Engpässen werden primäre Rendering-Paradigmen
+verglichen: naives Forward Rendering, klassisches Deferred Shading mit G-Buffer-Packing (mittels Style-IDs und
+Uber-Shadern) sowie Deferred Light Volumes als Referenz für Multi-Pass-Architekturen.
+Ziel ist die Erarbeitung einer empirischen Basis für eine fundierte Entscheidungsmatrix, deren exakte wissenschaftliche
+Abgrenzung im Folgenden definiert wird.
 
 % Die spezifische Forschungslücke (Granularität vs. Globales Post-Processing)
-Globale Screen-Space Filter sin in der Praxis weit verbreiteter Standard und performancetechnisch weitestgehend gelöst.
-Im speziellen Falle der selektiven, objektbasierten Stilisierung, besonderen im Bereich der weitreichend eingesetzten
-Deferred-Rendering-Paradigmen, kommen gängige Praktiken und Workarounds, je nach Zielbild, allerdings immer wieder an
-grundlegende Grenzen.
-Industrie-Workarounds wie Stencil-Masks, G-Buffer Packing, oder die Anwendung von hybriden Pipelines versprechen zwar
-Abhilfe, sind jedoch aufgrund ihrer sehr individualisierten Anwendung nur wenig bis gar nicht hinsichtlich der ihnen
-zugrundeliegenden Skalierungsmustern dokumentiert.
-Wann erfordert die zugrundeliegende Scene welche Lösungsansätze und wo sind die grundlegenden Flaschenhälse.
+Globale Screen-Space-Filter stellen in der Praxis einen einfachen und etablierten Standard
+dar~\parencite[vgl.][S. 147]{magdicsPostprocessingNPREffects2013}.
+Im spezifischen Kontext der selektiven, objektbasierten Stilisierung, vornehmlich innerhalb der weit verbreiteten
+Deferred-Rendering-Paradigmen, stoßen gängige Praktiken jedoch in Abhängigkeit von der intendierten visuellen Stilistik
+an grundlegende architektonische Grenzen.
+Industrie-Workarounds wie Stencil-Maskierungen, dediziertes G-Buffer-Packing oder der Einsatz hybrider Pipelines
+versprechen hierbei zwar Abhilfe, sind jedoch aufgrund ihrer hochgradig spezialisierten Implementierung kaum
+hinsichtlich ihrer zugrundeliegenden Skalierungsmuster dokumentiert.
+Es bleibt folglich unzureichend geklärt, welche Szenenkonfigurationen welche spezifischen Lösungsansätze erfordern und
+an welchen Stellen sich die primären Performance-Engpässe manifestieren.
 
 % Der Mangel an empirischer Evidenz (Das Messproblem)
-Zwar sind die theoretischen Bottlenecks (Bandbreitenlimits in G-Buffern, Register Pressure bei Uber-Shadern etc.)
-bekannt und umfassend dokumentiert.
-Wie Akenine-Möller et al. anmerken, verschieben sich diese Flaschenhälse in der Praxis jedoch hochdynamisch in
-Abhängigkeit der Szenenkomplexität.
-Es fehlt in der aktuellen Literatur eine isolierte, vergleichende und empirische Systemanalyse, welche die Limitationen,
-im Speziellen für den Bereich NPR, quantifiziert.
+Theoretische Performance-Engpässe, wie etwa Bandbreitenlimitierungen in G-Buffern oder Register Pressure bei
+Uber-Shadern, sind in der Literatur zwar
+dokumentiert~\parencite[vgl.][Abschn. 6]{schiedDeferredAttributeInterpolation2015, akenine-mollerRealtimeRendering2019};
+wie~\textcite[S. 905]{akenine-mollerRealtimeRendering2019} jedoch anmerken, verschieben sich diese Limitierungen in
+der Praxis sehr dynamisch in Abhängigkeit von der Szenenkomplexität.
+Der aktuellen Literatur mangelt es folglich an einer isolierten, komparativen und empirischen Systemanalyse, welche
+diese Engpässe spezifisch im Kontext des Non-Photorealistic Renderings quantifiziert.
+
+% Abgrenzung und Negative-Scope
+Um die Validität der empirischen Messungen zu gewährleisten, bedarf es einer strikten Limitierung des
+Untersuchungsraums.
+Komplexe Sondereffekte oder Optimierungen wie Transparenzen, moderne Clustered-Techniken oder Anti-Aliasing-Ansätze
+werden für diese fundamentale Basis-Analyse bewusst exkludiert.
+Der Fokus liegt isoliert auf der Wechselwirkung zwischen opaker Geometrie, dynamischer Beleuchtung und materialbasierter
+NPR-Shader-Verarbeitung.
 
 % Lösungsansatz und Legitimation der vorliegenden Arbeit
-Um diese identifizierte Forschungslücke zu schließen, bedarf es eines isolierten Messinstruments, das frei von
-Engine-spezifischen Optimierungen die reinen Basis-Paradigmen der zugrundeliegenden Rendering-Architekturen evaluiert.
-Zu diesem Zweck wird im Rahmen der vorliegenden Arbeit das Evaluierungs-Framework \textit{HyDra} konzipiert und
+Um die identifizierte Forschungslücke zu schließen, bedarf es eines isolierten Messinstruments, das die
+zugrundeliegenden Rendering-Architekturen anhand ihrer reinen Basis-Paradigmen, frei von proprietärem
+High-Level-Engine-Overhead, evaluiert.
+Zu diesem Zweck wird im Rahmen der vorliegenden Arbeit das Evaluations-Framework \textit{HyDra} konzipiert und
 implementiert.
-Durch die Erhebung granularer Rohdaten unter skalierender Stil-Entropie uns Szenekomplexität soll eine fundierte,
-semi-holistische Entscheidungsmatrix abgeleitet werden.
+Durch die Erhebung granularer Rohdaten unter skalierender Stil-Entropie und Szenenkomplexität soll eine
+fundierte, heuristische Entscheidungsmatrix abgeleitet werden.
 Die technische Konzeption sowie die architektonischen Spezifika dieses Frameworks bilden den Schwerpunkt des
 nachfolgenden Kapitels.
