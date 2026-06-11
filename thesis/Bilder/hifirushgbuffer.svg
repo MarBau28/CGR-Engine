@@ -25,7 +25,7 @@
      inkscape:document-units="mm"
      showgrid="false"
      inkscape:zoom="1.1767058"
-     inkscape:cx="216.28175"
+     inkscape:cx="216.28176"
      inkscape:cy="212.45752"
      inkscape:window-width="2048"
      inkscape:window-height="1076"
@@ -1546,7 +1546,7 @@
          id="tspan266432-4-1"
          style="font-size:3.175px;fill:#000000;fill-opacity:1;stroke-width:0.264583"
          x="127.90295"
-         y="26.375782">GBufferA R8G8B8A8</tspan></text><text
+         y="26.375782">GBufferB R8G8B8A8</tspan></text><text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:3.175px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583;stroke-opacity:1"
        x="127.90295"

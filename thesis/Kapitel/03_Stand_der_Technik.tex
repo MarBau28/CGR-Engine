@@ -3,14 +3,14 @@
 
 Dieses Kapitel analysiert den aktuellen Forschungsstand zu Forward- und Deferred-Rendering-Architekturen sowie moderne
 Industriepraktiken im Bereich hybrider Architekturen und selektiver Stilisierung.
-Durch die Betrachtung bestehender Verfahren im Kontext des Non-Photorealistic Renderings (NPR) werden deren
-konzeptionelle und leistungstechnische Limitierungen aufgezeigt.
+Durch die Betrachtung bestehender Verfahren im Kontext des NPR werden deren konzeptionelle und leistungstechnische
+Limitierungen aufgezeigt.
 Die Identifikation dieser Schwachstellen sowie der Mangel an empirischen Vergleichsdaten dienen der Definition der
 zugrundeliegenden Forschungslücke, legitimieren die in dieser Arbeit durchgeführte holistische Systemanalyse und
 ermöglichen die wissenschaftliche Einordnung des eigens entwickelten Evaluations-Frameworks.
 
 
-\section{Klassische Rendering-Architekturen und deren Implikationen für das Non-Photorealistic Rendering}
+\section{Klassische Rendering-Architekturen und deren Implikationen für das NPR}
 \label{sec:03_academic_state}
 
 % Einleitung
@@ -41,7 +41,7 @@ Ansätze wie ein Z-Prepass zur frühzeitigen Verwerfung verdeckter Fragmente geh
 Standard~\parencite[vgl.][S. 57]{burnsVisibilityBufferCacheFriendly2013}, reichen bei hoher Objekt- und Lichtdichte
 jedoch nicht aus, um die Effizienz von Deferred-Verfahren zu
 erreichen~\parencite[vgl.][S. 4]{Thaler2011DeferredRendering}.
-Modernere Paradigmen wie \enquote{Clustered Forward} oder\enquote{Forward+} adressieren dieses Problem, indem
+Modernere Paradigmen wie \textit{Clustered Forward} oder\textit{Forward+} adressieren dieses Problem, indem
 Lichtquellen in 2D-Kacheln oder 3D-Clustern räumlich sortiert
 werden~\parencite[vgl.]{olssonClusteredDeferredForward2012, haradaForwardBringingDeferred2012}.
 Dies ermöglicht eine Effizienz, die Deferred-Ansätzen nahekommt, während der primäre Vorteil der Forward-Architektur,
@@ -57,7 +57,7 @@ wird~\parencite[vgl.][S. 55]{burnsVisibilityBufferCacheFriendly2013}.
 Ein moderner Lösungsansatz ist die Implementierung entkoppelter Architekturen wie des \textit{Visibility-Buffers}
 (V-Buffer)~\parencite{burnsVisibilityBufferCacheFriendly2013}, welcher als Shading-Grundlage für
 hochkomplexe Geometrie-Pipelines wie der \textit{Nanite}-Architektur in der Unreal Engine 5
-dient~\parencite[vgl.][Folie \enquote{Visibility Buffer}]{Karis_Nanite_SIGGRAPH_Advances_2021_final}.
+dient~\parencite[vgl.][Folie \textit{Visibility Buffer}]{Karis_Nanite_SIGGRAPH_Advances_2021_final}.
 Im Gegensatz zum traditionellen G-Buffer speichert der V-Buffer pro Pixel lediglich minimale geometrische Metadaten
 (wie Primitive- und Instanz-IDs) sowie den Tiefenwert.
 Die speicherintensive Materialauswertung wird vollständig in einen nachgelagerten Pass verschoben.
@@ -74,15 +74,15 @@ Dieses Defizit wird in der industriellen Praxis standardmäßig über einen nach
 transparente Objekte gelöst~\parencite[vgl.][S. 56]{burnsVisibilityBufferCacheFriendly2013}.
 
 % NPR
-Hinsichtlich des Non-Photorealistic Renderings (NPR) unterscheidet die aktuelle Literatur primär zwischen
-\enquote{Object-Space}- und
-\enquote{Screen-Space}-Methoden~\parencite[vgl.][S. 148]{magdicsPostprocessingNPREffects2013}.
-\enquote{Object-Space}-Ansätze sind in der Regel in Forward-Pipelines verankert und berechnen Stilisierungen direkt auf
+Hinsichtlich des NPR unterscheidet die aktuelle Literatur primär zwischen
+\textit{Object-Space}- und
+\textit{Screen-Space}-Methoden~\parencite[vgl.][S. 148]{magdicsPostprocessingNPREffects2013}.
+Object-Space-Ansätze sind in der Regel in Forward-Pipelines verankert und berechnen Stilisierungen direkt auf
 der Geometrie, was eine granulare, objektbasierte Anpassung ermöglicht.
 Bei hoher Szenenkomplexität weisen diese Verfahren jedoch eine unzureichende Skalierbarkeit auf, was primär auf den
 Fragment-Overdraw bei rechenintensiven Abstraktionseffekten zurückzuführen
 ist~\parencite[vgl.][S. 1]{fatahalianReducingShadingGPUs2010}.
-Die moderne Rendering-Forschung weicht zur Umgehung dieser Performance-Limits oft auf \enquote{Screen-Space}-Methoden
+Die moderne Rendering-Forschung weicht zur Umgehung dieser Performance-Limits oft auf Screen-Space-Methoden
 (Post-Processing) aus, was architektonisch stark den Paradigmen des Deferred-Renderings entspricht.
 Wie~\textcite[S. 148]{magdicsPostprocessingNPREffects2013} beschreiben, ist diese Screen-Space-Verarbeitung zwar
 sehr effizient, löst jedoch den direkten Bezug zum individuellen 3D-Objekt auf, wodurch etwa die selektive Stilisierung
@@ -104,7 +104,7 @@ Post-Processing-Filter beschränkt~\parencite[vgl.][S. 148]{magdicsPostprocessin
 % Fazit
 Zusammenfassend lässt sich festhalten, dass die aktuelle Forschung zwar diverse architektonische Lösungen für hohe
 Geometrie- und Beleuchtungskomplexität sowohl in Forward- als auch in Deferred-Architekturen bietet, die spezifische
-Schnittmenge mit selektivem Non-Photorealistic Rendering in Deferred-Pipelines jedoch theoretischen Limitierungen
+Schnittmenge mit selektivem NPR in Deferred-Pipelines jedoch theoretischen Limitierungen
 unterliegt.
 Um zu evaluieren, ob und wie diese akademischen Hürden in der Praxis umgangen werden, ist im Folgenden ein genauerer
 Blick auf die angewandte Industriepraxis und moderner Game-Engines erforderlich.
@@ -115,10 +115,10 @@ Blick auf die angewandte Industriepraxis und moderner Game-Engines erforderlich.
 
 % Einleitung: Konflikt
 Der theoretische Konflikt zwischen der für Deferred Shading charakteristischen Homogenität des Beleuchtungspasses und
-der für Non-Photorealistic Rendering (NPR) zwingend erforderlichen Heterogenität individueller Stilisierungen zwingt die
+der für NPR (NPR) zwingend erforderlichen Heterogenität individueller Stilisierungen zwingt die
 Industrie, zu architektonischen Kompromissen.
 Der naive Ansatz, alle für komplexe NPR-Modelle benötigten Parameter separat in den G-Buffer zu schreiben, führt
-unweigerlich zu einem sogenannten \enquote{Fat G-Buffer}~\parencite[vgl.][S. 71]{AdvancesRealTimeRendering}.
+unweigerlich zu einem sogenannten \textit{Fat G-Buffer}~\parencite[vgl.][S. 71]{AdvancesRealTimeRendering}.
 In modernen AAA-Produktionen der Spieleindustrie werden teilweise bis zu acht Render Targets (RTs) gleichzeitig
 beschrieben, was starke Bandbreiten-Engpässe (Memory Bandwidth Bottlenecks) verursachen
 kann~\parencite[vgl.][S. 884]{akenine-mollerRealtimeRendering2019}.
@@ -148,10 +148,11 @@ differenzieren~\parencite[vgl.][Folie \enquote{Deferred Pipeline}]{deferredLight
 Überträgt man diesen Ansatz auf das NPR, um eine selektive Stilisierung direkt im regulären Lighting-Pass zu verankern,
 führt dies in der Praxis unweigerlich zu monolithischen
 Shader-Strukturen~\parencite[vgl.][Folie \enquote{Problems}]{deferredLightinginUncharted4}, sogenannten
-\enquote{Uber-Shadern}.
+\textit{Uber-Shadern}.
 Eine steigende Stil- und Materialvielfalt induziert innerhalb eines solchen Shaders einen massiven Registerdruck
 (\textit{Register Pressure}) und provoziert durch die notwendigen Fallunterscheidungen zeitgleich ineffiziente
-Kontrollflussdivergenzen (\textit{Warp Divergence}). Diese architektonischen Flaschenhälse limitieren die
+\textit{Warp Divergence}.
+Diese architektonischen Flaschenhälse limitieren die
 Gesamteffizienz der Rendering-Pipeline bei hoher Szenen-Entropie auf der GPU
 signifikant~\parencite[vgl.][Abschn. 6]{schiedDeferredAttributeInterpolation2015}.
 
@@ -219,7 +220,7 @@ Lösung ergibt sich die Forschungslücke der vorliegenden Arbeit, welche im folg
 % Einleitung
 Wie in den Kapiteln 3.1 und 3.2 dargelegt, bieten sowohl die Forschung als auch die Industriepraxis diverse,
 hochspezialisierte Lösungsansätze für architekturbedingte Restriktionen klassischer Forward- und Deferred-Pipelines,
-insbesondere im Kontext der selektiven Stilisierung beim Non-Photorealistic Rendering (NPR).
+insbesondere im Kontext der selektiven Stilisierung beim NPR.
 Da eine vollumfängliche Analyse sämtlicher industriespezifischer Workarounds den Untersuchungsumfang dieser Arbeit
 überschreiten würde, adressiert die vorliegende Untersuchung die bestehende Forschungslücke durch eine empirische
 Rückbesinnung auf die architektonischen Fundamente.
@@ -248,7 +249,7 @@ dokumentiert~\parencite[vgl.][Abschn. 6]{schiedDeferredAttributeInterpolation201
 wie~\textcite[S. 905]{akenine-mollerRealtimeRendering2019} jedoch anmerken, verschieben sich diese Limitierungen in
 der Praxis sehr dynamisch in Abhängigkeit von der Szenenkomplexität.
 Der aktuellen Literatur mangelt es folglich an einer isolierten, komparativen und empirischen Systemanalyse, welche
-diese Engpässe spezifisch im Kontext des Non-Photorealistic Renderings quantifiziert.
+diese Engpässe spezifisch im Kontext des NPR quantifiziert.
 
 % Abgrenzung und Negative-Scope
 Um die Validität der empirischen Messungen zu gewährleisten, bedarf es einer strikten Limitierung des
