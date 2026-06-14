@@ -29,19 +29,18 @@ Der wissenschaftliche Diskurs fokussiert sich daher primär auf hybride Lösungs
 architektonischer Engpässe.
 
 % Forward Rendering
-Der primäre architektonische Nachteil naiver Forward-Rendering-Ansätze liegt in der exponentiellen Leistungsdegradation
-bei hoher Geometrie- und Beleuchtungskomplexität.
-Die algorithmische Komplexität skaliert mit $\mathcal{O}(G \cdot L)$, wobei $G$ die Anzahl der Primitiven und $L$ die
-Anzahl der Lichtquellen darstellt~\parencite[vgl.][S. 1]{Thaler2011DeferredRendering}.
-Zu dieser Auswertungskomplexität addiert sich eine kombinatorische Explosion der Shader-Permutationen, sobald diverse
-Materialeigenschaften und Lichttypen in der Szene verrechnet werden müssen.
+Der primäre architektonische Nachteil klassischer Forward-Rendering-Ansätze liegt, wie in
+Abschnitt~\ref{sec:grundlagen_forward} dargelegt, im multiplikativen Aufwand von $\mathcal{O}(G \cdot L)$ bei hoher
+Geometrie- und Beleuchtungskomplexität.
+Zusätzlich zu dieser Komplexität ergibt sich eine kombinatorische Explosion der Shader-Permutationen, sobald diverse
+Materialeigenschaften und Lichttypen in einer Szene verrechnet werden müssen.
 Dieser Limitierung liegt die inhärente Eigenschaft von Forward-Pipelines zugrunde, bei hoher Szenen-Entropie
 zwangsweise eine gewisse Menge Fragment-Overdraw zu erzeugen~\parencite[vgl.][S. 1]{fatahalianReducingShadingGPUs2010}.
 Ansätze wie ein Z-Prepass zur frühzeitigen Verwerfung verdeckter Fragmente gehören in Forward-Pipelines zwar zum
 Standard~\parencite[vgl.][S. 57]{burnsVisibilityBufferCacheFriendly2013}, reichen bei hoher Objekt- und Lichtdichte
-jedoch nicht aus, um die Effizienz von Deferred-Verfahren zu
+jedoch nicht aus, um die Effizienz von Deferred-Ansätzen zu
 erreichen~\parencite[vgl.][S. 4]{Thaler2011DeferredRendering}.
-Modernere Paradigmen wie \textit{Clustered Forward} oder\textit{Forward+} adressieren dieses Problem, indem
+Modernere Techniken wie \textit{Clustered Forward} oder\textit{Forward+} adressieren dieses Problem, indem
 Lichtquellen in 2D-Kacheln oder 3D-Clustern räumlich sortiert
 werden~\parencite[vgl.]{olssonClusteredDeferredForward2012, haradaForwardBringingDeferred2012}.
 Dies ermöglicht eine Effizienz, die Deferred-Ansätzen nahekommt, während der primäre Vorteil der Forward-Architektur,
@@ -137,7 +136,7 @@ ID-Masken zu belegen~\parencite[vgl.][Folie \enquote{Our G-Buffer Layout}]{gamew
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.9\textwidth]{Bilder/hifirushgbuffer}
-    \caption{Speicherlayout der Hi-Fi Rush G-Buffers. Eigene Darstellung in Anlehnung
+    \caption{Speicherlayout der Hi-Fi Rush G-Buffer. Eigene Darstellung in Anlehnung
     an \parencite[Folie \enquote{Our G-Buffer Layout}]{gameworksToonRenderingHiFi}.}
     \label{fig:gbuffer_hifirush}
 \end{figure}
@@ -163,13 +162,13 @@ Forward-Pass erweitern.
 Shading-Operationen, die hochkomplexe Materialbrechungen oder Transparenzen erfordern, werden in einem oder mehreren, an
 den Deferred-Pass anschließenden, Forward-Rendering-Schritten berechnet und im finalen Framebuffer
 kombiniert~\parencite[vgl.][S. 887]{akenine-mollerRealtimeRendering2019}.
-Da dieser Forward-Pass jedoch die ursprünglichen Schwächen bezüglich der Beleuchtungskomplexität erbt, haben sich \
+Da dieser Forward-Pass jedoch die ursprünglichen Schwächen bezüglich der Beleuchtungskomplexität erbt, haben sich
 Techniken wie \textit{Clustered Forward}~\parencite[vgl.]{olssonClusteredDeferredForward2012} und
 \textit{Forward+}~\parencite[vgl.]{haradaForwardBringingDeferred2012} für diesen Hybridschritt etabliert.
 Durch räumliches Frustum- oder Tile-basiertes Light-Culling reduzieren sie die Anzahl der pro Fragment zu berechnenden
 Lichtquellen drastisch.
 Die Etablierung dieser Ansätze als Industriestandard zeigt sich beispielhaft an der \textit{id Tech 6} Engine
-(\textit{DOOM}, 2016): Die Architektur nutzt hybrides \textit{Clustered Deferred und Forward Shading}, um komplexe
+(\textit{DOOM}, 2016): Die Architektur nutzt hybrides Clustered Deferred und Forward Shading um komplexe
 Effekte und transparente Objekte mit der opaken Basisgeometrie zusammenzuführen, während die Lichtauswertung
 durch die räumliche 3D-Cluster-Zuweisung performant skaliert~\parencite[vgl.][]{DOOM}.
 
@@ -262,10 +261,10 @@ NPR-Shader-Verarbeitung.
 % Lösungsansatz und Legitimation der vorliegenden Arbeit
 Um die identifizierte Forschungslücke zu schließen, bedarf es eines isolierten Messinstruments, das die
 zugrundeliegenden Rendering-Architekturen anhand ihrer reinen Basis-Paradigmen, frei von proprietärem
-High-Level-Engine-Overhead, evaluiert.
+Engine-Overhead, evaluiert.
 Zu diesem Zweck wird im Rahmen der vorliegenden Arbeit das Evaluations-Framework \textit{HyDra} konzipiert und
 implementiert.
-Durch die Erhebung granularer Rohdaten unter skalierender Stil-Entropie und Szenenkomplexität soll eine
-fundierte, heuristische Entscheidungsmatrix abgeleitet werden.
+Durch die Erhebung granularer Rohdaten unter skalierender Stil-Entropie und Szenenkomplexität soll eine heuristische
+Entscheidungsmatrix abgeleitet werden.
 Die technische Konzeption sowie die architektonischen Spezifika dieses Frameworks bilden den Schwerpunkt des
 nachfolgenden Kapitels.
