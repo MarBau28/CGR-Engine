@@ -51,16 +51,28 @@ InputEventFlags InputController::ProcessInputs(EngineState &state, CameraControl
         flags.triggerSceneRebuild = true;
     }
 
-    if (IsKeyPressed(KEY_O) && !state.useNprRoom)
-        state.enableOutlines = !state.enableOutlines;
-    if (IsKeyPressed(KEY_F))
-        state.renderFloor = !state.renderFloor;
-    if (IsKeyPressed(KEY_K))
-        state.enableKuwahara = !state.enableKuwahara;
-    if (IsKeyPressed(KEY_G))
-        state.enableGooch = !state.enableGooch;
-    if (IsKeyPressed(KEY_T))
-        state.enableToon = !state.enableToon;
+    if (IsKeyPressed(KEY_O) && !state.useNprRoom) {
+        state.enableOutlines      = !state.enableOutlines;
+        flags.triggerSceneRebuild = true;
+    }
+    if (IsKeyPressed(KEY_K)) {
+        state.enableKuwahara      = !state.enableKuwahara;
+        flags.triggerSceneRebuild = true;
+    }
+    if (IsKeyPressed(KEY_G)) {
+        state.enableGooch         = !state.enableGooch;
+        flags.triggerSceneRebuild = true;
+    }
+    if (IsKeyPressed(KEY_T)) {
+        state.enableToon          = !state.enableToon;
+        flags.triggerSceneRebuild = true;
+    }
+
+    if (IsKeyPressed(KEY_TAB)) {
+        int nextPath              = (static_cast<int>(state.activeRenderPath) + 1) % 3;
+        state.activeRenderPath    = static_cast<RenderPath>(nextPath);
+        flags.triggerSceneRebuild = true;
+    }
 
     if (IsKeyPressed(KEY_RIGHT) && state.kuwaharaRadius < 16)
         state.kuwaharaRadius++;
@@ -68,10 +80,8 @@ InputEventFlags InputController::ProcessInputs(EngineState &state, CameraControl
         state.kuwaharaRadius--;
     kuwIntInput.Update(KEY_UP, KEY_DOWN, state.kuwaharaIntensity, 0.5f, 5.0f, 1.0f, 20.0f);
 
-    if (IsKeyPressed(KEY_TAB)) {
-        int nextPath           = (static_cast<int>(state.activeRenderPath) + 1) % 3;
-        state.activeRenderPath = static_cast<RenderPath>(nextPath);
-    }
+    if (IsKeyPressed(KEY_F))
+        state.renderFloor = !state.renderFloor;
 
     if (IsKeyPressed(KEY_H)) {
         state.use16BitHDR          = !state.use16BitHDR;

@@ -25,8 +25,8 @@ add_executable(CGR-Engine ${SOURCES}
         include/InputHandler.h
         src/Profilers.cpp
         include/Profilers.h
-        src/Telemetry.cpp
-        include/Telemetry.h
+        src/CsvTelemetryWriter.cpp
+        include/CsvTelemetryWriter.h
         src/CameraController.cpp
         include/CameraController.h
         src/BenchmarkOrchestrator.cpp

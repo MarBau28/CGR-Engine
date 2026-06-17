@@ -95,11 +95,11 @@ void SceneManager::RebuildScene(const EngineState &state) {
     if (state.useNprRoom) {
         GenerateNprRoomScene(state.activeLightCount);
     } else {
-        GenerateStandardScene(state.objectSphereRadius, state.useClusteredStyles);
+        GenerateStandardScene(state);
     }
 }
 
-void SceneManager::GenerateStandardScene(const float sphereRadius, const bool clustered) {
+void SceneManager::GenerateStandardScene(const EngineState &state) {
     SetRandomSeed(1337);
 
     masterObstacleTransforms.clear();
@@ -108,34 +108,53 @@ void SceneManager::GenerateStandardScene(const float sphereRadius, const bool cl
     masterLightPositions.clear();
     masterLightProxyTransforms.clear();
 
+    // Rebuild the active style pool from scratch every call
+    std::vector<float> activeStyles;
+    activeStyles.push_back(1.0f);
+
+    if (state.enableGooch)
+        activeStyles.push_back(2.0f);
+    if (state.enableToon)
+        activeStyles.push_back(3.0f);
+
+    if (state.activeRenderPath != RenderPath::Forward && state.enableKuwahara) {
+        activeStyles.push_back(4.0f);
+    }
+
+    if (state.activeRenderPath == RenderPath::Forward) {
+        std::erase_if(activeStyles, [](const float id) { return id > 3.0f; });
+    }
+
+    const auto numStyles = static_cast<float>(activeStyles.size());
+
+    // Generate objects
     for (int i = 0; i < Config::EngineSettings::MAX_OBSTACLES; i++) {
         constexpr float baseRadius = 0.6495f;
         const float scale          = static_cast<float>(GetRandomValue(10, 30)) / 10.0f;
-
-        const float u      = static_cast<float>(GetRandomValue(0, 10000)) / 10000.0f;
-        const float radius = sqrtf(u) * sphereRadius;
-        const float angle  = static_cast<float>(GetRandomValue(0, 360)) * DEG2RAD;
-
-        const float minHeight = scale;
-        const float maxHeight = sphereRadius / 2.0f;
-        const float height    = static_cast<float>(GetRandomValue(static_cast<int>(minHeight) * 10,
-                                                                  static_cast<int>(maxHeight) * 10)) /
+        const float u              = static_cast<float>(GetRandomValue(0, 10000)) / 10000.0f;
+        const float radius         = std::sqrt(u) * state.objectSphereRadius;
+        const float angle          = static_cast<float>(GetRandomValue(0, 360)) * DEG2RAD;
+        const float height         = static_cast<float>(GetRandomValue(
+                                 static_cast<int>(scale) * 10,
+                                 static_cast<int>(state.objectSphereRadius / 2.0f) * 10)) /
                              10.0f;
 
         const Vector3 pos = {cosf(angle) * radius, height, sinf(angle) * radius};
 
         float styleId;
-        if (clustered) {
-            if (pos.x >= 0.0f && pos.z >= 0.0f)
-                styleId = 1.0f;
-            else if (pos.x < 0.0f && pos.z >= 0.0f)
-                styleId = 2.0f;
-            else if (pos.x < 0.0f && pos.z < 0.0f)
-                styleId = 3.0f;
-            else
-                styleId = 4.0f;
+        if (state.useClusteredStyles) {
+            float normAngle = std::fmod(angle, 2.0f * PI);
+            if (normAngle < 0.0f)
+                normAngle += 2.0f * PI;
+
+            // Divide the 2PI circle by the current number of active styles
+            const float slice = (2.0f * PI) / numStyles;
+            const int clusterIndex =
+                std::clamp(static_cast<int>(normAngle / slice), 0, static_cast<int>(numStyles - 1));
+            styleId = activeStyles[clusterIndex];
         } else {
-            styleId = static_cast<float>(GetRandomValue(1, 4));
+            // Distribute using the current pool size
+            styleId = activeStyles[i % static_cast<int>(numStyles)];
         }
 
         const Vector3 rotAxis = Vector3Normalize({static_cast<float>(GetRandomValue(0, 100)),
@@ -152,27 +171,22 @@ void SceneManager::GenerateStandardScene(const float sphereRadius, const bool cl
         masterObstacleSpheres.push_back({pos, baseRadius * scale});
     }
 
+    // Light generation
     int lightsGenerated = 0;
     while (lightsGenerated < Config::EngineSettings::MAX_LIGHTS) {
-        const float u             = static_cast<float>(GetRandomValue(0, 10000)) / 10000.0f;
-        const float radius        = sqrtf(u) * sphereRadius;
-        const float angle         = static_cast<float>(GetRandomValue(0, 360)) * DEG2RAD;
-        constexpr float minHeight = 2.0f;
-        const float maxHeight     = sphereRadius / 2.0f;
-        const float height = static_cast<float>(GetRandomValue(static_cast<int>(minHeight) * 10,
-                                                               static_cast<int>(maxHeight) * 10)) /
+        const float u      = static_cast<float>(GetRandomValue(0, 10000)) / 10000.0f;
+        const float radius = std::sqrt(u) * state.objectSphereRadius;
+        const float angle  = static_cast<float>(GetRandomValue(0, 360)) * DEG2RAD;
+        const float height = static_cast<float>(GetRandomValue(
+                                 20, static_cast<int>(state.objectSphereRadius / 2.0f) * 10)) /
                              10.0f;
 
-        Vector3 validPos = {cosf(angle) * radius, height, sinf(angle) * radius};
-        masterLightPositions.push_back(validPos);
-
-        Matrix proxyTransform = MatrixMultiply(MatrixScale(1.5f, 1.5f, 1.5f),
-                                               MatrixTranslate(validPos.x, validPos.y, validPos.z));
-        masterLightProxyTransforms.push_back(proxyTransform);
-
+        Vector3 pos = {cosf(angle) * radius, height, sinf(angle) * radius};
+        masterLightPositions.push_back(pos);
+        masterLightProxyTransforms.push_back(
+            MatrixMultiply(MatrixScale(1.5f, 1.5f, 1.5f), MatrixTranslate(pos.x, pos.y, pos.z)));
         lightsGenerated++;
     }
-
     actualGeneratedLights = lightsGenerated;
 }
 

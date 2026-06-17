@@ -83,7 +83,7 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuLogicPro
     int spacing = static_cast<int>(26 * uiScale);
 
     int panelWidth  = static_cast<int>(550 * uiScale);
-    int panelHeight = static_cast<int>(1300 * uiScale);
+    int panelHeight = static_cast<int>(1325 * uiScale);
     int panelX      = pad;
     int panelY      = pad;
 
@@ -355,8 +355,6 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuLogicPro
         if (!fs::exists(outputDir)) {
             std::error_code ec;
             fs::create_directories(outputDir, ec);
-            if (ec)
-                TraceLog(LOG_ERROR, "FAILED TO CREATE DIRECTORY: %s", ec.message().c_str());
         }
 
         auto now     = std::chrono::system_clock::now();

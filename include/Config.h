@@ -49,7 +49,7 @@ namespace Config::EngineSettings {
 
     // Light Math
     inline constexpr Vector3 MainLightColor     = {255.0f, 242.0f, 217.0f};
-    inline constexpr float LightIntensity       = 3.0f;
+    inline constexpr float LightIntensity       = 2.0f;
     inline constexpr float AmbientLightStrength = 0.25f;
     inline constexpr float MinLightThreshold    = 0.05f;
     inline constexpr float AttenuationConstant  = 1.0f;

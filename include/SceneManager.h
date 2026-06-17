@@ -93,7 +93,7 @@ class SceneManager {
     std::vector<Matrix> fwdTransformsOutline;
 
     // Internal Generators
-    void GenerateStandardScene(float sphereRadius, bool clustered);
+    void GenerateStandardScene(const EngineState &state);
     void GenerateNprRoomScene(int lightCount);
 
     // Returns the true obstacle count depending on the active environment

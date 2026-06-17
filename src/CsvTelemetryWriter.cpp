@@ -1,10 +1,8 @@
-#include "../include/Telemetry.h"
+#include "../include/CsvTelemetryWriter.h"
 #include <chrono>
 #include <filesystem>
 #include <fstream>
-#include <iomanip>
 #include <iostream>
-#include <sstream>
 
 namespace fs = std::filesystem;
 
@@ -28,32 +26,38 @@ void CsvTelemetryWriter::AppendRow(const std::string &suiteStr, const std::strin
                                    currentTris, currentOverdraw});
 }
 
-void CsvTelemetryWriter::Close() const {
+void CsvTelemetryWriter::Close(const std::string &currentSuiteName) const {
     if (metrics.empty()) {
         std::cerr << "[TELEMETRY] Write aborted: Metric buffer is empty." << std::endl;
         return;
     }
 
-    const std::string outputDir = "outputs/benchmarks";
-    if (!fs::exists(outputDir)) {
-        fs::create_directories(outputDir);
+    namespace fs         = std::filesystem;
+    fs::path currentPath = fs::current_path();
+
+    // Escape CMake build directories
+    if (currentPath.filename().string().find("cmake-build") != std::string::npos) {
+        currentPath = currentPath.parent_path();
     }
 
-    auto now       = std::chrono::system_clock::now();
-    auto in_time_t = std::chrono::system_clock::to_time_t(now);
-    std::stringstream ss;
-    ss << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d_%H-%M-%S");
+    fs::path outputDir = currentPath / "outputs" / "benchmarks";
+
+    if (!fs::exists(outputDir)) {
+        std::error_code ec;
+        fs::create_directories(outputDir, ec);
+    }
 
     std::string cleanBase = baseFilename;
     if (size_t extPos = cleanBase.find(".csv"); extPos != std::string::npos) {
         cleanBase.erase(extPos);
     }
 
-    const std::string filename = outputDir + "/" + cleanBase + "_" + ss.str() + ".csv";
+    std::string fileName = std::format("{}_{}.csv", cleanBase, currentSuiteName);
+    fs::path fullPath    = outputDir / fileName;
 
-    std::ofstream file(filename);
+    std::ofstream file(fullPath);
     if (!file.is_open()) {
-        std::cerr << "[TELEMETRY] IO Error: Failed to acquire file handle for " << filename
+        std::cerr << "[TELEMETRY] IO Error: Failed to acquire file handle for " << fullPath.string()
                   << std::endl;
         return;
     }
@@ -71,5 +75,5 @@ void CsvTelemetryWriter::Close() const {
     }
 
     file.close();
-    std::cout << "[TELEMETRY] Matrix flushed successfully to: " << filename << std::endl;
+    std::cout << "[TELEMETRY] Matrix flushed successfully to: " << fullPath.string() << std::endl;
 }

@@ -1,9 +1,9 @@
 #pragma once
 
 #include "CameraController.h"
+#include "CsvTelemetryWriter.h"
 #include "EngineState.h"
 #include "Profilers.h"
-#include "Telemetry.h"
 #include <queue>
 #include <string>
 #include <vector>
@@ -16,8 +16,9 @@ enum class BenchmarkSuite {
     Suite_5_2_1_ResolutionScaling,
     Suite_5_2_2_BaseBandwidthTax,
     Suite_5_3_1_LightCount,
-    Suite_5_3_2_LightIntensity,
-    Suite_5_3_3_LightSingularity,
+    Suite_5_3_2_1_LightIntensity,
+    Suite_5_3_2_2_LightSingularity,
+    Suite_5_3_3_ShadingOverdraw,
     Suite_5_4_1_SpatialEntropy,
     Suite_5_4_2_StyleCombinatorics,
     Suite_5_4_3_KernelBandwidth,
@@ -55,6 +56,7 @@ class BenchmarkOrchestrator {
     void Start(BenchmarkSuite suite);
     void UpdateAndRecord(double totalFrameTimeMs, int activeTris, double currentOverdraw);
     void EndBenchmark();
+    void InjectPerFrameState() const;
 
     [[nodiscard]] bool IsActive() const;
     [[nodiscard]] bool DidStateChangeThisFrame() const;
@@ -94,4 +96,6 @@ class BenchmarkOrchestrator {
     int currentPipelineIndex;
     std::queue<FrameRecord> pendingFrames;
     void FlushTelemetryQueue();
+
+    static std::string GetSuiteName(BenchmarkSuite suite);
 };

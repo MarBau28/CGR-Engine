@@ -2,12 +2,12 @@
 #include "../include/BenchmarkOrchestrator.h"
 #include "../include/CameraController.h"
 #include "../include/Config.h"
+#include "../include/CsvTelemetryWriter.h"
 #include "../include/EngineState.h"
 #include "../include/InputController.h"
 #include "../include/Profilers.h"
 #include "../include/RenderContext.h"
 #include "../include/SceneManager.h"
-#include "../include/Telemetry.h"
 #include "../include/TelemetryDashboard.h"
 #include <algorithm>
 #include <cmath>
@@ -105,13 +105,16 @@ int main() {
 
         // Benchmark Boot Sequence
         if (triggerBenchmarkStart) {
-            if (telemetryWriter.Initialize("hydra_benchmark_results.csv")) {
-                benchController.Start(BenchmarkSuite::Suite_5_1_1_LodMicroGeom);
+            if (telemetryWriter.Initialize("hydra-benchmark-results.csv")) {
+                benchController.Start(BenchmarkSuite::Suite_5_5_Pass3_ParityFlythrough);
             }
         }
 
         // State Interception: Prioritize benchmark dictates over manual user input
         if (benchController.IsActive()) {
+            // Dynamic frame state
+            benchController.InjectPerFrameState();
+
             engineState = benchController.GetCurrentState();
             if (benchController.DidStateChangeThisFrame()) {
                 sceneManager.RebuildScene(engineState);
@@ -120,8 +123,7 @@ int main() {
                     static_cast<int>(sceneManager.GetMasterStyleIds().size() * sizeof(float)), 0);
             }
         } else {
-            // Process manually triggered structural rebuilds (e.g., toggling NPR room or clustered
-            // styles)
+            // Process manually triggered structural rebuilds
             if (triggerSceneRebuild) {
                 sceneManager.RebuildScene(engineState);
                 rlUpdateVertexBuffer(
