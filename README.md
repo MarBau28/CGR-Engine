@@ -21,37 +21,6 @@ Standard-Pipelines verloren gehen.
 - **Der Ansatz:** Ein **semantischer G-Buffer**, der Style-Metadaten speichert, entkoppelt die Shading-Komplexität von
   der Geometrie und ermöglicht eine hybride Koexistenz verschiedener NPR-Stile in einer stabilen Deferred-Architektur.
 
-### Aktueller Implementierungsstand
-
-Die **Kern-Pipeline der Engine ist vollständig implementiert** und funktionsfähig. Der Prototyp demonstriert erfolgreich
-die Entkopplung von Geometrie und Stilisierung.
-
-#### 1. Architektur & Pipeline (Abgeschlossen)
-
-- **Geometry Pass:** Befüllung eines erweiterten G-Buffers (Albedo, Normalen, Depth) inklusive einer dedizierten *
-  *Style-ID** pro Fragment.
-- **Deferred Uber-Shader:** Ein zentraler Lighting-Pass, der basierend auf der Style-ID dynamisch zwischen verschiedenen
-  NPR-Algorithmen (Blinn-Phong, Gooch, Toon) verzweigt.
-- **Deferred Light Volumes:** Alternative Architektur zur performanten Akkumulation hunderter Lichtquellen mittels
-  instanziierter Licht-Geometrie.
-- **NPR-Integration:** Vollständige Unterstützung für **Kuwahara-Filter**, **Gooch-Shading**, **Toon-Shading** und *
-  *Inverted-Hull Outlines**.
-
-#### 2. Benchmarking & Telemetrie (Erster Entwurf / In Arbeit)
-
-Das Framework zur quantitativen Analyse befindet sich derzeit in der **ersten Entwurfsphase**. Es dient dazu, die
-Skalierbarkeit der Engine unter verschiedenen Stressfaktoren zu beweisen.
-
-- **Automatisierte State-Machine:** Ein erster Prototyp steuert Testläufe (Suites A-H) automatisch und variiert
-  Parameter wie Instanz-Anzahl, Licht-Topologie und Overdraw-Faktoren.
-- **Hardware-Profiling:** Integration von asynchronen GPU-Timern (`GL_TIME_ELAPSED`) und CPU-Profilern zur isolierten
-  Messung von Render-Passes.
-- **CSV-Export:** Telemetrie-Daten werden für die wissenschaftliche Auswertung direkt in strukturierte CSV-Dateien
-  geschrieben.
-
-> **Hinweis:** Der Fokus liegt aktuell auf der Verfeinerung der einzelnen Test-Szenarien und der Stabilisierung der
-> Messdaten unter extremen Bedingungen (z. B. maximale Tiefenkomplexität).
-
 ---
 
 ### Bedienung & Dashboard
@@ -61,7 +30,7 @@ zu visualisieren:
 
 - **[TAB]**: Umschalten zwischen Forward-, Deferred-Uber- und Deferred-Volume-Architektur.
 - **[R]**: Wechsel in den "NPR-Room" (steriler Test-Raum für Beleuchtungsstudien).
-- **[F12]**: Startet den automatisierten Benchmarking-Prozess (Vorschau-Status).
+- **[F11]**: Startet den automatisierten Benchmarking-Prozess (Vorschau-Status).
 - **[O, K, G, T]**: Manuelles Zu- oder Abschalten der NPR-Effekte (Outlines, Kuwahara, Gooch, Toon).
 
 ### Geplante Erweiterungen (Next Steps)
