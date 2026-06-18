@@ -8,7 +8,8 @@
     headings=normal,             % Überschriften nicht zu riesig
     bibliography=totoc,          % Literaturverzeichnis ins Inhaltsverzeichnis
     listof=totoc,                % Abbildungs-/Tabellenverzeichnis ins Inhaltsverzeichnis
-    numbers=noenddot             % Kein Punkt am Ende der Kapitelnummer
+    numbers=noenddot,            % Kein Punkt am Ende der Kapitelnummer
+    captions=tableabove          % Korrigiert den Abstand über Tabellen
 ]{scrreprt}
 
 % --- Encoding & Sprache ---
@@ -33,6 +34,7 @@
 \usepackage{float}
 \usepackage{scrhack}
 \usepackage{booktabs}
+\usepackage{tabularx}
 
 % --- Code Listings (C++ & GLSL) ---
 
@@ -126,6 +128,8 @@
     \clearpage
     \listoffigures
     \clearpage
+    \listoftables
+    \clearpage
     \lstlistoflistings
     \clearpage
 
@@ -147,7 +151,7 @@
 %    \input{Kapitel/04_Konzeption_&_Realisierung}
 
     % 12-15 Seiten
-%    \input{Kapitel/05_Evaluation}
+    \input{Kapitel/05_Evaluation}
 
     % 6-9 Seiten
 %    \input{Kapitel/06_Diskussion}

@@ -4,7 +4,7 @@
 komplexer 3D-Szenen**
 
 Dieses Repository enthält den C++/OpenGL-Prototypen für die Bachelorarbeit von Marvin Baumann im Studiengang
-Medieninformatik (Betreuer: Prof. Dr.-Ing. Gregor Lux).
+Medieninformatik.
 
 ---
 
@@ -26,19 +26,8 @@ Standard-Pipelines verloren gehen.
 ### Bedienung & Dashboard
 
 Die Engine verfügt über ein integriertes **Echtzeit-Dashboard**, um die Auswirkungen der Architektur-Wechsel unmittelbar
-zu visualisieren:
+zu visualisieren.
 
-- **[TAB]**: Umschalten zwischen Forward-, Deferred-Uber- und Deferred-Volume-Architektur.
-- **[R]**: Wechsel in den "NPR-Room" (steriler Test-Raum für Beleuchtungsstudien).
-- **[F11]**: Startet den automatisierten Benchmarking-Prozess (Vorschau-Status).
-- **[O, K, G, T]**: Manuelles Zu- oder Abschalten der NPR-Effekte (Outlines, Kuwahara, Gooch, Toon).
-
-### Geplante Erweiterungen (Next Steps)
-
-- **Refinement der Test-Suites:** Präzisere Isolierung von Vertex- vs. Fragment-Bottlenecks.
-- **Optimierung der State-Machine:** Stabilisierung der Hardware-Clocks während der Messphasen (Warm-up Phasen).
-- **Wissenschaftliche Auswertung:** Finalisierung der Vergleichsmetriken zwischen naiver Forward-Lösung und der hybriden
-  Deferred-Struktur.
 
 ---
 
@@ -47,11 +36,3 @@ zu visualisieren:
 - **Sprache:** C++20
 - **Graphics API:** OpenGL 3.3+ (Core Profile)
 - **Libraries:** raylib (Windowing & Math), glad (Extension Loading)
-
----
-
-#### Zusammenfassung
-
-- **Status Architektur:** Abgeschlossen und funktional.
-- **Status Benchmarking:** Erster Prototyp implementiert; Fokus liegt nun auf der Verfeinerung der Test-Methodik.
-- **Ziel:** Nachweis der algorithmischen Überlegenheit der hybriden Struktur bei hoher Szenenkomplexität.

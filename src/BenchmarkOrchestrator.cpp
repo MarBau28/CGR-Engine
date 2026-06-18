@@ -128,87 +128,101 @@ void BenchmarkOrchestrator::Start(BenchmarkSuite suite) {
 }
 
 void BenchmarkOrchestrator::ApplySuiteState() {
-    // Zero-state initialization to prevent variable carryover across architectural sweeps
-    currentState.activeLightCount     = 0;
-    currentState.ambientLightStrength = 1.0f;
-    currentState.enableOutlines       = false;
-    currentState.enableKuwahara       = false;
-    currentState.enableGooch          = false;
-    currentState.enableToon           = false;
-    currentState.useClusteredStyles   = false;
-    currentState.use16BitHDR          = true;
+    // BASELINE VARIABLES (CONTROL VARIABLES / ZERO-STATE)
+    // ---------------------------------------------------------------------------------------------
 
+    // Pipeline & Render Targets
     currentState.activeRenderPath = targetPipelines[currentPipelineIndex];
+    currentState.renderWidth      = Config::EngineSettings::ScreenWidth;
+    currentState.renderHeight     = Config::EngineSettings::ScreenHeight;
+    currentState.use16BitHDR      = true;
 
-    // Reset phase clocks and structural flags
+    // Geometry & Spatial Distribution
+    currentState.activeObstacleCount = Config::DefaultState::ActiveObstacleCount;
+    currentState.currentLodIndex     = Config::DefaultState::CurrentLodIndex;
+    currentState.objectSphereRadius  = Config::DefaultState::ObjectSphereRadius;
+    currentState.useClusteredStyles  = false;
+    currentState.renderFloor         = Config::DefaultState::RenderFloor;
+    currentState.useNprRoom          = Config::DefaultState::UseNprRoom;
+
+    // Lighting (Matching the exact original explicit reset)
+    currentState.activeLightCount     = 0;
+    currentState.ambientLightStrength = 1.0f; // Preserved: 5.1.x implicitly relies on this
+    currentState.lightIntensity       = Config::EngineSettings::LightIntensity;
+    currentState.useLightSingularity  = false;
+
+    // Stylization / NPR
+    currentState.enableGooch       = false;
+    currentState.enableToon        = false;
+    currentState.enableOutlines    = false;
+    currentState.enableKuwahara    = false;
+    currentState.kuwaharaRadius    = Config::DefaultState::KuwaharaRadius;
+    currentState.kuwaharaIntensity = Config::DefaultState::KuwaharaIntensity;
+
+    // Orchestrator State
     warmupDuration        = 10.0;
     phaseStartTime        = GetTime();
     currentPhase          = BenchPhase::Warmup;
     frameCounter          = 0;
     stateChangedThisFrame = true;
+    useFrameLimit         = false;
+    targetFrameCount      = 1000;
 
-    // TEST SUITE CONFIGURATIONS
+    // TEST SUITE-DEFINITIONS
     // ---------------------------------------------------------------------------------------------
 
     switch (currentSuite) {
     case BenchmarkSuite::Suite_5_1_1_LodMicroGeom: {
+        // Independent Variable: LOD Index (maps stepValues to currentLodIndex)
+        // Control Variables: Pure geometry baseline, isolated rendering without lighting
         currentState.activeObstacleCount = 2000;
         currentState.objectSphereRadius  = 50.0f;
         currentState.renderFloor         = false;
-        currentState.activeLightCount    = 0; // Pure geometry baseline
 
-        // Apply LOD Index
         currentState.currentLodIndex = static_cast<int>(stepValues[currentStepIndex]);
 
-        // Lock camera
-        cameraController.SetDeterministicState({0.0f, 25.0f, 150.0f}, // Position
-                                               {0.0f, 25.0f, 0.0f},   // Target
+        // Camera: Static lock
+        cameraController.SetDeterministicState({0.0f, 25.0f, 150.0f}, {0.0f, 25.0f, 0.0f},
                                                Config::EngineSettings::CameraFOV);
         break;
     }
     case BenchmarkSuite::Suite_5_1_2_ObjectCount: {
-        // Apply independent variable (Instances)
+        // Independent Variable: Instance Count (saturating the CPU dispatcher)
+        // Dynamic Variable: Expanding generation radius linearly with object count
+        // Control Variables: Strictly isolate CPU overhead (12-triangle cubes, no floor)
         currentState.activeObstacleCount = static_cast<int>(stepValues[currentStepIndex]);
-
-        // Dynamic Variable: Expand generation radius linearly with object count
         currentState.objectSphereRadius =
             static_cast<float>(currentState.activeObstacleCount) / 100.0f;
+        currentState.renderFloor     = false;
+        currentState.currentLodIndex = 0;
 
-        // Locked Variables to strictly isolate the CPU
-        currentState.renderFloor      = false;
-        currentState.activeLightCount = 0;
-        currentState.currentLodIndex  = 0; // 12-triangle cubes
-
-        // Step back far enough to encompass the expanding generation radius
+        // Camera: Step back far enough to encompass the expanding generation radius
         const float r = currentState.objectSphereRadius;
-        float d       = r / sinf((Config::EngineSettings::CameraFOV / 2.0f) * DEG2RAD);
-        d += 50.0f; // Safe margin
-
+        const float d = r / sinf((Config::EngineSettings::CameraFOV / 2.0f) * DEG2RAD) + 50.0f;
         cameraController.SetDeterministicState({0.0f, 0.0f, d}, {0.0f, 0.0f, 0.0f},
                                                Config::EngineSettings::CameraFOV);
         break;
     }
     case BenchmarkSuite::Suite_5_1_3_OverdrawDensity: {
-        // Apply independent variable (Instances)
+        // Independent Variable: Instance Count (forcing massive Z-axis stacking)
+        // Control Variables: Fixed tight radius, moderate LOD to balance pixel coverage vs. vertex
+        // cost
         currentState.activeObstacleCount = static_cast<int>(stepValues[currentStepIndex]);
 
-        // Locked Variables to strictly isolate Overdraw Density
-        currentState.objectSphereRadius = 30.0f; // Fixed, tight radius
+        currentState.objectSphereRadius = 30.0f;
         currentState.renderFloor        = false;
-        currentState.activeLightCount   = 0;
-        currentState.currentLodIndex    = 1; // Balance between pixel coverage and vertex cost
+        currentState.currentLodIndex    = 1;
 
-        // Camera Fixed position
+        // Camera: Tight margin to maximize screen-space coverage
         const float r = currentState.objectSphereRadius;
-        float d       = r / sinf((Config::EngineSettings::CameraFOV / 2.0f) * DEG2RAD);
-        d += 15.0f; // Tight margin to maximize screen-space coverage
-
+        const float d = r / sinf((Config::EngineSettings::CameraFOV / 2.0f) * DEG2RAD) + 15.0f;
         cameraController.SetDeterministicState({0.0f, 0.0f, d}, {0.0f, 0.0f, 0.0f},
                                                Config::EngineSettings::CameraFOV);
         break;
     }
     case BenchmarkSuite::Suite_5_2_1_ResolutionScaling: {
-        // Map abstract step values to absolute rendering resolutions
+        // Independent Variable: Absolute rendering resolution
+        // Control Variables: Standard scene baseline (moderate geometry, baseline lighting)
         switch (static_cast<int>(stepValues[currentStepIndex])) {
         case 0:
             currentState.renderWidth  = 854;
@@ -236,43 +250,41 @@ void BenchmarkOrchestrator::ApplySuiteState() {
             break;
         }
 
-        // Standard Scene Baseline: Moderate geometry, baseline lighting, no stylistic entropy
         currentState.activeObstacleCount  = 5000;
         currentState.currentLodIndex      = 1;
         currentState.activeLightCount     = 200;
         currentState.renderFloor          = true;
         currentState.ambientLightStrength = 0.25f;
 
-        // Statick locked Camera
+        // Camera: Static lock
         cameraController.SetDeterministicState({150.0f, 150.0f, 150.0f}, {0.0f, 0.0f, 0.0f},
                                                Config::EngineSettings::CameraFOV);
+        break;
     }
     case BenchmarkSuite::Suite_5_2_2_BaseBandwidthTax: {
-        // Map stepValue to renderFloor boolean
+        // Independent Variable: Floor Enable State (0.0f = Zero Fill-Rate, 1.0f = Max Fill-Rate)
+        // Control Variables: Isolate bandwidth (no geometry, maximum ambient strength)
         currentState.renderFloor = (stepValues[currentStepIndex] > 0.0f);
 
-        // Isolate bandwidth
         currentState.activeObstacleCount  = 0;
-        currentState.activeLightCount     = 0;
         currentState.ambientLightStrength = 1.00f;
 
-        // Static camera pointing straight down at the floor origin
-        cameraController.SetDeterministicState({0.1f, 150.0f, 0.1f}, // Position
-                                               {0.0f, 0.0f, 0.0f},   // Target
+        // Camera: Pointing straight down at the floor origin
+        cameraController.SetDeterministicState({0.1f, 150.0f, 0.1f}, {0.0f, 0.0f, 0.0f},
                                                Config::EngineSettings::CameraFOV);
         break;
     }
     case BenchmarkSuite::Suite_5_3_1_LightCount: {
+        // Independent Variable: Active Light Count
+        // Constraint: Enforce architectural caps based on Test Suite Definitions
         const int targetLights = static_cast<int>(stepValues[currentStepIndex]);
-
-        // Enforce architectural caps based on Test Suite Definitions
         if (currentState.activeRenderPath != RenderPath::DeferredVolume && targetLights > 500) {
-            // Immediately advance the state machine to skip recording this configuration
             AdvanceState();
             return;
         }
 
-        currentState.activeLightCount     = targetLights;
+        currentState.activeLightCount = targetLights;
+
         currentState.activeObstacleCount  = 5000;
         currentState.renderFloor          = true;
         currentState.objectSphereRadius   = 200.0f;
@@ -281,18 +293,17 @@ void BenchmarkOrchestrator::ApplySuiteState() {
         currentState.currentLodIndex      = 1;
         currentState.ambientLightStrength = 0.0f;
 
-        // Static camera elevated to view the entire scene
-        cameraController.SetDeterministicState({300.0f, 300.0f, 300.0f}, // Position
-                                               {0.0f, 0.0f, 0.0f},       // Target
+        // Camera: Elevated to view the entire scene
+        cameraController.SetDeterministicState({300.0f, 300.0f, 300.0f}, {0.0f, 0.0f, 0.0f},
                                                Config::EngineSettings::CameraFOV);
         break;
     }
     case BenchmarkSuite::Suite_5_3_2_1_LightIntensity: {
+        // Independent Variable: Light intensity multiplier (forcing screen-space overdraw)
+        // Control Variables: Lock light count to 250
         currentState.lightIntensity = stepValues[currentStepIndex];
 
-        // Lock light count to 250
-        currentState.activeLightCount = 250;
-
+        currentState.activeLightCount     = 250;
         currentState.activeObstacleCount  = 5000;
         currentState.renderFloor          = true;
         currentState.objectSphereRadius   = 200.0f;
@@ -300,81 +311,75 @@ void BenchmarkOrchestrator::ApplySuiteState() {
         currentState.useLightSingularity  = false;
         currentState.currentLodIndex      = 1;
 
-        cameraController.SetDeterministicState({300.0f, 300.0f, 300.0f}, // Position
-                                               {0.0f, 0.0f, 0.0f},       // Target
+        // Camera: Static lock
+        cameraController.SetDeterministicState({300.0f, 300.0f, 300.0f}, {0.0f, 0.0f, 0.0f},
                                                Config::EngineSettings::CameraFOV);
         break;
     }
     case BenchmarkSuite::Suite_5_3_2_2_LightSingularity: {
+        // Independent Variable: Active Light Count
+        // Control Variables: Force all lights to spawn at the origin
+        // Constraint: Enforce architectural caps based on Test Suite Definitions
         const int targetLights = static_cast<int>(stepValues[currentStepIndex]);
-
-        // Enforce architectural caps based on Test Suite Definitions
         if (currentState.activeRenderPath != RenderPath::DeferredVolume && targetLights > 500) {
-            // Immediately advance the state machine to skip recording this configuration
             AdvanceState();
             return;
         }
 
-        currentState.activeLightCount     = targetLights;
+        currentState.activeLightCount = targetLights;
+
         currentState.activeObstacleCount  = 5000;
         currentState.renderFloor          = true;
         currentState.objectSphereRadius   = 200.0f;
         currentState.lightIntensity       = 1.0f;
-        currentState.useLightSingularity  = true; // Force all lights to spawn at the origin
+        currentState.useLightSingularity  = true;
         currentState.ambientLightStrength = 0.0f;
         currentState.currentLodIndex      = 1;
 
-        // Camera Close to light singularity
-        cameraController.SetDeterministicState({0.0f, 50.0f, 50.0f}, // Position
-                                               {0.0f, 0.0f, 0.0f},   // Target
+        // Camera: Positioned close to the light singularity
+        cameraController.SetDeterministicState({0.0f, 50.0f, 50.0f}, {0.0f, 0.0f, 0.0f},
                                                Config::EngineSettings::CameraFOV);
         break;
     }
     case BenchmarkSuite::Suite_5_3_3_ShadingOverdraw: {
         // Independent Variable: Geometric Density
+        // Control Variables: Force heavy depth complexity with a heavy lighting baseline
         currentState.activeObstacleCount = static_cast<int>(stepValues[currentStepIndex]);
 
-        // Locked Variables: Force heavy depth complexity with a heavy lighting baseline
-        currentState.objectSphereRadius = 30.0f; // Fixed tight radius
-        currentState.activeLightCount   = 100;   // The catalyst for Forward ALU collapse
-        currentState.currentLodIndex    = 1;     // Balance vertex cost
+        currentState.objectSphereRadius = 30.0f;
+        currentState.activeLightCount   = 100;
+        currentState.currentLodIndex    = 1;
         currentState.renderFloor        = false;
         currentState.lightIntensity     = 1.0f;
 
-        // Camera Fixed position
+        // Camera: Tight margin to maximize screen-space coverage
         const float r = currentState.objectSphereRadius;
-        float d       = r / sinf((Config::EngineSettings::CameraFOV / 2.0f) * DEG2RAD);
-        d += 15.0f; // Tight margin to maximize screen-space coverage
-
+        const float d = r / sinf((Config::EngineSettings::CameraFOV / 2.0f) * DEG2RAD) + 15.0f;
         cameraController.SetDeterministicState({0.0f, 0.0f, d}, {0.0f, 0.0f, 0.0f},
                                                Config::EngineSettings::CameraFOV);
+        break;
     }
     case BenchmarkSuite::Suite_5_4_1_SpatialEntropy: {
+        // Independent Variable: Phase and Entropy mapping (0/2 = Clustered, 1/3 = Scattered)
+        // Dynamic Condition: Phase 2 introduces extreme warp divergence via Kuwahara + Outlines
+        // Constraint: Forward pipeline lacks Kuwahara; Advance the state machine
         const int step = static_cast<int>(stepValues[currentStepIndex]);
 
-        // Phase 2 (Steps 2 and 3) introduces extreme warp divergence via Kuwahara + Sobel
         if (step >= 2 && currentState.activeRenderPath == RenderPath::Forward) {
-            // The Forward pipeline lacks Kuwahara; Advance the state machine
             AdvanceState();
             return;
         }
 
-        // Scene setup
+        // Control Variables: Compress density to maximize screen-space filter workload
         currentState.activeObstacleCount = 15000;
         currentState.activeLightCount    = 250;
         currentState.renderFloor         = false;
-        currentState.objectSphereRadius =
-            175.0f; // Compress density to maximize screen-space filter workload
+        currentState.objectSphereRadius  = 175.0f;
 
-        // Extract spatial entropy state
-        // Steps 0 and 2 are even (Clustered), Steps 1 and 3 are odd (Scattered)
         currentState.useClusteredStyles = (step % 2 == 0);
+        currentState.enableGooch        = true;
+        currentState.enableToon         = true;
 
-        // Apply shared NPR baseline
-        currentState.enableGooch = true;
-        currentState.enableToon  = true;
-
-        // Apply Phase 2 Extreme Divergence (Kuwahara + Outlines)
         if (step >= 2) {
             currentState.enableKuwahara = true;
             currentState.kuwaharaRadius = 4;
@@ -384,48 +389,45 @@ void BenchmarkOrchestrator::ApplySuiteState() {
             currentState.enableOutlines = false;
         }
 
-        // Top-down camera to cleanly capture the X-Z plane sorting algorithm
+        // Camera: Top-down to cleanly capture the X-Z plane sorting algorithm
         cameraController.SetDeterministicState({0.1f, 550.0f, 0.1f}, {0.0f, 0.0f, 0.0f},
                                                Config::EngineSettings::CameraFOV);
         break;
     }
     case BenchmarkSuite::Suite_5_4_2_StyleCombinatorics: {
+        // Independent Variable: Active styles in the high-entropy pool (0=1 Style, 1=2 Styles, 2=3
+        // Styles) Control Variables: Enforce heavy baseline established in 5.4.1
         const int step = static_cast<int>(stepValues[currentStepIndex]);
 
-        // Enforce the heavy baseline established in 5.4.1
         currentState.activeObstacleCount = 15000;
         currentState.activeLightCount    = 250;
         currentState.objectSphereRadius  = 175.0f;
         currentState.renderFloor         = false;
         currentState.useClusteredStyles  = true;
 
-        // Force maximum spatial chaos and disable post-process kernels
-
-        // Combinatorics Step Logic
         if (step == 0) {
-            // 1 Style: 100% Blinn-Phong
             currentState.enableGooch = false;
             currentState.enableToon  = false;
         } else if (step == 1) {
-            // 2 Styles: 50% Blinn, 50% Gooch
             currentState.enableGooch = true;
             currentState.enableToon  = false;
         } else if (step == 2) {
-            // 3 Styles: 33% Blinn, 33% Gooch, 33% Toon
             currentState.enableGooch = true;
             currentState.enableToon  = true;
         }
 
-        // Top-down camera for consistent viewing of the highly entropic distribution
+        // Camera: Top-down for consistent viewing of the highly entropic distribution
         cameraController.SetDeterministicState({0.1f, 550.0f, 0.1f}, {0.0f, 0.0f, 0.0f},
                                                Config::EngineSettings::CameraFOV);
         break;
     }
     case BenchmarkSuite::Suite_5_4_3_KernelBandwidth: {
+        // Independent Variable: Kuwahara Kernel Radius
+        // Control Variables: Force every object to use Kuwahara to saturate bandwidth
+        // Constraint: Forward pipeline lacks Kuwahara; Advance the state machine
         const int radius = static_cast<int>(stepValues[currentStepIndex]);
 
         if (currentState.activeRenderPath == RenderPath::Forward) {
-            // The Forward pipeline lacks Kuwahara; Advance the state machine
             AdvanceState();
             return;
         }
@@ -434,13 +436,12 @@ void BenchmarkOrchestrator::ApplySuiteState() {
         currentState.activeLightCount    = 250;
         currentState.objectSphereRadius  = 175.0f;
 
-        // Forced Extreme Divergence/Resolution:
-        // Force every object to use Kuwahara to saturate bandwidth
         currentState.useClusteredStyles = false;
         currentState.enableKuwahara     = true;
         currentState.kuwaharaRadius     = radius;
         currentState.renderFloor        = false;
 
+        // Camera: Top-down projection
         cameraController.SetDeterministicState({0.1f, 525.0f, 0.1f}, {0.0f, 0.0f, 0.0f},
                                                Config::EngineSettings::CameraFOV);
         break;
@@ -449,7 +450,8 @@ void BenchmarkOrchestrator::ApplySuiteState() {
     case BenchmarkSuite::Suite_5_5_Pass2_ShadingTax:
     case BenchmarkSuite::Suite_5_5_Pass3_ParityFlythrough:
     case BenchmarkSuite::Suite_5_5_Pass4_DeferredMaxFidelity: {
-        // Base scene state (Applies to all passes)
+        // Independent Variable: Cumulative rendering features per pass (0 to Max Fidelity)
+        // Control Variables: Base scene state applies to all passes
         currentState.activeObstacleCount  = 15000;
         currentState.objectSphereRadius   = 150.0f;
         currentState.currentLodIndex      = 1;
@@ -460,7 +462,6 @@ void BenchmarkOrchestrator::ApplySuiteState() {
         useFrameLimit                     = true;
         targetFrameCount                  = 1000;
 
-        // PASS-SPECIFIC LOGIC
         if (currentSuite == BenchmarkSuite::Suite_5_5_Pass1_GeometryBaseline) {
             currentState.activeLightCount = 0;
             currentState.enableGooch      = false;
