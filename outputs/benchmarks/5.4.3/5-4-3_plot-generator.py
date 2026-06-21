@@ -40,34 +40,6 @@ def generate_5_4_3_plots(csv_path):
     bu.setup_latex_font()
 
     # ---------------------------------------------------------
-    # FIGURE 1: Line Chart (Macro-Trend / Means)
-    # ---------------------------------------------------------
-    df_g1 = df.groupby(['Overdraw_Label', 'Architecture'], sort=False, observed=False)['TotalGpuMs'].mean().reset_index()
-    
-    fig, ax = plt.subplots(figsize=(10, 6))
-    
-    for arch in bu.ARCH_ORDER:
-        arch_data = df_g1[df_g1['Architecture'] == arch].set_index('Overdraw_Label').reindex(overdraw_labels)
-        arch_data = arch_data.dropna(subset=['TotalGpuMs']) 
-        
-        if not arch_data.empty:
-            color = bu.ARCH_COLOR_MAP[arch]
-            ax.plot(arch_data.index, arch_data['TotalGpuMs'], 
-                    color=color, linestyle='-', marker='o', linewidth=2, markersize=6, 
-                    label=arch)
-            
-    ax.set_xlabel('Theoretischer Overdraw Faktor (Geometrie)')
-    ax.set_ylabel('GPU-Ausführungszeit (ms)')
-    
-    bu.apply_strict_styling(ax, force_zero_y=True)
-    ax.legend(title='Architektur', loc='upper left', framealpha=0.8, facecolor='white', edgecolor='gray')
-    
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, '5_4_3_shading_overdraw_scaling.pdf'), format='pdf', bbox_inches='tight')
-    plt.close()
-    print("-> Graph 1 exportiert (5_4_3_shading_overdraw_scaling.pdf)")
-
-    # ---------------------------------------------------------
     # FIGURE 2: Stacked Bar Chart (Decoupling Proof)
     # ---------------------------------------------------------
     archs_g2 = ['Forward', 'Deferred_Uber', 'Deferred_Volume']
@@ -135,46 +107,6 @@ def generate_5_4_3_plots(csv_path):
     plt.savefig(os.path.join(output_dir, '5_4_3_decoupling_proof.pdf'), format='pdf', bbox_inches='tight')
     plt.close()
     print("-> Graph 2 exportiert (5_4_3_decoupling_proof.pdf)")
-
-    # ---------------------------------------------------------
-    # FIGURE 3: Box Plot (Variance)
-    # ---------------------------------------------------------
-    df_var = df[df['StepValue'] == 32000.0].copy()
-    
-    if not df_var.empty:
-        fig, ax = plt.subplots(figsize=(8, 6))
-        
-        sns.boxplot(data=df_var, x='Architecture', y='TotalGpuMs', hue='Architecture', 
-                    palette=bu.ARCH_COLOR_MAP, ax=ax, whis=(1, 99), dodge=False,
-                    boxprops=dict(alpha=0.5), 
-                    flierprops=dict(marker='o', markersize=2, alpha=0.3, markerfacecolor='black', markeredgecolor='none'))
-        
-        if ax.legend_ is not None:
-            ax.legend_.remove()
-            
-        import matplotlib.patches
-        boxes = [patch for patch in ax.patches if type(patch) == matplotlib.patches.PathPatch]
-        
-        plotted_archs = df_var['Architecture'].dropna().unique()
-        box_idx = 0
-        for arch in bu.ARCH_ORDER:
-            if arch in plotted_archs.tolist():
-                if box_idx < len(boxes):
-                    box = boxes[box_idx]
-                    box.set_edgecolor(bu.ARCH_COLOR_MAP[arch])
-                    box.set_linewidth(1.5)
-                box_idx += 1
-
-        ax.set_xlabel('Architektur (bei 32.000 Instanzen)')
-        ax.set_ylabel('GPU-Ausführungszeit Verteilung (ms)')
-        
-        bu.apply_strict_styling(ax, force_zero_y=False)
-        bu.annotate_boxplot(ax, df_var, 'Architecture', 'TotalGpuMs', hue_col='Architecture')
-        
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, '5_4_3_shading_overdraw_variance.pdf'), format='pdf', bbox_inches='tight')
-        plt.close()
-        print("-> Graph 3 exportiert (5_4_3_shading_overdraw_variance.pdf)")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

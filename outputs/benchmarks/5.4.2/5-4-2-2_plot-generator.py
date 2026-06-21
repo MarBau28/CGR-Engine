@@ -16,6 +16,9 @@ def generate_5_4_3_plots(csv_path):
     
     df = bu.clean_arch(df)
     
+    # Skalierung auf maximal 2500 begrenzen
+    df = df[df['StepValue'] <= 1000].copy()
+    
     # Pre-Processing: Entferne invalidierte/abgestürzte Engine-States
     # (Forward und Deferred_Uber überleben physikalisch keine >500 punktuellen Lichter)
     mask_to_drop = (df['Architecture'].isin(['Forward', 'Deferred_Uber'])) & (df['StepValue'] > 500)

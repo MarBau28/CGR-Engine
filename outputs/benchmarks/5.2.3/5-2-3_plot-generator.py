@@ -64,29 +64,6 @@ def generate_5_2_3_plots(csv_path):
     plt.close()
     print("-> Graph 1 exportiert (5_2_3_overdraw_fillrate_scaling.pdf)")
 
-    # ---------------------------------------------------------
-    # GRAPH 2: Memory Bandwidth Variance
-    # ---------------------------------------------------------
-    df_g2 = df[df['Instances'] == 32000.0].copy()
-    
-    if not df_g2.empty:
-        fig, ax = plt.subplots(figsize=(10, 6))
-        
-        sns.boxplot(data=df_g2, x='Architecture', y='TotalGpuMs', hue='Architecture', 
-                    palette=bu.ARCH_COLOR_MAP, legend=False, ax=ax, whis=(1, 99), 
-                    boxprops=dict(alpha=0.5, edgecolor='black', linewidth=1.5),
-                    flierprops=dict(marker='o', markersize=3, alpha=0.5, markerfacecolor='black', markeredgecolor='none'))
-                    
-        ax.set_xlabel('Architektur (bei 32.000 Instanzen)')
-        ax.set_ylabel('GPU-Ausführungszeit (ms)')
-        bu.apply_strict_styling(ax, force_zero_y=False)
-        bu.annotate_boxplot(ax, df_g2, 'Architecture', 'TotalGpuMs', hue_col='Architecture')
-        
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, '5_2_3_overdraw_variance.pdf'), format='pdf', bbox_inches='tight')
-        plt.close()
-        print("-> Graph 2 exportiert (5_2_3_overdraw_variance.pdf)")
-
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python 5-2-3_plot-generator.py <path_to_csv>")

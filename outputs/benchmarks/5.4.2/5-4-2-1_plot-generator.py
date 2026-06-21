@@ -55,50 +55,13 @@ def generate_5_4_2_plots(csv_path):
     ax.legend(title='Architektur', loc='upper left', framealpha=0.8, facecolor='white', edgecolor='gray')
     
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, '5-4-2_LightIntensity_Means.pdf'), format='pdf', bbox_inches='tight')
+    plt.savefig(os.path.join(output_dir, '5-4-2-1_LightIntensity_Means.pdf'), format='pdf', bbox_inches='tight')
     plt.close()
     print("-> Graph 1 exportiert (5-4-2_LightIntensity_Means.pdf)")
 
-    # ---------------------------------------------------------
-    # FIGURE 2: Grouped Box Plot (Micro-Trend / Variance)
-    # ---------------------------------------------------------
-    fig, ax = plt.subplots(figsize=(12, 6))
-    
-    if not df.empty:
-        sns.boxplot(data=df, x='Intensity_Label', y='TotalGpuMs', hue='Architecture', 
-                    palette=bu.ARCH_COLOR_MAP, ax=ax, whis=(1, 99), 
-                    boxprops=dict(alpha=0.5), 
-                    flierprops=dict(marker='o', markersize=2, alpha=0.3, markerfacecolor='black', markeredgecolor='none'))
-                    
-        boxes = [patch for patch in ax.patches if type(patch) == matplotlib.patches.PathPatch]
-        
-        num_x = len(step_labels)
-        if len(boxes) > 0:
-            for hue_idx, arch in enumerate(bu.ARCH_ORDER):
-                base_color = bu.ARCH_COLOR_MAP[arch]
-                for x_idx in range(num_x):
-                    box_idx = hue_idx * num_x + x_idx
-                    if box_idx < len(boxes):
-                        box = boxes[box_idx]
-                        box.set_edgecolor(base_color)
-                        box.set_linewidth(1.5)
-
-        ax.set_xlabel('Lichtintensität (Radius-Multiplikator)')
-        ax.set_ylabel('GPU-Ausführungszeit Verteilung (ms)')
-        
-        bu.apply_strict_styling(ax, force_zero_y=False)
-        bu.annotate_boxplot(ax, df, 'Intensity_Label', 'TotalGpuMs', hue_col='Architecture')
-        
-        ax.legend(title='Architektur', loc='upper left', framealpha=0.8, facecolor='white', edgecolor='gray')
-        
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, '5-4-2_LightIntensity_Variance.pdf'), format='pdf', bbox_inches='tight')
-        plt.close()
-        print("-> Graph 2 exportiert (5-4-2_LightIntensity_Variance.pdf)")
-
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python 5-4-2_plot-generator.py <path_to_csv>")
+        print("Usage: python 5-4-2-1_plot-generator.py <path_to_csv>")
         sys.exit(1)
         
     csv_file = sys.argv[1]

@@ -1,2 +1,51 @@
-\chapter{Technische Grundlagen}
-\label{ch:02_basics}
+\chapter{Grundlagen}
+\label{ch:02_grundlagen}
+
+In diesem Kapitel werden die theoretischen Fundamente der untersuchten Rendering-Pipelines definiert.
+Dazu gehört die Abgrenzung der verschiedenen Render-Pfade, die Spezifikation der physischen Hardware-Flaschenhälse sowie die Einordnung der Konzepte im Kontext der Stilisierung.
+
+
+\section{Rendering-Paradigmen und algorithmische Komplexität}
+\label{sec:0201_rendering_paradigms_and_complexity}
+
+Dieser Abschnitt widmet sich der formalen Definition und Gegenüberstellung von klassischen und entkoppelten Render-Pfaden unter Berücksichtigung ihrer inhärenten Skalierbarkeit.
+
+\subsection{Forward Rendering}
+\label{subsec:020101_forward_rendering_core}
+Beschreibung der klassischen Render-Pipeline mit der direkten Berechnung von Geometrie und Schattierung in einem Durchlauf. Erläuterung des theoretischen Aufwandsverhaltens bei steigender Objekt- und Lichtanzahl.
+
+\subsection{Deferred Rendering}
+\label{subsec:020102_deferred_rendering_core}
+Erklärung der entkoppelten Pipeline und der Zwischenspeicherung von Geometriedaten in separaten Puffern. Aufzeigen der Effizienzgewinne bei der Schattierung durch den Einsatz geometrischer Hilfskörper.
+
+
+\section{Hardware-Limitierungen und Performance-Metriken}
+\label{sec:0202_hardware_limitations_and_metrics}
+
+Dieser Abschnitt spezifiziert die physischen Ausführungseinheiten moderner Grafikhardware, welche die kritischen Engpässe bei der praktischen Ausführung der Render-Pfade bilden.
+
+\subsection{Fragment-Overdraw und Fillrate}
+\label{subsec:020201_fragment_overdraw_and_fillrate}
+Thematisierung mehrfach gezeichneter Pixel auf identischen Koordinaten. Betrachtung der resultierenden Last für die Füllrate und softwareseitiger Optimierungen wie dem Z-Prepass.
+
+\subsection{Speicherbandbreite (Memory Bandwidth)}
+\label{subsec:020202_memory_bandwidth_limitations}
+Analyse der Durchsatzgrenzen beim Zugriff auf den Videospeicher. Erläuterung des Lese- und Schreibaufwands durch breite Pufferstrukturen und additive Mischvorgänge.
+
+\subsection{Register Pressure}
+\label{subsec:020203_register_pressure_limitations}
+Behandlung der limitierten internen Speichereinheiten pro Rechenkern. Beschreibung der Auswirkungen auf die Thread-Parallelisierung bei der Nutzung großer, kombinierter Shader-Programme.
+
+\subsection{Dynamic Branching und Warp Divergence}
+\label{subsec:020204_dynamic_branching_and_warp_divergence}
+Erläuterung der synchronen Funktionsweise von Thread-Gruppen auf Hardware-Ebene. Beschreibung der sequenziellen Serialisierung bei ungleichen Verzweigungsbedingungen auf Pixelebene.
+
+
+\section{Grundlagen der Non-Photorealistic Rendering (NPR) Pipeline}
+\label{sec:0203_non_photorealistic_rendering_fundamentals}
+
+Dieser Abschnitt kategorisiert die raumbezogenen Konzepte der NPR-Generierung zur selektiven, isolierten Stilisierung von Szenenobjekten.
+
+\subsection{Object-Space- vs. Screen-Space-Stilisierung}
+\label{subsec:020301_object_space_vs_screen_space_stylization}
+Abwägung von Stilisierungsverfahren direkt auf der dreidimensionalen Szenengeometrie im Vergleich zu nachgelagerten, globalen Filtern auf dem fertigen zweidimensionalen Bild. Gegenüberstellung von präziser Objekttrennung und Laufzeit-Konstanz.

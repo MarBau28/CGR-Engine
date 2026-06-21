@@ -36,6 +36,9 @@
 \usepackage{booktabs}
 \usepackage{tabularx}
 \usepackage{placeins}
+\usepackage{etoolbox}
+\pretocmd{\section}{\FloatBarrier}{}{}
+\pretocmd{\subsection}{\FloatBarrier}{}{}
 
 % --- Code Listings (C++ & GLSL) ---
 
@@ -149,16 +152,16 @@
     \input{Kapitel/03_Stand_der_Technik}
 
     % 15-20 Seiten
-%    \input{Kapitel/04_Konzeption_&_Realisierung}
+    \input{Kapitel/04_Konzeption_Realisierung}
 
     % 12-15 Seiten
     \input{Kapitel/05_Evaluation}
 
-    % 6-9 Seiten
-%    \input{Kapitel/06_Diskussion}
+    % 8-12 Seiten
+    \input{Kapitel/06_Diskussion}
 
     % 2-3 Seiten
-%    \input{Kapitel/07_Fazit_Ausblick}
+    \input{Kapitel/07_Fazit_Ausblick}
 
     \clearpage
 

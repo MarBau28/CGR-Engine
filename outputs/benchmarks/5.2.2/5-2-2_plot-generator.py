@@ -65,46 +65,23 @@ def generate_5_2_2_plots(csv_path):
     ax.set_ylabel('Ausführungszeit (ms)')
     bu.apply_strict_styling(ax, force_zero_y=True)
     
-    # Da dies ein Liniendiagramm ist, macht annotate_bar_chart hier keinen Sinn.
-    
-    # 2 separate Legenden zur sauberen Lesbarkeit generieren
+    # Kombinierte Legende erstellen
     legend_elements_arch = [Line2D([0], [0], color=bu.ARCH_COLOR_MAP.get(a, '#000000'), lw=3, label=a) for a in actual_archs]
     legend_elements_metric = [
         Line2D([0], [0], color='black', lw=2, linestyle='-', marker='o', label='CpuLogicMs'),
         Line2D([0], [0], color='black', lw=2, linestyle='--', marker='^', label='CpuRenderMs')
     ]
     
-    leg_arch = ax.legend(handles=legend_elements_arch, title='Architektur', loc='upper left', framealpha=0.8, facecolor='white', edgecolor='gray')
-    ax.add_artist(leg_arch)
-    ax.legend(handles=legend_elements_metric, title='Metrik', loc='upper right', framealpha=0.8, facecolor='white', edgecolor='gray')
+    # Alle Elemente in eine einzige Liste packen
+    all_handles = legend_elements_arch + legend_elements_metric
+    
+    # Eine gemeinsame Legende oben links platzieren
+    ax.legend(handles=all_handles, title='Architektur & Metrik', loc='upper left', framealpha=0.8, facecolor='white', edgecolor='gray')
     
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, '5_2_2_cpu_scaling_logic_vs_render.pdf'), format='pdf', bbox_inches='tight')
     plt.close()
     print("-> Graph 1 exportiert (5_2_2_cpu_scaling_logic_vs_render.pdf)")
-
-    # ---------------------------------------------------------
-    # GRAPH 2: Frame Pacing at 50,000 Instances
-    # ---------------------------------------------------------
-    df_g2 = df[df['Instances'] == 50000.0].copy()
-    
-    if not df_g2.empty:
-        fig, ax = plt.subplots(figsize=(10, 6))
-        
-        sns.boxplot(data=df_g2, x='Architecture', y='TotalFrameMs', hue='Architecture', 
-                    palette=bu.ARCH_COLOR_MAP, legend=False, ax=ax, whis=(1, 99), 
-                    boxprops=dict(alpha=0.5, edgecolor='black', linewidth=1.5),
-                    flierprops=dict(marker='o', markersize=3, alpha=0.5, markerfacecolor='black', markeredgecolor='none'))
-                    
-        ax.set_xlabel('Architektur (bei 50.000 Instanzen)')
-        ax.set_ylabel('Gesamte Frame-Zeit (ms)')
-        bu.apply_strict_styling(ax, force_zero_y=False)
-        bu.annotate_boxplot(ax, df_g2, 'Architecture', 'TotalFrameMs', hue_col='Architecture')
-        
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, '5_2_2_cpu_stutter_variance.pdf'), format='pdf', bbox_inches='tight')
-        plt.close()
-        print("-> Graph 2 exportiert (5_2_2_cpu_stutter_variance.pdf)")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

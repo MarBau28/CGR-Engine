@@ -76,7 +76,7 @@ Der Uber-Shader umgeht diesen spezifische Speicher-Bottleneck konstruktionsbedin
 Im vorliegenden Kapitel werden die untersuchten Limitierungen ausschließlich auf Performance-Ebene betrachtet.
 Spezifische harte Implementierungsgrenzen der Pipelines (wie etwa die Uniform-Buffer-Limitierungen der Forward- und
 Deferred-Uber-Architekturen) sowie etwaige künstlerische Qualitätsengpässe fließen nicht in die Messreihen ein.
-Diese Aspekte wurden bereits in Kapitel~\ref{sec:0402_limits} verortet und evaluiert.
+Diese Aspekte wurden bereits in Kapitel~\ref{sec:0403_pipeline_implementations} verortet und evaluiert.
 
 \subsection{{Systemkonfiguration und Variablen-Mapping}}
 \label{subsec:050102_evaluation_configuration_and_variable_mapping}
@@ -266,8 +266,6 @@ Besonders kritisch für die Validität der Messungen ist die definierte Warm-up-
     \end{tabularx}
 \end{table}
 
-\FloatBarrier
-
 \subsection{{Versuchsablauf}}
 \label{subsec:050103_evaluateion_procedure}
 
@@ -307,3 +305,200 @@ Datenpunkte außerhalb dieses Intervalls klassifiziert der Algorithmus als stati
 die finale Auswertung.
 Dieser Schritt garantiert, dass die später präsentierten Messdaten das rein architektonische und algorithmische
 Skalierungsverhalten der Rendering-Pipelines abbilden.
+
+
+\section{{Geometrische Dichte und Overdraw}}
+\label{sec:0502_geometry_eval}
+
+Im Rahmen des nachfolgenden Kapitels werden Benchmarks und Erkenntnisse präsentiert, die dazu dienen, geometriebedingte
+Performance-Bottlenecks innerhalb der untersuchten Rendering-Pipelines zu evaluieren.
+Der Fokus liegt primär auf der Isolation der Hardware-Rasterizer und der CPU-Draw-Call-Aufwände.
+
+\subsection{{LOD (Mikro-Geometrie)}}
+\label{subsec:050201_lod_eval}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{Abbildungen/5-2-1_bottleneck_divergence}
+    \caption[Geometrische Skalierung bei variierendem Detailgrad]{Messung der GPU- und CPU-Laufzeiten bei einer
+    LOD-Skalierung von 24.000 bis 16,38 Mio. Dreiecken und einer konstanten Objektanzahl von 2.000 zur Isolation des
+    Hardware-Rasterizers.}
+    \label{fig:5_2_1_bottleneck_divergence}
+\end{figure}
+
+\subsection{{Object Count Limit}}
+\label{subsec:050202_obejct_count_eval}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{Abbildungen/5_2_2_cpu_scaling_logic_vs_render}
+    \caption[Objektanzahl-Limitierung im CPU-Dispatch]{Messung von \texttt{CpuLogicMs} und \texttt{CpuRenderMs} bei
+    einer Skalierung von 1.000 bis 50.000 Instanzen zur Isolation der CPU-Architektur.}
+    \label{fig:5_2_2_cpu_scaling_logic_vs_render}
+\end{figure}
+
+\subsection{{Overdraw-Dichte}}
+\label{subsec:050203_overdraw_eval}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{Abbildungen/5_2_3_overdraw_fillrate_scaling}
+    \caption[Overdraw-Skalierung bei steigender Tiefenkomplexität]{Messung der GPU-Ausführungszeit in Abhängigkeit vom
+    theoretischen Overdraw-Faktor (1,1 bis 18,1 Schichten pro Pixel) bei einer Skalierung von 2.000 bis 32.000
+    Instanzen.}
+    \label{fig:5_2_3_overdraw_fillrate_scaling}
+\end{figure}
+
+
+\section{{Bandbreite und Auflösung}}
+\label{sec:0503_brandwidth_resolution_eval}
+
+In dem nachfolgenden Kapitel werden Benchmarks und Erkenntnisse präsentiert, die dazu dienen, die
+bandbreitenspezifischen Limitierungen auszuloten.
+Im Rahmen der Analyse werden die API und die Speicherkosten des G-Buffers sowie der zunehmende ALU-Aufwand des
+Forward-Rendering evaluiert.
+
+\subsection{{Auflösung}}
+\label{subsec:050301_resolution_eval}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{Abbildungen/5_3_1_resolution_scaling_crossover}
+    \caption[Auflösungsskalierung unter konstanter Beleuchtungslast]{Messung der GPU-Ausführungszeit in Abhängigkeit von
+    der Framebuffer-Auflösung (480p bis 4K) unter einer statischen Last von 100 Lichtquellen.}
+    \label{fig:5_3_1_resolution_scaling_crossover}
+\end{figure}
+
+\subsection{{Bandbreiten}}
+\label{subsec:050302_bandwidth_eval}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{Abbildungen/5-3-2_BaseBandwidthTax_Means}
+    \caption[Basis-Bandbreitenkosten der Rendering-Architekturen]{Vergleich der GPU-Ausführungszeit zwischen minimaler
+    Geometrielast (Basis-Overhead) und vollflächiger Screen-Space-Abdeckung (Bandbreiten-Limit) ohne Beleuchtung zur
+    Isolierung der G-Buffer-Speicherbandbreite.}
+    \label{fig:5_3_2_base_bandwidth_tax_means}
+\end{figure}
+
+
+\section{{Beleuchtung}}
+\label{sec:0504_lighting_eval}
+
+Im nachfolgenden Kapitel werden Benchmarks und Erkenntnisse präsentiert, die dazu dienen, die beleuchtungsspezifischen
+Limitierungen zu ermitteln.
+Da Deferred Rendering im Bereich der Beleuchtungsberechnung signifikante Vorteile verspricht, sollen im Folgenden die
+genauen architektonischen Crossover-Points ermittelt werden, ab denen die Deferred-Pipelines die Forward-Pipelines
+übertreffen.
+Auf Hardware-Ebene werden im Rahmen der vorliegenden Untersuchung die ALU- und ROP-Limits mithilfe der nachfolgenden
+Benchmarks evaluiert.
+
+\subsection{{Lichtanzahl}}
+\label{subsec:050401_light count_eval}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{Abbildungen/5-4-1_LightCount_Means}
+    \caption[Skalierung der Lichtanzahl bei dynamischen Punktlichtern]{Messung der GPU-Ausführungszeit in Abhängigkeit
+    von der Anzahl aktiver Lichtquellen (10 bis 5.000).}
+    \label{fig:5_4_1_light_count_means}
+\end{figure}
+
+\subsection{{Lichtintensität \& Overlap}}
+\label{subsec:050402_light_intensity_and_overlap_eval}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{Abbildungen/5-4-2-1_LightIntensity_Means}
+    \caption[Skalierung der Lichtintensität bei konstanter Lichtanzahl]{Messung der GPU-Ausführungszeit in Abhängigkeit
+    von der Lichtintensität respektive dem Radius-Multiplikator (0,5 bis 20,0) bei einer konstanten Anzahl von 250
+    Lichtquellen.}
+    \label{fig:5_4_2_1_light_intensity_means}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{Abbildungen/5-4-2-2_LightSingularity_Means}
+    \caption[Skalierung der Lichtanzahl in einer Singularität]{Messung der GPU-Ausführungszeit in Abhängigkeit von der
+    Anzahl der Lichtquellen (10 bis 1000) bei einer Positionierung aller Lichtquellen in einer räumlichen Singularität.}
+    \label{fig:5_4_2_2_light_singularity_means}
+\end{figure}
+
+\subsection{{Shading Overdraw}}
+\label{subsec:050403_shading_overdraw_eval}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{Abbildungen/5_4_3_decoupling_proof}
+    \caption[Entkopplungsnachweis bei steigendem geometrischen Overdraw]{Aufschlüsselung der GPU-Ausführungszeit nach
+    einzelnen Pipeline-Komponenten in Abhängigkeit vom theoretischen Overdraw-Faktor bei einer konstanten Last von 100
+    Lichtquellen.}
+    \label{fig:5_4_3_decoupling_proof}
+\end{figure}
+
+
+\section{{Hybride Stilisierung \& Entropie}}
+\label{sec:0505_npr_eval}
+
+In den vorangegangenen Kapiteln 5.2 bis 5.4 wurde das grundlegende Verhalten der evaluierten Rendering-Architekturen
+aufgezeigt und somit zugleich die Fähigkeiten und Grenzen des HyDra-Frameworks als Kontrollgruppen demonstriert.
+Die nachfolgenden Tests widmen sich dem Kern der Forschung und evaluieren die Wechselwirkungen von Stil-Entropie und
+den allgemeinen Einfluss selektiver NPR-Techniken auf die verschiedenen Pipelines.
+Der Fokus liegt hierbei insbesondere auf der Evaluation von Warp Divergence und Register Pressure.
+
+\subsection{{Stil-Entropie}}
+\label{subsec:050501_entropy_eval}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{Abbildungen/5_5_1_entropy_divergence_means}
+    \caption[Einfluss der räumlichen Entropie auf die GPU-Shading-Zeit]{Messung der GPU-Shading-Zeit in Abhängigkeit von
+    der räumlichen Verteilung (Geklustert vs. Gestreut) der Rendering-Stile zur Isolation von Warp Divergence.}
+    \label{fig:5_5_1_entropy_divergence_means}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{Abbildungen/5_5_2_style_combinatorics_gpu}
+    \caption[Einfluss stilistischer Kombinatorik auf die GPU-Shading-Zeit]{Messung der GPU-Shading-Zeit in Abhängigkeit
+    von der Anzahl simultan aktiver Rendering-Stile (1 bis 3 Stile) zur Evaluierung kombinatorischer Degradation.}
+    \label{fig:5_5_2_style_combinatorics_gpu}
+\end{figure}
+
+\subsection{{Kernel Bandbreiten Limits}}
+\label{subsec:050502_kernel_eval}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{Abbildungen/5_5_3_kernel_bandwidth_scalability}
+    \caption[Skalierung des Kuwahara-Filterradius]{Messung der GPU-Shading-Zeit in Abhängigkeit vom
+    Kuwahara-Kernel-Radius (2 bis 16) zur Evaluation der VRAM-Bandbreitenlimits unter steigender Filtergröße.}
+    \label{fig:5_5_3_kernel_bandwidth_scalability}
+\end{figure}
+
+
+\section{{Macro-Benchmark Synthese}}
+\label{sec:0506_kernel_eval}
+
+In der finalen Testreihe erfolgt die Integration aller übergeordneter Einflüsse aus den vorangegangenen Benchmarks in
+ein umfassendes Real-World-Szenario, um die Interaktion der bislang untersuchten Effekte in ihrer Gesamtheit zu
+analysieren.
+Die nachfolgenden Evaluationen werden in einem Schritt zusammengefasst, bestehen allerdings aus vier verschiedenen
+Einzelpässen, in welchen die verschiedenen Einflüsse von Geometrie, Beleuchtung und selektiver Silisierung gemeinsam
+betrachtet werden.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{Abbildungen/5_6_cumulative_rendering_cost_combined}
+    \caption[Akkumulierte GPU-Ausführungszeit im Makro-Benchmark]{Aufschlüsselung der GPU-Ausführungszeit nach
+    Pipeline-Komponenten (Geometrie, Beleuchtung und Stil-Entropie).}
+    \label{fig:5_6_cumulative_rendering_cost_combined}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{Abbildungen/5_6_flythrough_variance}
+    \caption[Frame-Zeit-Verlauf des Kamera-Flythroughs]{Verlauf der Frame-Zeit über die Dauer von 3000 Frames des
+    Kamera-Flythroughs unter kombinierter Geometrie-, Beleuchtungs- und Stil-Last.}
+    \label{fig:5_6_flythrough_variance}
+\end{figure}

@@ -39,25 +39,6 @@ def generate_5_2_1_plots(csv_path):
     actual_archs = df['Architecture'].unique()
     
     bu.setup_latex_font()
-    
-    # ---------------------------------------------------------
-    # GRAPH 1: Architectural Rasterization Cost
-    # ---------------------------------------------------------
-    df_g1 = df.groupby(['Triangles_Label', 'Architecture'], sort=False, observed=False)['TotalGpuMs'].mean().reset_index()
-    
-    fig, ax = plt.subplots(figsize=(10, 6))
-    sns.barplot(data=df_g1, x='Triangles_Label', y='TotalGpuMs', hue='Architecture', 
-                order=triangle_order, palette=bu.ARCH_COLOR_MAP, ax=ax, edgecolor='black', linewidth=1.0)
-    
-    ax.set_xlabel('Aktive Dreiecke (Active Triangles)')
-    ax.set_ylabel('GPU-Ausführungszeit (ms)')
-    bu.apply_strict_styling(ax, force_zero_y=True)
-    bu.annotate_bar_chart(ax, fontsize=9)
-    ax.legend(title='Architektur', loc='upper left')
-    
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, '5-2-1_rasterization_cost.pdf'), format='pdf', bbox_inches='tight')
-    plt.close()
 
     # ---------------------------------------------------------
     # GRAPH 2: CPU vs. GPU Bottleneck Divergence
@@ -87,31 +68,11 @@ def generate_5_2_1_plots(csv_path):
     ax.set_ylabel('Ausführungszeit (ms)')
     bu.apply_strict_styling(ax, force_zero_y=True)
     
-    ax.legend(title='Komponentenkosten', bbox_to_anchor=(1.02, 1), loc='upper left')
+    # Legende nach oben links innerhalb des Graphen verschoben
+    ax.legend(title='Komponentenkosten', loc='upper left')
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, '5-2-1_bottleneck_divergence.pdf'), format='pdf', bbox_inches='tight')
     plt.close()
-
-    # ---------------------------------------------------------
-    # GRAPH 3: Frame Pacing Stability at Maximum Stress
-    # ---------------------------------------------------------
-    df_g3 = df[df['Triangles'] == 16384000.0].copy()
-    
-    if not df_g3.empty:
-        fig, ax = plt.subplots(figsize=(10, 6))
-        sns.boxplot(data=df_g3, x='Architecture', y='TotalGpuMs', hue='Architecture', 
-                    palette=bu.ARCH_COLOR_MAP, legend=False, ax=ax,
-                    boxprops=dict(alpha=0.5, edgecolor='black', linewidth=1.5),
-                    flierprops=dict(marker='o', markersize=3, alpha=0.5, markerfacecolor='black', markeredgecolor='none'))
-        
-        ax.set_xlabel('Architektur')
-        ax.set_ylabel('GPU-Ausführungszeit (ms)')
-        bu.apply_strict_styling(ax, force_zero_y=False)
-        bu.annotate_boxplot(ax, df_g3, 'Architecture', 'TotalGpuMs', hue_col='Architecture')
-        
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, '5-2-1_frame_pacing_stability.pdf'), format='pdf', bbox_inches='tight')
-        plt.close()
     
     print(f"Diagramme erfolgreich generiert. Pfad: {os.path.abspath(output_dir)}")
 

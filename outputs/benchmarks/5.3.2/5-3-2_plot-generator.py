@@ -68,55 +68,6 @@ def generate_5_3_2_plots(csv_path):
     plt.close()
     print("-> Graph 1 exportiert (5-3-2_BaseBandwidthTax_Means.pdf)")
 
-    # ---------------------------------------------------------
-    # FIGURE 2: Grouped Box Plot (Micro-Trend / Variance)
-    # ---------------------------------------------------------
-    fig, ax = plt.subplots(figsize=(10, 6))
-    
-    df_box = df.copy()
-    df_box['StepCategory'] = df_box['StepValue'].astype(str)
-    
-    if not df_box.empty:
-        sns.boxplot(data=df_box, x='Architecture', y='TotalGpuMs', hue='StepCategory', 
-                    ax=ax, whis=(1, 99), 
-                    flierprops={'markersize': 2, 'alpha': 0.5, 'marker': 'o', 'markerfacecolor': 'black', 'markeredgecolor': 'none'})
-                    
-        # Styling for individual patches (boxes)
-        boxes = [patch for patch in ax.patches if type(patch) == matplotlib.patches.PathPatch]
-        
-        if len(boxes) == 6: # 3 Architekturen * 2 Hues
-            for i, arch in enumerate(bu.ARCH_ORDER):
-                base_color = bu.ARCH_COLOR_MAP[arch]
-                
-                box_0 = boxes[i]
-                box_0.set_facecolor('none')  # Transparent
-                box_0.set_edgecolor(base_color)
-                box_0.set_linestyle('--')
-                box_0.set_linewidth(2)
-                
-                box_1 = boxes[i + 3]
-                box_1.set_facecolor(base_color)
-                box_1.set_edgecolor('black')
-                box_1.set_linewidth(1.5)
-                box_1.set_linestyle('-')
-
-        ax.set_xlabel('Rendering-Architektur')
-        ax.set_ylabel('GPU-Ausführungszeit (ms)')
-        
-        bu.apply_strict_styling(ax, force_zero_y=False)
-        bu.annotate_boxplot(ax, df_box, 'Architecture', 'TotalGpuMs', hue_col='StepCategory')
-        
-        legend_elements_2 = [
-            Line2D([0], [0], color='gray', linestyle='--', lw=2, label='Verteilung Ohne Boden'),
-            Patch(facecolor='gray', edgecolor='black', label='Verteilung Mit Boden')
-        ]
-        ax.legend(handles=legend_elements_2, loc='upper left', framealpha=0.8, facecolor='white')
-        
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, '5-3-2_BaseBandwidthTax_Variance.pdf'), format='pdf', bbox_inches='tight')
-        plt.close()
-        print("-> Graph 2 exportiert (5-3-2_BaseBandwidthTax_Variance.pdf)")
-
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python 5-3-2_plot-generator.py <path_to_csv>")

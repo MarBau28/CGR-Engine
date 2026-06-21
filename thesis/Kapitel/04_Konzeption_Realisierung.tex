@@ -1,0 +1,66 @@
+\chapter{Konzeption und Realisierung}
+\label{ch:04_konzeption_realisierung}
+
+Dieses Kapitel beschreibt den Aufbau und die technische Umsetzung des Test-Frameworks. Es zeigt die Struktur der Daten, die Grundlagen der Zeicheneffekte sowie die Umsetzung der drei Render-Wege und der Leistungsmessung.
+
+
+\section{Konzeption der Systemarchitektur und G-Buffer-Topologie}
+\label{sec:0401_system_architecture_and_gbuffer}
+
+Übersicht über den Weg der Daten von der CPU zur Grafikkarte und die Aufteilung des Zwischenspeichers. Tabellarische Auflistung aller Puffer mit ihren genauen Texturformaten. Begründung für die Wahl einer höheren Speichergenauigkeit, um Bildfehler und Ungenauigkeiten beim Zusammenrechnen der Pixel zu verhindern.
+
+
+\section{Mathematisch-Technische Spezifikation der NPR-Komponenten}
+\label{sec:0402_npr_specification}
+
+Beschreibung der einzelnen Zeicheneffekte unabhängig von den eigentlichen Render-Wegen, damit sich Erklärungen später nicht im Text wiederholen.
+
+\subsection{Lokale Shading-Modelle}
+\label{subsec:040201_local_shading_models}
+Erklärung von Toon-Shading für harte Farbstufen und von Gooch-Shading für technische Farbverläufe auf Objektoberflächen.
+
+\subsection{Filter- und Frequenzraum-Operationen}
+\label{subsec:040202_filter_operations}
+Erklärung von Rechenmatrizen zur Erkennung von Kanten im Tiefenbild und im Richtungsbild der Oberflächen. Beschreibung des Algorithmus zur Bildglättung ohne das Verwischen wichtiger Strukturen.
+
+\subsection{Geometriebasierte NPR-Stilisierung}
+\label{subsec:040203_geometry_npr}
+Technische Erklärung der Außenlinien-Erzeugung durch das Aufblähen der Geometrie entlang ihrer Eckpunkte und das anschließende Ausblenden verdeckter Seiten.
+
+
+\section{Pipeline-Implementierungen und architektonische Restriktionen}
+\label{sec:0403_pipeline_implementations}
+
+Erklärung der drei gebauten Render-Wege und Beschreibung der jeweiligen technischen Grenzen für die spätere Auswertung.
+
+\subsection{Forward Rendering Pipeline}
+\label{subsec:040301_forward_pipeline}
+Umsetzung des klassischen Render-Wegs. Erklärung, warum sich globale Bildeffekte hier nicht ohne Weiteres für einzelne Objekte nutzen lassen. Aufzeigen von Hardware-Größenlimits beim Übertragen der Lichtdaten von der CPU.
+
+\subsection{Deferred-Uber Pipeline}
+\label{subsec:040302_deferred_uber_pipeline}
+Trennung von Geometrie und Schattierung über ein einfaches Vollbild-Viereck. Erklärung, warum bestimmte Filter zwingend erst ganz am Ende auf das fertige Bild angewendet werden können, und wie sich ein großer Shader negativ auf die parallele Ausführung auswirkt.
+
+\subsection{Deferred Light-Volume Pipeline}
+\label{subsec:040303_light_volume_pipeline}
+Nutzung von einfachen Hilfskörpern zur räumlichen Begrenzung des Lichts. Nachweis von Vorteilen bei der getrennten Berechnung von Effekten pro Objekt und Analyse von Fehlern bei weit entfernten oder sehr kleinen Objekten.
+
+
+\section{Telemetrie- und Orchestrator-Architektur}
+\label{sec:0404_telemetry_and_orchestrator}
+
+Beschreibung des Codes zur Steuerung des Programms und zur genauen Messung der Ausführungszeiten.
+
+\subsection{Der Render-Orchestrator}
+\label{subsec:040401_render_orchestrator}
+Zentraler Code-Teil zur Verwaltung des Programmablaufs und für das Umschalten zwischen den drei Render-Wegen während der Laufzeit.
+
+\subsection{Die Telemetrie-Infrastruktur}
+\label{subsec:040402_telemetry_infrastructure}
+Umsetzung von asynchronen API-Abfragen zur Zeitmessung auf der Grafikkarte, ohne das System künstlich auszubremsen. Architektur zur zusätzlichen Erfassung von Grafikspeicher-Auslastung und Befehls-Zählern.
+
+
+\section{Zusammenfassung}
+\label{sec:0405_summary}
+
+Kurzer Rückblick auf das gebaute System und Überleitung zur praktischen Überprüfung der genannten technischen Grenzen im nächsten Kapitel.
