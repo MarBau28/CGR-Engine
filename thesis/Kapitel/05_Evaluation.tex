@@ -102,7 +102,7 @@ CPU-seitige Code-Optimierung sowie den grundlegenden API-Overhead.
         \toprule
         \textbf{Hardware-Komponente}      & \textbf{Spezifikation / Wert}                      \\
         \midrule
-        Prozessor (CPU)                   & Intel Core i5-6600K @ 3.50\,GHz (4 logische Kerne) \\
+        Prozessor (CPU)                   & Intel Core i5-6600K @ 4\times~3.50\,GHz           \\
         Hauptspeicher (RAM)               & 16\,GB DDR4 (Dual-Channel) @ 3000\,MT/s            \\
         Grafikkarte (GPU)                 & NVIDIA GeForce GTX 1660                            \\
         GPU-Architektur                   & Turing (TU116)                                     \\
@@ -154,26 +154,26 @@ Tabelle~\ref{tab:independent_vars} fasst das Variablen-Mapping zusammen.
         \texttt{activeRenderPath}    & \textit{Enum}         & Alle Suiten         & Die primäre architektonische
         Variable.
         Rotiert durch Forward, Deferred-Uber und Deferred-Volume.\\
-        \texttt{currentLodIndex}     & 0 bis 4               & 5.1.1               & Skaliert den geometrischen
+        \texttt{currentLodIndex}     & 0 bis 4               & 5.2.1               & Skaliert den geometrischen
         Detailgrad pro Objekt.\\
-        \texttt{activeObstacleCount} & bis 50.000            & 5.1.2, 5.1.3, 5.3.3 & Anzahl der gerenderten Instanzen.
+        \texttt{activeObstacleCount} & bis 50.000            & 5.2.2, 5.2.3, 5.2.3 & Anzahl der gerenderten Instanzen.
         Forciert CPU-Overhead oder Z-Achsen-Overdraw-Dichte.\\
-        \texttt{renderResolution}    & 480p bis 4K           & 5.2.1               & Absolute Render-Auflösung zur
+        \texttt{renderResolution}    & 480p bis 4K           & 5.3.1               & Absolute Render-Auflösung zur
         Messung der Fill-Rate. \\
-        \texttt{renderFloor}         & \textit{Boolean}      & 5.2.2               & Erzeugt eine Basis-Bandbreitenlast
+        \texttt{renderFloor}         & \textit{Boolean}      & 5.3.2               & Erzeugt eine Basis-Bandbreitenlast
         (Max Fill-Rate) durch eine raumfüllende Geometrie.\\
-        \texttt{activeLightCount}    & 10 bis 5.000          & 5.3.1, 5.3.2.2      & Anzahl der aktiven dynamischen
+        \texttt{activeLightCount}    & 10 bis 5.000          & 5.4.1, 5.4.2.2      & Anzahl der aktiven dynamischen
         Lichter im Frustum.\\
-        \texttt{lightIntensity}      & 0,5 bis 20,0          & 5.3.2.1             & Multiplikator für den Lichtradius.
+        \texttt{lightIntensity}      & 0,5 bis 20,0          & 5.4.2.1             & Multiplikator für den Lichtradius.
         Forciert RMW-Speicher-Sättigung.\\
-        \texttt{useClusteredStyles}  & \textit{Boolean}      & 5.4.1               & Steuert die stilistische Entropie.
-        Schaltet zwischen geklusterter und gestreuter Verteilung um.\\
-        \texttt{enableGooch/Toon}    & 1 bis 3 Stile         & 5.4.2               & Stil-Kombinatorik.
+        \texttt{useClusteredStyles}  & \textit{Boolean}      & 5.5.1               & Steuert die stilistische Entropie.
+        Schaltet zwischen sortierter und gestreuter Verteilung von Effekten um.\\
+        \texttt{enableGooch/Toon}    & 1 bis 3 Stile         & 5.5.2               & Stil-Kombinatorik.
         Skaliert die Anzahl der gleichzeitig in einem Frame evaluierten Shading-Modelle.\\
-        \texttt{kuwaharaRadius}      & 2 bis 16              & 5.4.3               & Filtergröße für den
+        \texttt{kuwaharaRadius}      & 2 bis 16              & 5.5.3               & Filtergröße für den
         Kuwahara-Kernel.
         Dient der Sättigung der Textur-Bandbreite.\\
-        Feature Accumulation         & Pass 1 bis 4          & 5.5.x               & Kumulative Aktivierung von Geometrie, Basis-Shading und hoher Stil-Entropie über einen determinierten Kamerapfad. \\
+        Feature Accumulation         & Pass 1 bis 4          & 5.6               & Kumulative Aktivierung von Geometrie, Basis-Shading und hoher Stil-Entropie über einen determinierten Kamerapfad. \\
         \bottomrule
     \end{tabularx}
 \end{table}
@@ -183,9 +183,8 @@ Im direkten Gegenzug zu den manipulierten Parametern erfasst das Telemetrie-Modu
 quantitativer Messgrößen.
 Diese abhängigen Variablen bilden die empirische Datengrundlage der Evaluationen.
 Um die Leistung der Hardware- und Software-Ebenen isoliert beurteilen zu können, werden die Daten pro Frame aggregiert
-und zur späteren statistischen Auswertung in das
-CSV-Export-Modul exportiert.
-Tabelle~\ref{tab:dependent_vars} kategorisiert die extrahierten Leistungs- und Szenenmetriken.
+und zur späteren statistischen Auswertung in das tabellarisch aufgearbeitet.
+Tabelle~\ref{tab:dependent_vars} beschreibt die extrahierten Leistungs- und Szenenmetriken.
 Die GPU-Laufzeiten werden dabei über asynchrone Hardware-Queries ermittelt, um ein Blockieren der CPU-Pipeline zu
 verhindern.
 
@@ -208,7 +207,7 @@ verhindern.
         (Füllen des G-Buffers).
         Wird für Forward Pipeline nicht befüllt.\\
         \texttt{lightMs}          & GPU / Device       & Dauer des asynchronen Hardware-Queries für die Beleuchtung und
-        den NPR-Resolve.
+        den NPR-Effekte.
         Forward schreibt hier die kombinierte Last aus Geometrie und Beleuchtung, da Geometrie nicht isoliert werden
         kann.\\
         \texttt{totalGpuMs}       & GPU / Device       & Gesamte GPU-Ausführungszeit des Frames.                                                                 \\
@@ -224,14 +223,12 @@ verhindern.
     \end{tabularx}
 \end{table}
 
-% Einleitungstext zu den Kontrollvariablen
+% Einleitung Kontrollvariablen
 Den Abschluss des Variablen-Mappings bilden die Kontrollvariablen.
-Diese Systemparameter definieren die statische Baseline des Frameworks.
-Um statistischen Schwankungen zu vermeiden und eine reproduzierbare Ausgangslage für alle Messreihen zu garantieren,
-werden diese Werte strikt eingefroren, sofern die jeweilige Test-Suite sie nicht explizit als unabhängige Variable
-überschreibt.
-Tabelle~\ref{tab:controlled_vars} fasst die Standardkonfiguration der Orchestrierungs-, Rendering- und Physik-Module
-zusammen.
+Diese Parameter definieren die statische Baseline des Frameworks.
+Um reproduzierbare Ausgangslagen für alle Messreihen zu garantieren, sind diese Werte eingefroren, sofern die jeweilige
+Test-Suite sie nicht explizit als unabhängige Variable überschreibt.
+Tabelle~\ref{tab:controlled_vars} fasst die Standardkonfiguration der zusammen.
 Besonders kritisch für die Validität der Messungen ist die definierte Warm-up-Phase in Echtzeit.
 
 % Tabelle der Kontrollvariablen
@@ -263,20 +260,50 @@ Besonders kritisch für die Validität der Messungen ist die definierte Warm-up-
         & \texttt{kuwaharaRadius}            & 4\\
         & \texttt{kuwaharaIntensity}         & 4,0\\
         \midrule
-        Test-Orchestrierung     & \texttt{warmupDuration}            & 10,0~Sekunden (zur Sättigung der Caches)                \\
+        Test-Orchestrierung     & \texttt{warmupDuration}            & 10,0~Sekunden\\
         & \texttt{captureDuration}           & 1000 Frames\\
         \bottomrule
     \end{tabularx}
 \end{table}
 
+\FloatBarrier
+
+\subsection{{Versuchsablauf}}
+\label{subsec:050103_evaluateion_procedure}
+
+% Aufwärmphase.
+Vor der aktiven Datenaufzeichnung durchläuft das System eine obligatorische Warm-up-Phase von zehn Sekunden.
+Dieser Prozess dient dazu, die Hardware-Caches und Textur-Caches
+aufzubauen~\parencite[vgl.][Kap. 18.4, Abschn. \textit{Memory Issues}]{akenine-mollerRealtimeRendering2019}.
+Hierdurch werden inkonsistente Frametimes, die durch asynchrone Ladevorgänge, späte Speicherallokationen oder
+aufgeschobene Statusänderungen des Grafiktreibers in den ersten Frames
+entstehen~\parencite[vgl.][Kap. 18.4.2, Abschn. \textit{State Changes}]{akenine-mollerRealtimeRendering2019},
+für die Messung exkludiert.
+Beim Wechseln von Rendering-Pipelines oder beim Voranschreiten abhängiger Schritt-Variablen wird ebenfalls eine
+Warm-up-Pause von zehn Sekunden erzwungen.
 
 
+% Sampling.
+Nach der Warm-up-Phase startet die Sampling-Phase mit einer festgelegten Dauer von 1000 Frames.
+Die Kamera wird eingefroren (Ausnahme: Evaluation 5.6).
+Das Telemetrie-Modul fragt nun jede der definierten abhängigen Variablen pro Frame ab und akkumuliert die Rohdaten in
+dedizierten Arrays zur späteren Exportierung.
 
+% Datenaufbereitung.
+Die final präsentierten Graphen und Messergebnisse basieren auf arithmetischen Mittelwerten der Sampling-Phase.
+Zur Identifikation und Bereinigung unvorhersehbarer Micro-Stutterer (\textit{Frame-Rate Spikes}) wird die
+Standardabweichung der Frame-Zeiten
+berechnet~\parencite[vgl.][Abschn. 8.5.2.2]{gregoryGameEngineArchitecture2018}.
+Für jede Parameter-Konfiguration bildet die Menge der erfassten Frame-Metriken den initialen Datensatz $X$.
+Aus diesem werden gruppenbasiert der empirische Mittelwert $\mu$ sowie die Standardabweichung $\sigma$ berechnet.
+Ein individueller Messwert $x_i \in X$ wird ausschließlich dann in die finale Kurvengenerierung einbezogen, sofern die
+folgende Bedingung erfüllt ist:
 
+\begin{equation}
+    \mu - 3\sigma \le x_i \le \mu + 3\sigma
+\end{equation}
 
-
-
-
-
-
-
+Datenpunkte außerhalb dieses Intervalls klassifiziert der Algorithmus als statistische Ausreißer und verwirft diese für
+die finale Auswertung.
+Dieser Schritt garantiert, dass die später präsentierten Messdaten das rein architektonische und algorithmische
+Skalierungsverhalten der Rendering-Pipelines abbilden.
