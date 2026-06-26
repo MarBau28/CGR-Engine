@@ -1,34 +1,34 @@
 \chapter{Einführung}
 \label{ch:01_introduction}
 
-Die stilisierte Darstellung komplexer 3D-Szenen und einzelner Objekte mittels \textit{Non-Photorealistic Rendering}
-(NPR) ist in der modernen Computergrafik sowohl für technische als auch für unterhaltende Anwendungen von großer
+Die stilisierte Darstellung komplexer 3D-Szenen und einzelner Objekte mittels \ac{NPR} ist in der modernen Computergrafik sowohl für technische als auch für unterhaltende Anwendungen von großer
 Bedeutung.
 Eine gezielte Stilisierung erhöht die visuelle Lesbarkeit, lenkt den Fokus des Betrachters und ermöglicht künstlerische
 Abstraktionen.
 Insbesondere die industrielle Praxis und aufwendige Spieleproduktionen sehen sich jedoch mit der Notwendigkeit
 konfrontiert, stetig wachsende Datenmengen und Szenenkomplexitäten in Echtzeit bewältigen zu müssen.
-Um die resultierende Performance-Engpässe effizient zu handhaben, bedarf es hochskalierender Rendering-Architekturen.
-Die Gewährleistung dieser Skalierbarkeit erweist sich im Kontext der für NPR zwingend erforderlichen Stil-Heterogenität
+Um die resultierende Performance-Engpässe effizient zu handhaben, bedarf es hochskalierenrder Rendering-Architekturen.
+Die Gewährleistung dieser Skalierbarkeit erweist sich im Kontext der für \ac{NPR} zwingend erforderlichen Stil-Heterogenität
 jedoch als komplexe Problemstellung und offenbart einen fundamentalen Konflikt innerhalb etablierter
-Rendering-Paradigmen~\parencite[vgl.][Abschn. 1]{magdicsPostprocessingNPREffects2013}.
+Rendering-Paradigmen. \cite[Abschn.~1]{magdicsPostprocessingNPREffects2013}
 
 
 \section{Motivation \& Problemstellung}
 \label{sec:0101_motivation_and_problem}
 
 % Wirtschaftliche/Wissenschaftliche Relevanz von NPR.
-NPR-Effekte werden primär mit künstlerischen Umsetzungen und stilisierten Darstellungen in der Unterhaltungsindustrie,
-wie etwa in Videospielen oder Filmproduktionen, in Verbindung gebracht.
+\ac{NPR}-Effekte werden primär mit künstlerischen Umsetzungen und stilisierten Darstellungen in der
+Unterhaltungsindustrie, wie etwa in Videospielen oder Filmproduktionen, in Verbindung gebracht.
 Die gezielte Stilisierung ganzer Szenen oder einzelner Objekte zur Schaffung eines bestimmten künstlerischen Kontextes
-bildet hierbei einen der Hauptanwendungszwecke von modernem NPR. Darüber hinaus finden diese Techniken jedoch auch im
-Bereich von technischen Illustrationen, CAD-Anwendungen oder medizinischen Visualisierungen weitreichende Anwendung.
+bildet hierbei einen der Hauptanwendungszwecke von modernem \ac{NPR}.
+Darüber hinaus finden diese Techniken jedoch auch im Bereich von technischen Illustrationen, \ac{CAD}-Anwendungen oder
+medizinischen Visualisierungen weitreichende Anwendung.
 In diesen Fachbereichen erfüllt die Stilisierung oftmals den funktionalen Zweck, durch eine simplere oder abstraktere
 Darstellung die allgemeine Lesbarkeit der Szene zu erhöhen oder den Fokus gezielt auf kritische Daten und spezifische
 Elemente zu lenken.
-Eine derartige funktionale Hervorhebung durch Simplifizierung ist mit gängigem \textit{Physically Based Rendering} (PBR)
+Eine derartige funktionale Hervorhebung durch Simplifizierung ist mit gängigem \textit{\ac{PBR}} (PBR)
 in dieser Form oft nicht möglich, da rein fotorealistische Ansätze visuell häufig zu detailreich sind und den Blick auf
-das Wesentliche verstellen~\parencite[vgl.][Abschn. 1]{magdicsPostprocessingNPREffects2013}.
+das Wesentliche verstellen~\cite[Abschn.~1]{magdicsPostprocessingNPREffects2013}.
 
 % Status Quo Deferred Pipelines.
 Moderne Echtzeit-Rendering-Pipelines müssen enorme Mengen an 3D-Geometriedaten verarbeiten und simultan hochkomplexe
@@ -39,40 +39,40 @@ und so in aufwendigen Szenen drastische Performance-Einsparungen ermöglicht.
 Aufgrund dieses inhärenten Aufbaus weisen klassische Deferred-Pipelines jedoch einen starken architektonischen Nachteil
 auf, da sie die darstellbare Materialvielfalt stark limitieren.
 Infolge dieser technischen Restriktionen wurden Deferred-Paradigmen historisch primär für die Auswertung homogener,
-fotorealistischer Oberflächen (PBR) konzipiert und
-optimiert~\parencite[vgl.][Abschn. 1]{haradaForwardBringingDeferred2012}.
+fotorealistischer Oberflächen (\ac{PBR}) konzipiert und
+optimiert~\cite[Abschn.~1]{haradaForwardBringingDeferred2012}.
 
-% Verlust der Semantik vs. Granularität.
-Deferred Rendering projiziert die dreidimensionale Szenengeometrie in einen zweidimensionalen \textit{Geometry Buffer}
-(G-Buffer).
+% Verlust der Semantik vS.~Granularität.
+Deferred Rendering projiziert die dreidimensionale Szenengeometrie in einen zweidimensionalen \ac{G-Buffer}.
 Bei dieser Überführung in den \textit{Screen-Space} geht die geometrische Identität der Objekte, also semantische
 Informationen wie etwa die Zugehörigkeit zu einem spezifischen 3D-Modell, weitestgehend verloren.
 Stattdessen werden in klassischen Pipelines lediglich physikalische Oberflächendaten für standardisierte
-Lichtberechnungen (PBR), wie etwa Albedo, Normalen oder Rauheit, gespeichert.
-Viele NPR-Effekte erfordern für eine fehlerfreie Ausführung jedoch zwingend einen gewissen Grad an semantischen
+Lichtberechnungen (\ac{PBR}), wie etwa Albedo, Normalen oder Rauheit, gespeichert.
+Viele \ac{NPR}-Effekte erfordern für eine fehlerfreie Ausführung jedoch zwingend einen gewissen Grad an semantischen
 Informationen.
 Die Zuweisung verschiedener Zeichenstile wie \textit{Toon-Shading} oder die exakte Trennung überlappender
 Objekte durch Umrisslinien benötigen beispielsweise spezifische Material-Identifikatoren (\textit{Shading-Model-IDs}),
-oder Objekt-IDs. Diese Metadaten fehlen in einem klassischen, auf PBR-optimierten G-Buffer.
-Dieser Umstand führt dazu, dass NPR in Deferred-Architekturen häufig zu einem rein globalen Post-Processing-Filter über
-das gesamte Bild verkommt~\parencite[vgl.][Abschn. 1]{magdicsPostprocessingNPREffects2013}.
+oder Objekt-IDs.
+Diese Metadaten fehlen in einem klassischen, auf \ac{PBR}-optimierten \ac{G-Buffer}.
+Dieser Umstand führt dazu, dass \ac{NPR} in Deferred-Architekturen häufig zu einem rein globalen Post-Processing-Filter über
+das gesamte Bild verkommt~\cite[Abschn.~1]{magdicsPostprocessingNPREffects2013}.
 Eine granulare, selektive Stilisierung (z.B.\ Bauteil A als Skizze, Bauteil B massiv schattiert) wird dadurch extrem
 erschwert.
 Bei hoher stilistischer Vielfalt und sehr selektiven Anwendungsfällen wird daher oft auf klassisches
 \textit{Forward-Rendering} zurückgegriffen.
 Dieses erweist sich jedoch wiederum als stark ineffizient bei hoher
-Beleuchtungskomplexität~\parencite[vgl.][Abschn. 1]{haradaForwardBringingDeferred2012}.
+Beleuchtungskomplexität~\cite[Abschn.~1]{haradaForwardBringingDeferred2012}.
 
 % überleitung und Hardware-Restriktionen.
 Die Kombination aus massenhafter Geometrie, Beleuchtungskomplexität und stilistischer Vielfalt zwingt in der Praxis
 gängige Rendering-Paradigmen an ihre individuellen hardwaretechnischen Leistungsgrenzen.
 Dabei offenbart sich ein grundlegender architektonischer Konflikt: Pipelines leiden bei der Stilisierung vieler Objekte
 entweder unter massiven redundanten Zeichenoperationen bei überlappender
-Geometrie~\parencite[vgl.][Abschn. 1]{fatahalianReducingShadingGPUs2010}, oder die Auswertung der diversen Stildaten
+Geometrie~\cite[Abschn.~1]{fatahalianReducingShadingGPUs2010}, oder die Auswertung der diversen Stildaten
 überlastet die Speicher- und Rechenkapazitäten der
-Grafikhardware~\parencite[vgl.][Abschn. 6]{schiedDeferredAttributeInterpolation2015}.
+Grafikhardware~\cite[Abschn.~6]{schiedDeferredAttributeInterpolation2015}.
 Trotz der Relevanz dieses Problems mangelt es an systematischen, empirischen Erkenntnissen darüber, unter welchen
-genauen Bedingungen und Skalierungen diese spezifischen Leistungseinbrüche im Kontext des NPR auftreten.
+genauen Bedingungen und Skalierungen diese spezifischen Leistungseinbrüche im Kontext des \ac{NPR}auftreten.
 Aus dieser Notwendigkeit leitet sich die direkte Zielsetzung der vorliegenden Arbeit ab.
 
 
@@ -81,7 +81,7 @@ Aus dieser Notwendigkeit leitet sich die direkte Zielsetzung der vorliegenden Ar
 
 % Das primäre Ziel (WHAT & WHY).
 Das primäre Ziel dieser Arbeit ist die Durchführung einer holistischen, quantitativen Systemanalyse verschiedener
-Rendering-Architekturen im Kontext der selektiven Stilisierung (NPR), mit einem speziellen Fokus auf das in diesem
+Rendering-Architekturen im Kontext der selektiven Stilisierung bzw. \ac{NPR}, mit einem speziellen Fokus auf das in diesem
 Bereich oft vernachlässigte Deferred Rendering.
 Das angestrebte wissenschaftliche Resultat dieser Untersuchung ist die Erstellung einer empirisch hergeleiteten,
 heuristischen Entscheidungsmatrix zur Evaluation elementarer Rendering-Paradigmen.
@@ -117,7 +117,7 @@ Variablen der Geometrie, Beleuchtung und Stil-Entropie, ohne den Overhead propri
 
 % Thematische Eingrenzung.
 Die Implementierung und Evaluation komplexer Sondereffekte, wie etwa die Verarbeitung semitransparenter Geometrie oder
-hardwarebasiertes Anti-Aliasing (MSAA), sind nicht Teil dieser Untersuchung, da sie den Rahmen der grundlegenden
+hardwarebasiertes Anti-Aliasing (\ac{MSAA}), sind nicht Teil dieser Untersuchung, da sie den Rahmen der grundlegenden
 Architekturanalyse sprengen würden.
 Ebenso werden moderne, auf räumlicher Unterteilung basierende Lichtauswertungen, wie \textit{Clustered}- oder
 \textit{Forward+}-Rendering, bewusst exkludiert, um sich vollständig und isoliert auf das Basisverhalten der

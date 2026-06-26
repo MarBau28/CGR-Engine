@@ -34,54 +34,54 @@ void BenchmarkOrchestrator::Start(BenchmarkSuite suite) {
     // ---------------------------------------------------------------------------------------------
 
     switch (suite) {
-    case BenchmarkSuite::Suite_5_1_1_LodMicroGeom: {
+    case BenchmarkSuite::Suite_5_2_1_LodMicroGeom: {
         // Maps to currentLodIndex
         stepValues = {0.0f, 1.0f, 2.0f, 3.0f, 4.0f};
         break;
     }
-    case BenchmarkSuite::Suite_5_1_2_ObjectCount: {
+    case BenchmarkSuite::Suite_5_2_2_ObjectCount: {
         // Sweeping activeObstacleCount to saturate the CPU dispatcher
         stepValues = {1000.0f, 5000.0f, 10000.0f, 25000.0f, 50000.0f};
         break;
     }
-    case BenchmarkSuite::Suite_5_1_3_OverdrawDensity:
+    case BenchmarkSuite::Suite_5_2_3_OverdrawDensity:
         // Sweeping activeObstacleCount to force massive Z-axis stacking
         stepValues = {2000.0f, 4000.0f, 8000.0f, 16000.0f, 32000.0f};
         break;
-    case BenchmarkSuite::Suite_5_2_1_ResolutionScaling: {
+    case BenchmarkSuite::Suite_5_3_1_ResolutionScaling: {
         // 0 = 480p, 1 = 720p, 2 = 1080p, 3 = 2K, 4 = 4K
         stepValues = {0.0f, 1.0f, 2.0f, 3.0f, 4.0f};
         break;
     }
-    case BenchmarkSuite::Suite_5_2_2_BaseBandwidthTax: {
+    case BenchmarkSuite::Suite_5_3_2_BaseBandwidthTax: {
         // 0.0f = Floor Disabled (Zero Fill-Rate), 1.0f = Floor Enabled (Max Fill-Rate)
         stepValues = {0.0f, 1.0f};
         break;
     }
-    case BenchmarkSuite::Suite_5_3_1_LightCount: {
+    case BenchmarkSuite::Suite_5_4_1_LightCount: {
         // Sweeps activeLightCount.
         // Forward/Uber are capped at 500 per Test Definition. Volume scales to MAX_LIGHTS.
         stepValues = {10.0f, 50.0f, 100.0f, 250.0f, 500.0f, 1000.0f, 2500.0f, 5000.0f};
         break;
     }
-    case BenchmarkSuite::Suite_5_3_2_1_LightIntensity: {
+    case BenchmarkSuite::Suite_5_4_2_1_LightIntensity: {
         // Sweeping light intensity (radius multiplier) to force massive screen-space overdraw.
         // 0.5 = minimal overlap, 20.0 = extreme RMW memory bus saturation.
         stepValues = {0.5f, 1.0f, 2.0f, 5.0f, 10.0f, 20.0f};
         break;
     }
-    case BenchmarkSuite::Suite_5_3_2_2_LightSingularity: {
+    case BenchmarkSuite::Suite_5_4_2_2_LightSingularity: {
         // Sweeping light count, but all lights are forced to coordinate (0,0,0)
         // Forward/Uber capped at 500. Volume scales to 5000.
         stepValues = {10.0f, 50.0f, 100.0f, 250.0f, 500.0f, 1000.0f, 2500.0f, 5000.0f};
         break;
     }
-    case BenchmarkSuite::Suite_5_3_3_ShadingOverdraw: {
+    case BenchmarkSuite::Suite_5_4_3_ShadingOverdraw: {
         // Sweeping Instance Count to force massive Z-axis stacking (Overdraw)
         stepValues = {2000.0f, 4000.0f, 8000.0f, 16000.0f, 32000.0f};
         break;
     }
-    case BenchmarkSuite::Suite_5_4_1_SpatialEntropy: {
+    case BenchmarkSuite::Suite_5_5_1_SpatialEntropy: {
         // Step mapping defines Phase and Entropy states:
         // 0.0f = Phase 1 (No Kuwahara) | Clustered Styles (Low Entropy)
         // 1.0f = Phase 1 (No Kuwahara) | Scattered Styles (High Entropy)
@@ -90,7 +90,7 @@ void BenchmarkOrchestrator::Start(BenchmarkSuite suite) {
         stepValues = {0.0f, 1.0f, 2.0f, 3.0f};
         break;
     }
-    case BenchmarkSuite::Suite_5_4_2_StyleCombinatorics: {
+    case BenchmarkSuite::Suite_5_5_2_StyleCombinatorics: {
         // Step mapping defines the number of active styles in the high-entropy pool:
         // 0.0f = 1 Style  (100% Blinn)
         // 1.0f = 2 Styles (50% Blinn, 50% Gooch)
@@ -98,21 +98,21 @@ void BenchmarkOrchestrator::Start(BenchmarkSuite suite) {
         stepValues = {0.0f, 1.0f, 2.0f};
         break;
     }
-    case BenchmarkSuite::Suite_5_4_3_KernelBandwidth: {
+    case BenchmarkSuite::Suite_5_5_3_KernelBandwidth: {
         // Evaluate bandwidth scaling with kernel size:
         // Radius 2, 4, 8, 12, 16
         stepValues = {2.0f, 4.0f, 8.0f, 12.0f, 16.0f};
         break;
     }
-    case BenchmarkSuite::Suite_5_5_Pass1_GeometryBaseline:
-    case BenchmarkSuite::Suite_5_5_Pass2_ShadingTax:
-    case BenchmarkSuite::Suite_5_5_Pass3_ParityFlythrough: {
+    case BenchmarkSuite::Suite_5_6_Pass1_GeometryBaseline:
+    case BenchmarkSuite::Suite_5_6_Pass2_ShadingTax:
+    case BenchmarkSuite::Suite_5_6_Pass3_ParityFlythrough: {
         targetPipelines = {RenderPath::Forward, RenderPath::DeferredUber,
                            RenderPath::DeferredVolume};
         stepValues      = {0.0f}; // Single step, 1000 frames
         break;
     }
-    case BenchmarkSuite::Suite_5_5_Pass4_DeferredMaxFidelity: {
+    case BenchmarkSuite::Suite_5_6_Pass4_DeferredMaxFidelity: {
         targetPipelines = {RenderPath::DeferredUber, RenderPath::DeferredVolume};
         stepValues      = {0.0f};
         break;
@@ -172,7 +172,7 @@ void BenchmarkOrchestrator::ApplySuiteState() {
     // ---------------------------------------------------------------------------------------------
 
     switch (currentSuite) {
-    case BenchmarkSuite::Suite_5_1_1_LodMicroGeom: {
+    case BenchmarkSuite::Suite_5_2_1_LodMicroGeom: {
         // Independent Variable: LOD Index (maps stepValues to currentLodIndex)
         // Control Variables: Pure geometry baseline, isolated rendering without lighting
         currentState.activeObstacleCount = 2000;
@@ -186,7 +186,7 @@ void BenchmarkOrchestrator::ApplySuiteState() {
                                                Config::EngineSettings::CameraFOV);
         break;
     }
-    case BenchmarkSuite::Suite_5_1_2_ObjectCount: {
+    case BenchmarkSuite::Suite_5_2_2_ObjectCount: {
         // Independent Variable: Instance Count (saturating the CPU dispatcher)
         // Dynamic Variable: Expanding generation radius linearly with object count
         // Control Variables: Strictly isolate CPU overhead (12-triangle cubes, no floor)
@@ -203,7 +203,7 @@ void BenchmarkOrchestrator::ApplySuiteState() {
                                                Config::EngineSettings::CameraFOV);
         break;
     }
-    case BenchmarkSuite::Suite_5_1_3_OverdrawDensity: {
+    case BenchmarkSuite::Suite_5_2_3_OverdrawDensity: {
         // Independent Variable: Instance Count (forcing massive Z-axis stacking)
         // Control Variables: Fixed tight radius, moderate LOD to balance pixel coverage vs. vertex
         // cost
@@ -220,7 +220,7 @@ void BenchmarkOrchestrator::ApplySuiteState() {
                                                Config::EngineSettings::CameraFOV);
         break;
     }
-    case BenchmarkSuite::Suite_5_2_1_ResolutionScaling: {
+    case BenchmarkSuite::Suite_5_3_1_ResolutionScaling: {
         // Independent Variable: Absolute rendering resolution
         // Control Variables: Standard scene baseline (moderate geometry, baseline lighting)
         switch (static_cast<int>(stepValues[currentStepIndex])) {
@@ -261,7 +261,7 @@ void BenchmarkOrchestrator::ApplySuiteState() {
                                                Config::EngineSettings::CameraFOV);
         break;
     }
-    case BenchmarkSuite::Suite_5_2_2_BaseBandwidthTax: {
+    case BenchmarkSuite::Suite_5_3_2_BaseBandwidthTax: {
         // Independent Variable: Floor Enable State (0.0f = Zero Fill-Rate, 1.0f = Max Fill-Rate)
         // Control Variables: Isolate bandwidth (no geometry, maximum ambient strength)
         currentState.renderFloor = (stepValues[currentStepIndex] > 0.0f);
@@ -274,7 +274,7 @@ void BenchmarkOrchestrator::ApplySuiteState() {
                                                Config::EngineSettings::CameraFOV);
         break;
     }
-    case BenchmarkSuite::Suite_5_3_1_LightCount: {
+    case BenchmarkSuite::Suite_5_4_1_LightCount: {
         // Independent Variable: Active Light Count
         // Constraint: Enforce architectural caps based on Test Suite Definitions
         const int targetLights = static_cast<int>(stepValues[currentStepIndex]);
@@ -298,7 +298,7 @@ void BenchmarkOrchestrator::ApplySuiteState() {
                                                Config::EngineSettings::CameraFOV);
         break;
     }
-    case BenchmarkSuite::Suite_5_3_2_1_LightIntensity: {
+    case BenchmarkSuite::Suite_5_4_2_1_LightIntensity: {
         // Independent Variable: Light intensity multiplier (forcing screen-space overdraw)
         // Control Variables: Lock light count to 250
         currentState.lightIntensity = stepValues[currentStepIndex];
@@ -316,7 +316,7 @@ void BenchmarkOrchestrator::ApplySuiteState() {
                                                Config::EngineSettings::CameraFOV);
         break;
     }
-    case BenchmarkSuite::Suite_5_3_2_2_LightSingularity: {
+    case BenchmarkSuite::Suite_5_4_2_2_LightSingularity: {
         // Independent Variable: Active Light Count
         // Control Variables: Force all lights to spawn at the origin
         // Constraint: Enforce architectural caps based on Test Suite Definitions
@@ -341,7 +341,7 @@ void BenchmarkOrchestrator::ApplySuiteState() {
                                                Config::EngineSettings::CameraFOV);
         break;
     }
-    case BenchmarkSuite::Suite_5_3_3_ShadingOverdraw: {
+    case BenchmarkSuite::Suite_5_4_3_ShadingOverdraw: {
         // Independent Variable: Geometric Density
         // Control Variables: Force heavy depth complexity with a heavy lighting baseline
         currentState.activeObstacleCount = static_cast<int>(stepValues[currentStepIndex]);
@@ -359,7 +359,7 @@ void BenchmarkOrchestrator::ApplySuiteState() {
                                                Config::EngineSettings::CameraFOV);
         break;
     }
-    case BenchmarkSuite::Suite_5_4_1_SpatialEntropy: {
+    case BenchmarkSuite::Suite_5_5_1_SpatialEntropy: {
         // Independent Variable: Phase and Entropy mapping (0/2 = Clustered, 1/3 = Scattered)
         // Dynamic Condition: Phase 2 introduces extreme warp divergence via Kuwahara + Outlines
         // Constraint: Forward pipeline lacks Kuwahara; Advance the state machine
@@ -394,7 +394,7 @@ void BenchmarkOrchestrator::ApplySuiteState() {
                                                Config::EngineSettings::CameraFOV);
         break;
     }
-    case BenchmarkSuite::Suite_5_4_2_StyleCombinatorics: {
+    case BenchmarkSuite::Suite_5_5_2_StyleCombinatorics: {
         // Independent Variable: Active styles in the high-entropy pool (0=1 Style, 1=2 Styles, 2=3
         // Styles) Control Variables: Enforce heavy baseline established in 5.4.1
         const int step = static_cast<int>(stepValues[currentStepIndex]);
@@ -421,7 +421,7 @@ void BenchmarkOrchestrator::ApplySuiteState() {
                                                Config::EngineSettings::CameraFOV);
         break;
     }
-    case BenchmarkSuite::Suite_5_4_3_KernelBandwidth: {
+    case BenchmarkSuite::Suite_5_5_3_KernelBandwidth: {
         // Independent Variable: Kuwahara Kernel Radius
         // Control Variables: Force every object to use Kuwahara to saturate bandwidth
         // Constraint: Forward pipeline lacks Kuwahara; Advance the state machine
@@ -446,10 +446,10 @@ void BenchmarkOrchestrator::ApplySuiteState() {
                                                Config::EngineSettings::CameraFOV);
         break;
     }
-    case BenchmarkSuite::Suite_5_5_Pass1_GeometryBaseline:
-    case BenchmarkSuite::Suite_5_5_Pass2_ShadingTax:
-    case BenchmarkSuite::Suite_5_5_Pass3_ParityFlythrough:
-    case BenchmarkSuite::Suite_5_5_Pass4_DeferredMaxFidelity: {
+    case BenchmarkSuite::Suite_5_6_Pass1_GeometryBaseline:
+    case BenchmarkSuite::Suite_5_6_Pass2_ShadingTax:
+    case BenchmarkSuite::Suite_5_6_Pass3_ParityFlythrough:
+    case BenchmarkSuite::Suite_5_6_Pass4_DeferredMaxFidelity: {
         // Independent Variable: Cumulative rendering features per pass (0 to Max Fidelity)
         // Control Variables: Base scene state applies to all passes
         currentState.activeObstacleCount  = 15000;
@@ -462,25 +462,25 @@ void BenchmarkOrchestrator::ApplySuiteState() {
         useFrameLimit                     = true;
         targetFrameCount                  = 1000;
 
-        if (currentSuite == BenchmarkSuite::Suite_5_5_Pass1_GeometryBaseline) {
+        if (currentSuite == BenchmarkSuite::Suite_5_6_Pass1_GeometryBaseline) {
             currentState.activeLightCount = 0;
             currentState.enableGooch      = false;
             currentState.enableToon       = false;
             currentState.enableOutlines   = false;
             currentState.enableKuwahara   = false;
-        } else if (currentSuite == BenchmarkSuite::Suite_5_5_Pass2_ShadingTax) {
+        } else if (currentSuite == BenchmarkSuite::Suite_5_6_Pass2_ShadingTax) {
             currentState.activeLightCount = 250;
             currentState.enableGooch      = false;
             currentState.enableToon       = false;
             currentState.enableOutlines   = false;
             currentState.enableKuwahara   = false;
-        } else if (currentSuite == BenchmarkSuite::Suite_5_5_Pass3_ParityFlythrough) {
+        } else if (currentSuite == BenchmarkSuite::Suite_5_6_Pass3_ParityFlythrough) {
             currentState.activeLightCount = 250;
             currentState.enableGooch      = true;
             currentState.enableToon       = true;
             currentState.enableOutlines   = true;
             currentState.enableKuwahara   = false;
-        } else if (currentSuite == BenchmarkSuite::Suite_5_5_Pass4_DeferredMaxFidelity) {
+        } else if (currentSuite == BenchmarkSuite::Suite_5_6_Pass4_DeferredMaxFidelity) {
             currentState.activeLightCount = 250;
             currentState.enableGooch      = true;
             currentState.enableToon       = true;
@@ -651,8 +651,8 @@ const EngineState &BenchmarkOrchestrator::GetCurrentState() const { return curre
 
 void BenchmarkOrchestrator::InjectPerFrameState() const {
     if (currentPhase == BenchPhase::Capture &&
-        currentSuite >= BenchmarkSuite::Suite_5_5_Pass1_GeometryBaseline &&
-        currentSuite <= BenchmarkSuite::Suite_5_5_Pass4_DeferredMaxFidelity) {
+        currentSuite >= BenchmarkSuite::Suite_5_6_Pass1_GeometryBaseline &&
+        currentSuite <= BenchmarkSuite::Suite_5_6_Pass4_DeferredMaxFidelity) {
         // 't' maps strictly from 0.0 to 1.0 over the course of the benchmark
         const float t = static_cast<float>(frameCounter) / static_cast<float>(targetFrameCount);
 
@@ -678,37 +678,37 @@ void BenchmarkOrchestrator::InjectPerFrameState() const {
 
 std::string BenchmarkOrchestrator::GetSuiteName(const BenchmarkSuite suite) {
     switch (suite) {
-    case BenchmarkSuite::Suite_5_1_1_LodMicroGeom:
+    case BenchmarkSuite::Suite_5_2_1_LodMicroGeom:
         return "5-1-1-LodMicroGeom";
-    case BenchmarkSuite::Suite_5_1_2_ObjectCount:
+    case BenchmarkSuite::Suite_5_2_2_ObjectCount:
         return "5-1-2-ObjectCount";
-    case BenchmarkSuite::Suite_5_1_3_OverdrawDensity:
+    case BenchmarkSuite::Suite_5_2_3_OverdrawDensity:
         return "5-1-3-OverdrawDensity";
-    case BenchmarkSuite::Suite_5_2_1_ResolutionScaling:
+    case BenchmarkSuite::Suite_5_3_1_ResolutionScaling:
         return "5-2-1-ResolutionScaling";
-    case BenchmarkSuite::Suite_5_2_2_BaseBandwidthTax:
+    case BenchmarkSuite::Suite_5_3_2_BaseBandwidthTax:
         return "5-2-2-BaseBandwidthTax";
-    case BenchmarkSuite::Suite_5_3_1_LightCount:
+    case BenchmarkSuite::Suite_5_4_1_LightCount:
         return "5-3-1-LightCount";
-    case BenchmarkSuite::Suite_5_3_2_1_LightIntensity:
+    case BenchmarkSuite::Suite_5_4_2_1_LightIntensity:
         return "5-3-2-1-LightIntensity";
-    case BenchmarkSuite::Suite_5_3_2_2_LightSingularity:
+    case BenchmarkSuite::Suite_5_4_2_2_LightSingularity:
         return "5-3-2-2-LightSingularity";
-    case BenchmarkSuite::Suite_5_3_3_ShadingOverdraw:
+    case BenchmarkSuite::Suite_5_4_3_ShadingOverdraw:
         return "5-3-3-ShadingOverdraw";
-    case BenchmarkSuite::Suite_5_4_1_SpatialEntropy:
+    case BenchmarkSuite::Suite_5_5_1_SpatialEntropy:
         return "5-4-1-SpatialEntropy";
-    case BenchmarkSuite::Suite_5_4_2_StyleCombinatorics:
+    case BenchmarkSuite::Suite_5_5_2_StyleCombinatorics:
         return "5-4-2-StyleCombinatorics";
-    case BenchmarkSuite::Suite_5_4_3_KernelBandwidth:
+    case BenchmarkSuite::Suite_5_5_3_KernelBandwidth:
         return "5-4-3-KernelBandwidth";
-    case BenchmarkSuite::Suite_5_5_Pass1_GeometryBaseline:
+    case BenchmarkSuite::Suite_5_6_Pass1_GeometryBaseline:
         return "5-5-Pass1-GeometryBaseline";
-    case BenchmarkSuite::Suite_5_5_Pass2_ShadingTax:
+    case BenchmarkSuite::Suite_5_6_Pass2_ShadingTax:
         return "5-5-Pass2-ShadingTax";
-    case BenchmarkSuite::Suite_5_5_Pass3_ParityFlythrough:
+    case BenchmarkSuite::Suite_5_6_Pass3_ParityFlythrough:
         return "5-5-Pass3-ParityFlythrough";
-    case BenchmarkSuite::Suite_5_5_Pass4_DeferredMaxFidelity:
+    case BenchmarkSuite::Suite_5_6_Pass4_DeferredMaxFidelity:
         return "5-5-Pass4-DeferredMaxFidelity";
     default:
         return "Unknown-Suite";

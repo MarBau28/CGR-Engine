@@ -1,12 +1,12 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="LaTeX" type="LATEX_RUN_CONFIGURATION" factoryName="LaTeX configuration factory">
     <texify>
-      <compiler>PDFLATEX</compiler>
+      <compiler>LATEXMK</compiler>
       <compiler-path />
       <pdf-viewer>BUILT-IN-PDF-VIEWER</pdf-viewer>
       <require-focus>false</require-focus>
       <viewer-command />
-      <compiler-arguments />
+      <compiler-arguments>-pdf -outdir=build</compiler-arguments>
       <envs />
       <expand-macros-in-environment-variables>false</expand-macros-in-environment-variables>
       <before-run-command />
@@ -14,11 +14,11 @@
       <output-path>$PROJECT_DIR$/thesis/build</output-path>
       <auxil-path>{projectDir}/auxil</auxil-path>
       <working-directory>{mainFileParent}</working-directory>
-      <compile-twice>true</compile-twice>
+      <compile-twice>false</compile-twice>
       <output-format>PDF</output-format>
       <latex-distribution>TEXLIVE</latex-distribution>
       <has-been-run>true</has-been-run>
-      <bib-run-config>[BibTeX.main bibliography]</bib-run-config>
+      <bib-run-config>[]</bib-run-config>
       <makeindex-run-config>[]</makeindex-run-config>
     </texify>
     <method v="2" />

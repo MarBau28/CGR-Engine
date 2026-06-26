@@ -12,24 +12,22 @@
     captions=tableabove          % Korrigiert den Abstand über Tabellen
 ]{scrreprt}
 
-% --- Encoding & Sprache ---
-
+% --- System & Sprache ---
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{babel}
 \usepackage{csquotes}
 
 % --- Typografie & Layout ---
-
 \usepackage{newpxtext,newpxmath}
 \linespread{1.05}
 \usepackage{microtype}
 \usepackage[left=3cm,right=2.5cm,top=2.5cm,bottom=2.5cm]{geometry}
 \usepackage{setspace}
 \setstretch{1.15}
+\usepackage[default]{sourcesanspro}
 
 % --- Grafiken & Tabellen ---
-
 \usepackage{graphicx}
 \usepackage{float}
 \usepackage{scrhack}
@@ -37,13 +35,20 @@
 \usepackage{tabularx}
 \usepackage{placeins}
 \usepackage{etoolbox}
+
 \pretocmd{\section}{\FloatBarrier}{}{}
 \pretocmd{\subsection}{\FloatBarrier}{}{}
 
-% --- Code Listings (C++ & GLSL) ---
+% --- Externe PDFs einbinden ---
+\usepackage{pdfpages}
 
+% --- Abkürzungsverzeichnis ---
+\usepackage[printonlyused,withpage]{acronym}
+
+% --- Code Listings (C++ & GLSL) ---
 \usepackage{listings}
 \usepackage{xcolor}
+
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
 \definecolor{codepurple}{rgb}{0.58,0,0.82}
@@ -71,7 +76,6 @@
 }
 \lstset{style=engineStyle}
 
-% Spezifische GLSL Definition
 \lstdefinelanguage{GLSL}{
     morekeywords={attribute, const, uniform, varying, layout, centroid, flat, smooth, noperspective, break, continue,
     do, for, while, switch, case, default, if, else, in, out, inout, float, int, void, bool, true, false, invariant,
@@ -81,53 +85,75 @@
     morestring=[b]",
 }
 
-% --- Literaturverzeichnis (APA Style) ---
+% --- Literaturverzeichnis (IEEE) ---
+\usepackage[
+    backend=biber,
+    style=ieee,
+    maxcitenames=1,
+    mincitenames=1,
+    doi=true,
+    isbn=false
+]{biblatex}
 
-\usepackage[backend=biber,style=apa]{biblatex}
+\DefineBibliographyStrings{ngerman}{
+    presentedat = {präsentiert auf der\addspace},
+    andothers   = {et\addabbrvspace al\adddot}
+}
+
+\DeclareSourcemap{
+    \maps[datatype=bibtex]{
+        \map{
+            \step[fieldsource=doi,final]
+            \step[fieldset=url,null]
+            \step[fieldset=urldate,null]
+        }
+        \map{
+            \step[fieldset=pagetotal,null]
+        }
+    }
+}
+
+\AtEveryBibitem{
+    \iffieldundef{url}{
+        \clearfield{urlyear}
+        \clearfield{urlmonth}
+        \clearfield{urlday}
+    }{}
+}
+
 \addbibresource{Verzeichnisse/literatur.bib}
 
-% --- Hyperlinks ---
-
+% --- Hyperlinks (Immer zuletzt laden) ---
 \usepackage[hidelinks]{hyperref}
 
 
-% ==============================================================================
+% =====================================================================================================================
 
 
 \begin{document}
 
-    % Zone 1: Keine Seitenzahlen
+    % --- Zone 1: Keine Seitenzahlen ---
     \pagenumbering{gobble}
 
-% --- Deckblatt (Dummy) ---
+    % Erste Seite (Deckblatt)
+    \includepdf[pages={1}]{Verzeichnisse/Bachelor_Deckblatt_Abschlussarbeit.pdf}
 
-    \begin{titlepage}
-        Deckblatt Placeholder
-    \end{titlepage}
-
-% --- Eidesstattliche Erklärung (Dummy) ---
-
-
-    \chapter*{Eidesstattliche Erklärung}
-    Placeholder
+    % Zweite Seite (Eidesstattliche Erklärung)
+    \includepdf[pages={2}]{Verzeichnisse/Bachelor_Deckblatt_Abschlussarbeit.pdf}
 
     \clearpage
 
-    % Zone 2: Große römische Zahlen (I, II, III...)
+    % --- Zone 2: Große römische Zahlen (I, II, III...) ---
     \pagenumbering{Roman}
-
-% --- Abstract ---
 
 
     \chapter*{Kurzfassung}
-
     \addcontentsline{toc}{chapter}{Kurzfassung}
     Abstract Placeholder
 
     \clearpage
 
-% --- Inhaltsverzeichnis ---
-
+    % --- Verzeichnisse ---
     \tableofcontents
     \clearpage
     \listoffigures
@@ -136,11 +162,11 @@
     \clearpage
     \lstlistoflistings
     \clearpage
+    \input{Verzeichnisse/abkuerzungen}
+    \clearpage
 
-% ZONE 3: Arabische Zahlen (1, 2, 3...)
+    % --- Zone 3: Arabische Zahlen (1, 2, 3...) ---
     \pagenumbering{arabic}
-
-% --- Hauptteil ---
 
     % 3-5 Seiten (Final 4)
     \input{Kapitel/01_Einführung}
@@ -165,17 +191,15 @@
 
     \clearpage
 
-    % Zone 4: Kleine römische Zahlen (i, ii, iii...)
+    % --- Zone 4: Kleine römische Zahlen (i, ii, iii...) ---
     \setcounter{page}{1}
     \pagenumbering{roman}
 
-% --- Literatur & Anhang ---
-
+    % Literatur & Anhang
     \printbibliography
     \clearpage
 
     \appendix
-
-%    \input{Kapitel/09_Anhang}
+    % \input{Kapitel/09_Anhang}
 
 \end{document}

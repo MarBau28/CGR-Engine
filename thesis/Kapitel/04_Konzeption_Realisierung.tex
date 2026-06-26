@@ -1,13 +1,13 @@
 \chapter{Konzeption und Realisierung}
 \label{ch:04_konzeption_realisierung}
 
-Dieses Kapitel beschreibt den Aufbau und die technische Umsetzung des Test-Frameworks. Es zeigt die Struktur der Daten, die Grundlagen der Zeicheneffekte sowie die Umsetzung der drei Render-Wege und der Leistungsmessung.
+Dieses Kapitel beschreibt den Aufbau und die technische Umsetzung des Test-FrameworkS.~Es zeigt die Struktur der Daten, die Grundlagen der Zeicheneffekte sowie die Umsetzung der drei Render-Wege und der Leistungsmessung.
 
 
 \section{Konzeption der Systemarchitektur und G-Buffer-Topologie}
 \label{sec:0401_system_architecture_and_gbuffer}
 
-Übersicht über den Weg der Daten von der CPU zur Grafikkarte und die Aufteilung des Zwischenspeichers. Tabellarische Auflistung aller Puffer mit ihren genauen Texturformaten. Begründung für die Wahl einer höheren Speichergenauigkeit, um Bildfehler und Ungenauigkeiten beim Zusammenrechnen der Pixel zu verhindern.
+Übersicht über den Weg der Daten von der \ac{CPU} zur Grafikkarte und die Aufteilung des ZwischenspeicherS.~Tabellarische Auflistung aller Puffer mit ihren genauen Texturformaten. Begründung für die Wahl einer höheren Speichergenauigkeit, um Bildfehler und Ungenauigkeiten beim Zusammenrechnen der Pixel zu verhindern.
 
 
 \section{Mathematisch-Technische Spezifikation der NPR-Komponenten}
@@ -35,7 +35,7 @@ Erklärung der drei gebauten Render-Wege und Beschreibung der jeweiligen technis
 
 \subsection{Forward Rendering Pipeline}
 \label{subsec:040301_forward_pipeline}
-Umsetzung des klassischen Render-Wegs. Erklärung, warum sich globale Bildeffekte hier nicht ohne Weiteres für einzelne Objekte nutzen lassen. Aufzeigen von Hardware-Größenlimits beim Übertragen der Lichtdaten von der CPU.
+Umsetzung des klassischen Render-WegS.~Erklärung, warum sich globale Bildeffekte hier nicht ohne Weiteres für einzelne Objekte nutzen lassen. Aufzeigen von Hardware-Größenlimits beim Übertragen der Lichtdaten von der CPU.
 
 \subsection{Deferred-Uber Pipeline}
 \label{subsec:040302_deferred_uber_pipeline}
@@ -43,7 +43,7 @@ Trennung von Geometrie und Schattierung über ein einfaches Vollbild-Viereck. Er
 
 \subsection{Deferred Light-Volume Pipeline}
 \label{subsec:040303_light_volume_pipeline}
-Nutzung von einfachen Hilfskörpern zur räumlichen Begrenzung des Lichts. Nachweis von Vorteilen bei der getrennten Berechnung von Effekten pro Objekt und Analyse von Fehlern bei weit entfernten oder sehr kleinen Objekten.
+Nutzung von einfachen Hilfskörpern zur räumlichen Begrenzung des LichtS.~Nachweis von Vorteilen bei der getrennten Berechnung von Effekten pro Objekt und Analyse von Fehlern bei weit entfernten oder sehr kleinen Objekten.
 
 
 \section{Telemetrie- und Orchestrator-Architektur}
@@ -57,7 +57,7 @@ Zentraler Code-Teil zur Verwaltung des Programmablaufs und für das Umschalten z
 
 \subsection{Die Telemetrie-Infrastruktur}
 \label{subsec:040402_telemetry_infrastructure}
-Umsetzung von asynchronen API-Abfragen zur Zeitmessung auf der Grafikkarte, ohne das System künstlich auszubremsen. Architektur zur zusätzlichen Erfassung von Grafikspeicher-Auslastung und Befehls-Zählern.
+Umsetzung von asynchronen \ac{API}-Abfragen zur Zeitmessung auf der Grafikkarte, ohne das System künstlich auszubremsen. Architektur zur zusätzlichen Erfassung von Grafikspeicher-Auslastung und Befehls-Zählern.
 
 
 \section{Zusammenfassung}
