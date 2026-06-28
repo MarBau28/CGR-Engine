@@ -7,7 +7,7 @@ Eine gezielte Stilisierung erhöht die visuelle Lesbarkeit, lenkt den Fokus des 
 Abstraktionen.
 Insbesondere die industrielle Praxis und aufwendige Spieleproduktionen sehen sich jedoch mit der Notwendigkeit
 konfrontiert, stetig wachsende Datenmengen und Szenenkomplexitäten in Echtzeit bewältigen zu müssen.
-Um die resultierende Performance-Engpässe effizient zu handhaben, bedarf es hochskalierenrder Rendering-Architekturen.
+Die effiziente Bewältigung der resultierenden Performance-Engpässe erfordert hochskalierbare Rendering-Architekturen.
 Die Gewährleistung dieser Skalierbarkeit erweist sich im Kontext der für \ac{NPR} zwingend erforderlichen Stil-Heterogenität
 jedoch als komplexe Problemstellung und offenbart einen fundamentalen Konflikt innerhalb etablierter
 Rendering-Paradigmen. \cite[Abschn.~1]{magdicsPostprocessingNPREffects2013}
@@ -33,9 +33,9 @@ das Wesentliche verstellen~\cite[Abschn.~1]{magdicsPostprocessingNPREffects2013}
 % Status Quo Deferred Pipelines.
 Moderne Echtzeit-Rendering-Pipelines müssen enorme Mengen an 3D-Geometriedaten verarbeiten und simultan hochkomplexe
 Beleuchtungsszenarien aus zahlreichen Lichtquellen berechnen.
-Zur effizienten Bewältigung dieser Szenen- und Lichtkomplexität hat sich das \textit{Deferred Rendering} als ein
-beliebtes Architektur-Paradigma etabliert, da es die Geometrieverarbeitung strikt von der Lichtauswertung entkoppelt
-und so in aufwendigen Szenen drastische Performance-Einsparungen ermöglicht.
+Das \textit{Deferred Rendering} entkoppelt die Geometrieverarbeitung strikt von der Lichtauswertung und stellt ein
+etabliertes Architektur-Paradigma zur effizienten Bewältigung hoher Szenen- und Lichtkomplexität dar, da es in komplexen
+Szenarien eine drastische Reduzierung des Rechenaufwands ermöglicht.
 Aufgrund dieses inhärenten Aufbaus weisen klassische Deferred-Pipelines jedoch einen starken architektonischen Nachteil
 auf, da sie die darstellbare Materialvielfalt stark limitieren.
 Infolge dieser technischen Restriktionen wurden Deferred-Paradigmen historisch primär für die Auswertung homogener,
@@ -108,9 +108,9 @@ empirisch untersucht und beantwortet wird:
 \end{quote}
 
 % Methodik und Artefakt (HOW).
-Zur Beantwortung dieser architektonischen Fragestellungen bedarf es einer objektiven und kontrollierten Testumgebung.
-Zu diesem Zweck wird im praktischen Teil dieser Arbeit das C++/OpenGL-basierte Evaluations-Framework \textit{HyDra}
-(\textit{Hybrid Deferred Rendering Architecture}) als wissenschaftliches Artefakt konzipiert und umgesetzt.
+Das C++/OpenGL-basierte Evaluations-Framework \ac{HyDra} wird im Rahmen dieser Arbeit als wissenschaftliches Artefakt
+realisiert, um eine objektive und kontrollierte Testumgebung für die Beantwortung der architektonischen Fragestellungen
+bereitzustellen.
 Innerhalb dieses Frameworks werden die drei zuvor genannten Basis-Pipelines isoliert umgesetzt.
 Dieser methodische Aufbau ermöglicht die Generierung deterministischer Messreihen unter systematischer Skalierung der
 Variablen der Geometrie, Beleuchtung und Stil-Entropie, ohne den Overhead proprietärer Engine-Architekturen.
@@ -128,7 +128,8 @@ Architekturen unter dem Einfluss hoher Stil-Entropie zu fokussieren.
 \label{sec:0103_setup}
 
 % Aufbau.
-Um die formulierten Forschungsfragen methodisch zu beantworten, ist die vorliegende Arbeit wie folgt strukturiert:
+Die vorliegende Arbeit gliedert sich wie folgt, um eine systematische Beantwortung der Forschungsfragen zu
+gewährleisten:
 \textbf{Kapitel 2} vermittelt zunächst die architektonischen und hardwaretechnischen Grundlagen sowie relevante
 technische Begrifflichkeiten, die für das Verständnis der weiteren Untersuchungen erforderlich sind.
 \textbf{Kapitel 3} analysiert im Anschluss den aktuellen Stand der Forschung sowie der Industriepraxis und grenzt darauf

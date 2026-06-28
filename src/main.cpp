@@ -106,7 +106,7 @@ int main() {
         // Benchmark Boot Sequence
         if (triggerBenchmarkStart) {
             if (telemetryWriter.Initialize("hydra-benchmark-results.csv")) {
-                benchController.Start(BenchmarkSuite::Suite_5_6_Pass3_ParityFlythrough);
+                benchController.Start(BenchmarkSuite::Suite_5_5_1_1_SpatialEntropy);
             }
         }
 

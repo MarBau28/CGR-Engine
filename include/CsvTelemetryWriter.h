@@ -28,7 +28,6 @@ class CsvTelemetryWriter {
                    double lightMs, double totalGpuMs, double totalFrameMs, double fps,
                    int currentInstances, int currentTris, double currentOverdraw);
     void Close(const std::string &currentSuiteName) const;
-    void Close();
 
   private:
     std::string baseFilename;

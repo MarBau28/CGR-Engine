@@ -204,13 +204,7 @@ void main()
                         vec2 offset = vec2(float(x) * offsets[i].x, float(y) * offsets[i].y);
                         vec2 sampleUV = fragTexCoord + offset * texelSize;
 
-                        //// Sample the fully lit color + ambient for this pixel
-                        //vec3 sampledLit = texture(litSceneTex, sampleUV).rgb;
-                        //vec3 sampledAlbedo = texture(texture0, sampleUV).rgb;
-                        //vec3 sampledAmbient = sampledAlbedo * ambientLightStrength;
-                        //vec3 col = sampledLit + sampledAmbient;
-
-                        // Fetch neighbor's spatial and identity data (for outline beeding fix)
+                        // Fetch neighbor's spatial and identity data (for outline bleeding fix)
                         vec4 neighborNormalData = texture(gNormalTex, sampleUV);
                         int neighborStyleID = int(round(neighborNormalData.a * 255.0));
                         vec3 col;

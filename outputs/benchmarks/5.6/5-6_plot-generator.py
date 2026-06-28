@@ -48,35 +48,70 @@ def generate_5_6_plots(target_dir):
         agg3 = df3.groupby('Architecture', sort=False, observed=False)['TotalGpuMs'].mean()
 
     # ---------------------------------------------------------
-    # FIGURE 2: Line Chart (Flythrough Frame-Time Variance)
+    # FIGURE 1: Line Chart (Flythrough Frame-Time Variance - GM)
+    # ---------------------------------------------------------
+    if not df1.empty:
+        fig, ax = plt.subplots(figsize=(12, 6))
+        for arch in bu.ARCH_ORDER:
+            arch_data = df1[df1['Architecture'] == arch].sort_values('FrameNumber')
+            if not arch_data.empty:
+                color = bu.ARCH_COLOR_MAP[arch]
+                ax.plot(arch_data['FrameNumber'], arch_data['TotalFrameMs'], color=color, alpha=0.3, linewidth=1.0)
+                rolling = arch_data['TotalFrameMs'].rolling(window=90, center=True).mean()
+                ax.plot(arch_data['FrameNumber'], rolling, color=color, linewidth=2.5, label=arch)
+
+        ax.set_xlabel('Kamera-Flythrough (Frame-Index)')
+        ax.set_ylabel('Frame-Zeit (ms)')
+        bu.apply_strict_styling(ax, force_zero_y=True)
+        ax.legend(title='Rendering-Pipeline', loc='upper left', framealpha=0.8, facecolor='white', edgecolor='gray')
+        plt.tight_layout()
+        plt.savefig(os.path.join(target_dir, '5_6_flythrough_variance_geom.pdf'), format='pdf', bbox_inches='tight')
+        plt.close()
+        print("-> Graph 1 exportiert (5_6_flythrough_variance_geom.pdf)")
+
+    # ---------------------------------------------------------
+    # FIGURE 2: Line Chart (Flythrough Frame-Time Variance - LIGHT)
+    # ---------------------------------------------------------
+    if not df2.empty:
+        fig, ax = plt.subplots(figsize=(12, 6))
+        for arch in bu.ARCH_ORDER:
+            arch_data = df2[df2['Architecture'] == arch].sort_values('FrameNumber')
+            if not arch_data.empty:
+                color = bu.ARCH_COLOR_MAP[arch]
+                ax.plot(arch_data['FrameNumber'], arch_data['TotalFrameMs'], color=color, alpha=0.3, linewidth=1.0)
+                rolling = arch_data['TotalFrameMs'].rolling(window=90, center=True).mean()
+                ax.plot(arch_data['FrameNumber'], rolling, color=color, linewidth=2.5, label=arch)
+
+        ax.set_xlabel('Kamera-Flythrough (Frame-Index)')
+        ax.set_ylabel('Frame-Zeit (ms)')
+        bu.apply_strict_styling(ax, force_zero_y=True)
+        ax.legend(title='Rendering-Pipeline', loc='upper left', framealpha=0.8, facecolor='white', edgecolor='gray')
+        plt.tight_layout()
+        plt.savefig(os.path.join(target_dir, '5_6_flythrough_variance_light.pdf'), format='pdf', bbox_inches='tight')
+        plt.close()
+        print("-> Graph 2 exportiert (5_6_flythrough_variance_light.pdf)")
+
+    # ---------------------------------------------------------
+    # FIGURE 3: Line Chart (Flythrough Frame-Time Variance - NPR)
     # ---------------------------------------------------------
     if not df3.empty:
         fig, ax = plt.subplots(figsize=(12, 6))
-        
         for arch in bu.ARCH_ORDER:
             arch_data = df3[df3['Architecture'] == arch].sort_values('FrameNumber')
             if not arch_data.empty:
                 color = bu.ARCH_COLOR_MAP[arch]
-                
-                # Raw Data (Opacity 0.5)
-                ax.plot(arch_data['FrameNumber'], arch_data['TotalFrameMs'], 
-                        color=color, alpha=0.3, linewidth=1.0)
-                
-                # Rolling Average (Solid Line) - Angepasst auf 3000 Frames -> größeres Window (z.B. 90) für dieselbe relative Glättung
+                ax.plot(arch_data['FrameNumber'], arch_data['TotalFrameMs'], color=color, alpha=0.3, linewidth=1.0)
                 rolling = arch_data['TotalFrameMs'].rolling(window=90, center=True).mean()
-                ax.plot(arch_data['FrameNumber'], rolling, 
-                        color=color, linewidth=2.5, label=arch)
+                ax.plot(arch_data['FrameNumber'], rolling, color=color, linewidth=2.5, label=arch)
 
         ax.set_xlabel('Kamera-Flythrough (Frame-Index)')
         ax.set_ylabel('Frame-Zeit (ms)')
-        
         bu.apply_strict_styling(ax, force_zero_y=True)
-        ax.legend(title='Rendering-Pipeline', loc='upper right', framealpha=0.8, facecolor='white', edgecolor='gray')
-        
+        ax.legend(title='Rendering-Pipeline', loc='upper left', framealpha=0.8, facecolor='white', edgecolor='gray')
         plt.tight_layout()
-        plt.savefig(os.path.join(target_dir, '5_6_flythrough_variance.pdf'), format='pdf', bbox_inches='tight')
+        plt.savefig(os.path.join(target_dir, '5_6_flythrough_variance_npr.pdf'), format='pdf', bbox_inches='tight')
         plt.close()
-        print("-> Graph 2 exportiert (5_6_flythrough_variance.pdf)")
+        print("-> Graph 3 exportiert (5_6_flythrough_variance_npr.pdf)")
 
     # ---------------------------------------------------------
     # FIGURE 4: Combined Stacked Bar Chart (Cumulative GPU Tax)

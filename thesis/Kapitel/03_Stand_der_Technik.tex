@@ -86,8 +86,8 @@ Die moderne Rendering-Forschung weicht zur Umgehung dieser Performance-Limits of
 Wie~\textcite[S.~148]{magdicsPostprocessingNPREffects2013} beschreiben, ist diese Screen-Space-Verarbeitung zwar
 sehr effizient, löst jedoch den direkten Bezug zum individuellen 3D-Objekt auf, wodurch etwa die selektive Stilisierung
 stark erschwert wird.
-Um den räumlichen Kontext für das Post-Processing zurückzugewinnen, drängt sich die Nutzung von
-Deferred-Rendering-Architekturen auf.
+Die Nutzung von Deferred-Rendering-Architekturen ermöglicht die Rekonstruktion des räumlichen Kontextes im
+Post-Processing.
 Wie~\textcite[Abschn.~3.2]{Thaler2011DeferredRendering} anmerkt, basiert die Lösung dieses Problems auf einem
 zweistufigen Ansatz: Im ersten Schritt werden alle räumlichen 3D-Informationen (Tiefen, Normalen) im \ac{G-Buffer} gesammelt,
 um diese Metadaten im zweiten Schritt für globale, bildschirmbasierte \ac{NPR}-Effekte nutzbar zu machen.
@@ -105,8 +105,8 @@ Zusammenfassend lässt sich festhalten, dass die aktuelle Forschung zwar diverse
 Geometrie- und Beleuchtungskomplexität sowohl in Forward- als auch in Deferred-Architekturen bietet, die spezifische
 Schnittmenge mit selektivem \ac{NPR}in Deferred-Pipelines jedoch theoretischen Limitierungen
 unterliegt.
-Um zu evaluieren, ob und wie diese akademischen Hürden in der Praxis umgangen werden, ist im Folgenden ein genauerer
-Blick auf die angewandte Industriepraxis und moderner Game-Engines erforderlich.
+Die Analyse der angewandten Industriepraxis sowie der Architektur moderner Game-Engines zeigt auf, wie diese
+akademischen Hürden in der Praxis umgangen werden.
 
 
 \section{Rendering-Pipelines und Stilisierung in der Industriepraxis}
@@ -126,9 +126,10 @@ Stattdessen greifen Entwickler auf hoch spezialisierte, kompromissbehaftete Arch
 Stilisierungen innerhalb gegebener Hardware-Grenzen zu realisieren.
 
 % Ansatz A: G-Buffer Packing.
-Ein primärer Lösungsansatz hierfür ist das \textit{\ac{G-Buffer} Packing} in Kombination mit \enquote{Shading-Model-IDs}.
-Um die Speicherbandbreite zu limitieren, werden ungenutzte Datenkanäle klassischer Physically-Based-Rendering-Pipelines
-(\ac{PBR}) wiederverwendet oder redefiniert.
+Ein primärer Lösungsansatz hierfür ist das \textit{\ac{G-Buffer} Packing} in Kombination mit
+\enquote{Shading-Model-IDs}.
+Die Wiederverwendung oder Neudefinition von Datenkanälen, die für das klassische \ac{PBR} vorgesehen sind,
+reduziert den Bedarf an Speicherbandbreite.
 Ein exemplarisches Vorgehen zeigt das auf Toon-Rendering fokussierte Spiel \textit{Hi-Fi RUSH}: Hierbei werden regulär
 für \ac{PBR}-Daten vorgesehene \ac{G-Buffer}-Kanäle gezielt umgewidmet, um diese stattdessen mit spezifischen \ac{NPR}-Parametern und
 ID-Masken zu belegen (siehe Abbildung~\ref{fig:g-buffer_hifirush}).
@@ -156,9 +157,9 @@ Gesamteffizienz der Rendering-Pipeline bei hoher Szenen-Entropie auf der \ac{GPU
 signifikant~\cite[Abschn.~6]{schiedDeferredAttributeInterpolation2015}.
 
 % Ansatz B: Hybrid Rendering.
-Um die strukturellen Limitierungen des \ac{G-Buffer}s hinsichtlich Materialvielfalt zu adressieren, implementieren moderne
-Engines hybride Architekturen, welche eine grundlegende Deferred-Pipeline um einen nachgelagerten
-Forward-Pass erweitern.
+Moderne Engines implementieren hybride Architekturen, die eine grundlegende Deferred-Pipeline um einen nachgelagerten
+Forward-Pass erweitern, um den strukturellen Limitierungen des \ac{G-Buffer}s hinsichtlich der Materialvielfalt zu
+begegnen.
 Shading-Operationen, die hochkomplexe Materialbrechungen oder Transparenzen erfordern, werden in einem oder mehreren, an
 den Deferred-Pass anschließenden, Forward-Rendering-Schritten berechnet und im finalen Framebuffer
 kombiniert~\cite[S.~887]{akenine-mollerRealtimeRendering2019}.
@@ -176,8 +177,8 @@ durch die räumliche 3D-Cluster-Zuweisung performant skaliert~\cite{DOOM}.
 Eine weitere gängige Industriepraxis bildet das selektive Screen-Space Post-Processing.
 Hierbei wird die Stilisierung nicht auf Materialebene berechnet, sondern als bildbasierter 2D-Filter
 in der Nachbearbeitung angebracht~\cite[S.~661]{akenine-mollerRealtimeRendering2019}.
-Um bei solchen globalen Filtern dennoch eine selektive, objektbasierte Zuweisung zu erzwingen, greift die Industrie auf
-verfahren wie \textit{Stencil-Masking} zurück~\cite[S.~81]{AdvancesRealTimeRendering}.
+Die Industrie implementiert Verfahren wie das \textit{Stencil-Masking}, um bei globalen Filtern dennoch eine selektive,
+objektbasierte Zuweisung zu gewährleisten~\cite[S.~81]{AdvancesRealTimeRendering}.
 In klassischen Deferred-Pipelines ist der \textit{Stencil-Buffer} (\textit{Schablonenspeicher}) hardwareseitig meist
 direkt an den \textit{Depth-Buffer} (\textit{Tiefenpuffer}).
 gekoppelt~\cite[Folie~\enquote{\ac{G-Buffer}: Our approach}]{valientDeferredRenderingKillzone}.
@@ -223,9 +224,9 @@ insbesondere im Kontext der selektiven Stilisierung bei \ac{NPR}.
 Da eine vollumfängliche Analyse sämtlicher industriespezifischer Workarounds den Untersuchungsumfang dieser Arbeit
 überschreiten würde, adressiert die vorliegende Untersuchung die bestehende Forschungslücke durch eine empirische
 Rückbesinnung auf die architektonischen Fundamente.
-Zur Evaluation der systematischen Verschiebung von Performance-Engpässen werden primäre Rendering-Paradigmen
-verglichen: naives Forward Rendering, klassisches Deferred Shading mit \ac{G-Buffer}-Packing (mittels Style-IDs und
-Uber-Shader) sowie Deferred Light Volumes als Referenz für Multi-Pass-Architekturen.
+Die Evaluation der systematischen Verschiebung von Performance-Engpässen erfolgt über den Vergleich primärer
+Rendering-Paradigmen: naives Forward Rendering, simples Deferred Shading mit \textit{G-Buffer}-Packing über
+\textit{Style-IDs} und Uber-Shader sowie Deferred Light-Volumes als Referenz für Multi-Pass-Architekturen.
 Ziel ist die Erarbeitung einer empirischen Basis für eine fundierte Entscheidungsmatrix.
 
 % Die spezifische Forschungslücke (Granularität vs.~globales Post-Processing).
@@ -250,19 +251,17 @@ Der aktuellen Literatur mangelt es folglich an einer isolierten, komparativen un
 diese Engpässe spezifisch im Kontext des \ac{NPR}quantifiziert.
 
 % Abgrenzung und Negative-Scope.
-Um die Validität der empirischen Messungen zu gewährleisten, bedarf es einer strikten Limitierung des
-Untersuchungsraums.
+Die Gewährleistung valider empirischer Messungen erfordert eine strikte Limitierung des Untersuchungsraums.
 Komplexe Sondereffekte oder Optimierungen wie Transparenzen, moderne Clustered-Techniken oder Anti-Aliasing-Ansätze
 werden für diese fundamentale Basis-Analyse bewusst exkludiert.
 Der Fokus liegt isoliert auf der Wechselwirkung zwischen opaker Geometrie, dynamischer Beleuchtung und materialbasierter
 \ac{NPR}-Shader-Verarbeitung.
 
 % Lösungsansatz und Legitimation der vorliegenden Arbeit.
-Um die identifizierte Forschungslücke zu schließen, bedarf es eines isolierten Messinstruments, das die
-zugrundeliegenden Rendering-Architekturen anhand ihrer reinen Basis-Paradigmen, frei von proprietärem
-Engine-Overhead, evaluiert.
-Zu diesem Zweck wird im Rahmen der vorliegenden Arbeit das Evaluations-Framework \textit{HyDra} konzipiert und
-implementiert.
+Die Schließung dieser Forschungslücke erfordert ein isoliertes Messinstrument, das die zugrundeliegenden
+Rendering-Architekturen anhand ihrer reinen Basis-Paradigmen und frei von proprietärem Engine-Overhead evaluiert.
+Das im Rahmen der vorliegenden Arbeit entwickelte Evaluations-Framework \ac{HyDra} dient der methodischen Umsetzung
+dieses Vorhabens.
 Durch die Erhebung granularer Rohdaten unter skalierender Stil-Entropie und Szenenkomplexität soll eine heuristische
 Entscheidungsmatrix abgeleitet werden.
 Die technische Konzeption sowie die architektonischen Spezifika dieses Frameworks bilden den Schwerpunkt des

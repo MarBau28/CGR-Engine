@@ -72,7 +72,8 @@ void main()
     vec3 lightDir = normalize(lightVector);
 
     // Calculate Attenuation
-    float attenuation = 1.0 / (attenuationConstant + attenuationLinear * lightDistance + attenuationQuadratic * (lightDistance * lightDistance));
+    float attenuation = 1.0 / (attenuationConstant + attenuationLinear * lightDistance + attenuationQuadratic *
+    (lightDistance * lightDistance));
     float distanceRatio = lightDistance / maxLightRadius;
     float distanceRatioQuad = distanceRatio * distanceRatio * distanceRatio * distanceRatio;
     attenuation *= clamp(1.0 - distanceRatioQuad, 0.0, 1.0);

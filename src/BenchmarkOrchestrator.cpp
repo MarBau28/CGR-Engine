@@ -81,7 +81,7 @@ void BenchmarkOrchestrator::Start(BenchmarkSuite suite) {
         stepValues = {2000.0f, 4000.0f, 8000.0f, 16000.0f, 32000.0f};
         break;
     }
-    case BenchmarkSuite::Suite_5_5_1_SpatialEntropy: {
+    case BenchmarkSuite::Suite_5_5_1_1_SpatialEntropy: {
         // Step mapping defines Phase and Entropy states:
         // 0.0f = Phase 1 (No Kuwahara) | Clustered Styles (Low Entropy)
         // 1.0f = Phase 1 (No Kuwahara) | Scattered Styles (High Entropy)
@@ -90,7 +90,7 @@ void BenchmarkOrchestrator::Start(BenchmarkSuite suite) {
         stepValues = {0.0f, 1.0f, 2.0f, 3.0f};
         break;
     }
-    case BenchmarkSuite::Suite_5_5_2_StyleCombinatorics: {
+    case BenchmarkSuite::Suite_5_5_1_2_StyleCombinatorics: {
         // Step mapping defines the number of active styles in the high-entropy pool:
         // 0.0f = 1 Style  (100% Blinn)
         // 1.0f = 2 Styles (50% Blinn, 50% Gooch)
@@ -98,7 +98,7 @@ void BenchmarkOrchestrator::Start(BenchmarkSuite suite) {
         stepValues = {0.0f, 1.0f, 2.0f};
         break;
     }
-    case BenchmarkSuite::Suite_5_5_3_KernelBandwidth: {
+    case BenchmarkSuite::Suite_5_5_2_KernelBandwidth: {
         // Evaluate bandwidth scaling with kernel size:
         // Radius 2, 4, 8, 12, 16
         stepValues = {2.0f, 4.0f, 8.0f, 12.0f, 16.0f};
@@ -266,6 +266,8 @@ void BenchmarkOrchestrator::ApplySuiteState() {
         // Control Variables: Isolate bandwidth (no geometry, maximum ambient strength)
         currentState.renderFloor = (stepValues[currentStepIndex] > 0.0f);
 
+        currentState.renderWidth          = 3840;
+        currentState.renderHeight         = 2160;
         currentState.activeObstacleCount  = 0;
         currentState.ambientLightStrength = 1.00f;
 
@@ -359,7 +361,7 @@ void BenchmarkOrchestrator::ApplySuiteState() {
                                                Config::EngineSettings::CameraFOV);
         break;
     }
-    case BenchmarkSuite::Suite_5_5_1_SpatialEntropy: {
+    case BenchmarkSuite::Suite_5_5_1_1_SpatialEntropy: {
         // Independent Variable: Phase and Entropy mapping (0/2 = Clustered, 1/3 = Scattered)
         // Dynamic Condition: Phase 2 introduces extreme warp divergence via Kuwahara + Outlines
         // Constraint: Forward pipeline lacks Kuwahara; Advance the state machine
@@ -394,7 +396,7 @@ void BenchmarkOrchestrator::ApplySuiteState() {
                                                Config::EngineSettings::CameraFOV);
         break;
     }
-    case BenchmarkSuite::Suite_5_5_2_StyleCombinatorics: {
+    case BenchmarkSuite::Suite_5_5_1_2_StyleCombinatorics: {
         // Independent Variable: Active styles in the high-entropy pool (0=1 Style, 1=2 Styles, 2=3
         // Styles) Control Variables: Enforce heavy baseline established in 5.4.1
         const int step = static_cast<int>(stepValues[currentStepIndex]);
@@ -421,7 +423,7 @@ void BenchmarkOrchestrator::ApplySuiteState() {
                                                Config::EngineSettings::CameraFOV);
         break;
     }
-    case BenchmarkSuite::Suite_5_5_3_KernelBandwidth: {
+    case BenchmarkSuite::Suite_5_5_2_KernelBandwidth: {
         // Independent Variable: Kuwahara Kernel Radius
         // Control Variables: Force every object to use Kuwahara to saturate bandwidth
         // Constraint: Forward pipeline lacks Kuwahara; Advance the state machine
@@ -679,37 +681,37 @@ void BenchmarkOrchestrator::InjectPerFrameState() const {
 std::string BenchmarkOrchestrator::GetSuiteName(const BenchmarkSuite suite) {
     switch (suite) {
     case BenchmarkSuite::Suite_5_2_1_LodMicroGeom:
-        return "5-1-1-LodMicroGeom";
+        return "5-2-1-LodMicroGeom";
     case BenchmarkSuite::Suite_5_2_2_ObjectCount:
-        return "5-1-2-ObjectCount";
+        return "5-2-2-ObjectCount";
     case BenchmarkSuite::Suite_5_2_3_OverdrawDensity:
-        return "5-1-3-OverdrawDensity";
+        return "5-2-3-OverdrawDensity";
     case BenchmarkSuite::Suite_5_3_1_ResolutionScaling:
-        return "5-2-1-ResolutionScaling";
+        return "5-3-1-ResolutionScaling";
     case BenchmarkSuite::Suite_5_3_2_BaseBandwidthTax:
-        return "5-2-2-BaseBandwidthTax";
+        return "5-3-2-BaseBandwidthTax";
     case BenchmarkSuite::Suite_5_4_1_LightCount:
-        return "5-3-1-LightCount";
+        return "5-4-1-LightCount";
     case BenchmarkSuite::Suite_5_4_2_1_LightIntensity:
-        return "5-3-2-1-LightIntensity";
+        return "5-4-2-1-LightIntensity";
     case BenchmarkSuite::Suite_5_4_2_2_LightSingularity:
-        return "5-3-2-2-LightSingularity";
+        return "5-4-2-2-LightSingularity";
     case BenchmarkSuite::Suite_5_4_3_ShadingOverdraw:
-        return "5-3-3-ShadingOverdraw";
-    case BenchmarkSuite::Suite_5_5_1_SpatialEntropy:
-        return "5-4-1-SpatialEntropy";
-    case BenchmarkSuite::Suite_5_5_2_StyleCombinatorics:
-        return "5-4-2-StyleCombinatorics";
-    case BenchmarkSuite::Suite_5_5_3_KernelBandwidth:
-        return "5-4-3-KernelBandwidth";
+        return "5-4-3-ShadingOverdraw";
+    case BenchmarkSuite::Suite_5_5_1_1_SpatialEntropy:
+        return "5-5-1-1-SpatialEntropy";
+    case BenchmarkSuite::Suite_5_5_1_2_StyleCombinatorics:
+        return "5-5-1-2-StyleCombinatorics";
+    case BenchmarkSuite::Suite_5_5_2_KernelBandwidth:
+        return "5-5-2-KernelBandwidth";
     case BenchmarkSuite::Suite_5_6_Pass1_GeometryBaseline:
-        return "5-5-Pass1-GeometryBaseline";
+        return "5-6-Pass1-GeometryBaseline";
     case BenchmarkSuite::Suite_5_6_Pass2_ShadingTax:
-        return "5-5-Pass2-ShadingTax";
+        return "5-6-Pass2-ShadingTax";
     case BenchmarkSuite::Suite_5_6_Pass3_ParityFlythrough:
-        return "5-5-Pass3-ParityFlythrough";
+        return "5-6-Pass3-ParityFlythrough";
     case BenchmarkSuite::Suite_5_6_Pass4_DeferredMaxFidelity:
-        return "5-5-Pass4-DeferredMaxFidelity";
+        return "5-6-Pass4-DeferredMaxFidelity";
     default:
         return "Unknown-Suite";
     }
