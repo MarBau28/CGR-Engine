@@ -279,7 +279,9 @@ int main() {
             int goochInt = engineState.enableGooch ? 1 : 0;
             int toonInt  = engineState.enableToon ? 1 : 0;
 
-            // Pipeline Branch A: Deferred Shading (Single Uber-Shader)
+            // PIPELINE BRANCH A: DEFERRED-UBER
+            // -------------------------------------------------------------------------------------
+            
             if (engineState.activeRenderPath == RenderPath::DeferredUber) {
                 BeginTextureMode(ctx.litSceneTarget);
                 {
@@ -343,7 +345,9 @@ int main() {
                 }
                 EndTextureMode();
 
-                // Pipeline Branch B: Deferred Shading (Volumetric Light Rendering)
+                // PIPELINE BRANCH B: DEFERRED-VOLUMES
+                // ---------------------------------------------------------------------------------
+
             } else if (engineState.activeRenderPath == RenderPath::DeferredVolume) {
                 // Pass 1: Accumulate Lighting
                 BeginTextureMode(ctx.litSceneTarget);
@@ -447,7 +451,9 @@ int main() {
                 }
                 EndTextureMode();
 
-                // Pipeline Branch C: forward Shading (Baseline Evaluation)
+                // PIPELINE BRANCH C: FORWARD
+                // ---------------------------------------------------------------------------------
+
             } else if (engineState.activeRenderPath == RenderPath::Forward) {
                 rlEnableDepthTest();
                 rlEnableDepthMask();

@@ -293,3 +293,100 @@ Durch dieses Mapping stehen den nachgelagerten Deferred-Shadern sämtliche benö
 Verfügung.
 Dadurch kann die \ac{GPU} im Shading-Pass dynamisch und selektiv den korrekten \ac{NPR}-Algorithmus auswählen.
 
+
+\section{Pipeline-Architekturen und systematische Restriktionen}
+\label{sec:0402_pipelines_and_restrictions}
+
+% Einordnung
+In Kapitel~\ref{ch:02_grundlagen}, wurden die theoretischen Paradigmen der grundlegenden Rendering-Pipelines
+etabliert.
+In diesem Abschnitt werden die tatsächlichen architektonischen Restriktionen der implementierten Renderpfade innerhalb
+des \ac{HyDra}-Frameworks analysiert.
+Der Fokus liegt demnach nicht auf der grundlegenden Funktionsweise, sondern auf den spezifischen Modifikationen zur
+Integration selektiver Stilisierungsprozesse und den daraus resultierenden Hardware-Limitationen.
+Im Rahmen der vorliegenden Untersuchung erfolgt eine Analyse der absoluten Skalierungsgrenzen (Bottlenecks) und
+spezifischen visuellen Artefakte (Drawbacks) der jeweiligen Architekturen, um das theoretische Fundament für die
+quantitative Performance-Evaluation in Kapitel~\ref{ch:05_evaluation} zu legen.
+
+\subsection{Forward Rendering Pipeline}
+\label{subsec:040201_forward_pipeline}
+
+% Grundlagen der Verarbeitung.
+Die Implementierung der Forward-Pipeline innerhalb des \ac{HyDra}-Frameworks folgt grundsätzlich der klassischen
+Standardimplementierung, wie in Kapitel~\ref{ForwardExplanation} dargelegt.
+Die verwendete Forward-Pipeline stellt zudem den Basisansatz des naiven Forwards dar und wird entsprechen ohne
+zusätzliche Optimierungen wie einen Z-Prepass oder sonstige Varianten implementiert.
+
+% Stilisierung.
+Wie in Kapitel~\ref{subsec:040102_scene_management} dargelegt, erfolgt die selektive Stilisierung in der
+Forward-Pipeline unmittelbar während der Drawcalls der in Batches instanziierten und von der \ac{CPU}
+(dem \texttt{SceneManager}) aufbereiteten Geometrie-Arrays.
+Demzufolge wird jedem Objekt der entsprechende Fragment-Shader sowie der damit assoziierte \ac{NPR}-Stil direkt
+zugewiesen.
+
+Dieser Ansatz weist, vor allem in Hinblick auf die selektive Stilisierung, allerdings diverse Schwachstellen und
+Limitationen auf.
+Eine wesentliche Schwachstelle ist die grundlegende Begrenzung in Form von grundlegend vorherrschenden
+Uniform-Buffer-Limits.
+In der für das Framework gewählten Grafik-\ac{API} OpenGL 3.3 erfolgt die Übergabe der Lichtdaten-Arrays standardmäßig über
+\ac{UBO}s, um den \ac{CPU}-seitigen Overhead einzelner Uniform-Zuweisungen pro Lichtquelle zu
+minimieren~\cite[S.~798]{akenine-mollerRealtimeRendering2019}.
+Die maximale physische Speichergröße, die ein einzelner Uniform-Block umfassen darf, wird treiberseitig durch das
+hardwareabhängige Limit \texttt{GL\_MAX\_UNIFORM\_BLOCK\_SIZE} definiert.
+Während dieser Wert auf moderner Desktop-Hardware variiert, schreibt die OpenGL-3.3-Spezifikation herstellerübergreifend
+eine garantierte Mindestgröße von \texttt{16 KiB} vor~\cite[S.~321, Tab.~6.45]{OpenGL33Core2010}.
+
+Wird jede der Punktlichtquellen im Shader durch eine vereinfachte Struktur aus einer Positions- und einer
+Farb-/Intensitätskomponente mit einer Gesamtgröße von \texttt{32 Bytes} abgebildet, lässt sich die theoretisch maximale
+Lichtanzahl $N_{\text{Licht}}$ innerhalb des garantierten \ac{API}-Mindestlimits über folgende Relation bestimmen:
+\begin{equation}
+    N_{\text{Licht}} = \frac{\texttt{GL\_MAX\_UNIFORM\_BLOCK\_SIZE}}{\text{Größe pro Lichtquelle}} =
+    \frac{16.384\text{ Bytes}}{32\text{ Bytes}} = 512
+    \label{eq:ubo-limits}
+\end{equation}
+
+Auf Hardware-Ebene existiert diese Restriktion, weil Uniform-Daten in dedizierten, extrem schnellen On-Chip-Registern
+(Constant Registers) der \ac{GPU} gehalten werden müssen~\cite[S.~35]{akenine-mollerRealtimeRendering2019}.
+Dieses fundamentale \ac{API}-Limit begründet, warum die Single-Pass-Architekturen des Frameworks
+(Forward und Deferred-Uber) auf eine Kapazitätsgrenze von maximal 500 Punktlichtern beschränkt sind, um eine vollständige
+Plattformkompatibilität ohne Treiber-Abstürze zu gewährleisten.
+
+% Screen Space Limits.
+Eine weitere grundlegende Einschränkung der naiven Forward-Pipeline bezüglich selektiver Stilisierung ist, dass sich
+traditionelle Screen-Space- oder Post-Processing-Effekte wie ein Kuwahara-Filter oder Sobel-Outlines nicht selektiv bzw.
+partiell anwenden lassen.
+Für die Generierung dieser Effekte ist präzises Wissen bezüglich der finalen Szene sowie der Umgebungsgeometrie
+erforderlich~\cite[Abschn.~5]{magdicsPostprocessingNPREffects2013}.
+Im Rahmen des implementierten Forward-Renderings erfolgt die Anwendung der Shader direkt und isoliert auf die einzelnen
+Geometrien innerhalb der Draw-Calls, wodurch keine Umgebungsbezogenen Daten (semantische Objektidentität) des finalen
+Bildes während des Shadings auf der \ac{GPU} vorhanden sind.
+Eine selektive Realisierung solcher Effekte ist in Forward-Pipelines also schlichtweg nicht möglich.
+In Bezug auf den im \ac{HyDra}-Framework implementierten Effekt zur Darstellung von Konturen kann in der
+Forward-Pipeline, anstelle der in den Deferred-Pipelines verwendeten Sobel-Outlines (Screen-Space-Methode) das bedingt
+gleichwertige Inverted-Hull-Verfahren (Object-Space-Methode) zur Kantenzeichnung verwendet werden
+(siehe Abbildung~\ref{fig:040201_outline_comparison}).
+Diese nur äußerst bedingte visuelle Parität muss also für etwaige vergleichende Evaluationen berücksichtigt werden.
+
+% Abbildung aus Engine.
+\begin{figure}[htbp]
+    \centering
+    % Linkes Bild
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Abbildungen/IMG-20260711205352333}
+        \caption{Inverted-Hull in Forward}
+        \label{fig:hydra_inverted-hull}
+    \end{subfigure}
+    \hfill
+    % Rechtes Bild
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Abbildungen/IMG-20260711205459842}
+        \caption{Sobel-Outlines in Deferred}
+        \label{fig:hydra_solebl-outlines}
+    \end{subfigure}
+    \caption{Vergleich von Kontureffekten in Forward und Deferred mittels Inverted-Hull- und Sobel-Outline-Verfahren.}
+    \label{fig:040201_outline_comparison}
+\end{figure}
+
+
