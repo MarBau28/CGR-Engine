@@ -1,66 +1,295 @@
 \chapter{Konzeption und Realisierung}
 \label{ch:04_konzeption_realisierung}
 
-Dieses Kapitel beschreibt den Aufbau und die technische Umsetzung des Test-FrameworkS.~Es zeigt die Struktur der Daten, die Grundlagen der Zeicheneffekte sowie die Umsetzung der drei Render-Wege und der Leistungsmessung.
+Im folgenden Kapitel wird der Aufbau und die technische Umsetzung des in C++ und OpenGL
+implementierten Test-Frameworks \ac{HyDra} beschrieben.
+Es werden die Struktur der Daten, die Implementierungen der untersuchten Rendering-Pipelines, die Implementierungen der
+verwendeten \ac{NPR}-Effekte, die individuellen architektonischen Limitationen sowie die Umsetzung der
+Leistungsmessungskomponenten erläutert.
+Das implementierte Programm fungiert als Untersuchungs- und Messinstrument, das eine Sandbox-Umgebung bereitstellt, in
+der das Verhalten der verschiedenen Rendering-Pipelines erprobt werden kann.
+
+Der Aufbau des \ac{HyDra} Frameworks folgt im Wesentlichen den Kernparadigmen der maximalen Vergleichbarkeit und des
+Determinismus.
+Das Programm wurde so strukturiert, dass die drei Rendering-Pipelines unter identischen Bedingungen getestet werden
+können.
 
 
-\section{Konzeption der Systemarchitektur und G-Buffer-Topologie}
-\label{sec:0401_system_architecture_and_gbuffer}
+\section{Systemarchitektur und Lebenszyklus}
+\label{sec:0401_system_architecture_and_lifecycle}
 
-Übersicht über den Weg der Daten von der \ac{CPU} zur Grafikkarte und die Aufteilung des ZwischenspeicherS.~Tabellarische Auflistung aller Puffer mit ihren genauen Texturformaten. Begründung für die Wahl einer höheren Speichergenauigkeit, um Bildfehler und Ungenauigkeiten beim Zusammenrechnen der Pixel zu verhindern.
+Die Architektur des \ac{HyDra}-Frameworks ist durch die Entkopplung der logischen Szenenverwaltung (\ac{CPU}-Zustand)
+vom eigentlichen Rendering (\ac{GPU}-Dispatch) gekennzeichnet.
+Es wird garantiert, dass alle drei Rendering-Pipelines exakt denselben deterministischen Zustand als Eingabedaten
+erhalten.
+Ziel ist es, etwaigen individuellen \ac{CPU}-Overhead möglichst zu eliminieren.
+Für die Deferred-Pipelines wird zudem der Semantische G-Buffer aufbereitet, wofür im Rahmen der Szeneverwaltung
+zusätzlich die Vergabe von objektspezifischen \textit{Style-IDs} erfolgt.
+Ein weiterer Bestandteil dieser vorbereitenden \ac{CPU}-Logik ist das implementierte View-Frustum-Culling.
+Es fungiert als Filter, der die sichtbare Geometrie evaluiert, bevor die Grafikkarte involviert wird.
+
+\subsection{Frame-Lebenszyklus}
+\label{subsec:040101_frame_lifecycle}
+
+% Init
+Wie in Abbildung~\ref{fig:render_loop_swimlane} dargestellt, durchläuft das Framework vor dem Eintritt in die
+Haupt-Rendering-Schleife ein initiales Setup.
+Diese Phase erfüllt im Wesentlichen zwei architektonische Aufgaben: Zum einen die Speicherallokation (\ac{VRAM}) der
+benötigten \ac{FBO}s, des \ac{G-Buffer}s sowie der \ac{VAO}s und \ac{VBO}s.
+Zum Anderen das Laden, Kompilieren und Verlinken aller Shader-Programme inklusive des Uniform-Mappings.
+Die in dieser einmaligen Initialisierungsphase definierte Basiskonfiguration kann zur Laufzeit partiell rekonfiguriert
+werden (etwa durch dynamische Skalierung der Auflösung oder Anpassung der Bitrate der \ac{G-Buffer}-\ac{FBO}s).
+Der Kontrollfluss wird erst an die zyklische Ausführung des Main-Loops übergeben, wenn der initiale Aufbau des \ac{VRAM}
+und der Render-Pipelines vollständig abgeschlossen ist.
+
+% Sync.
+Am Anfang der Haupt-Rendering-Schleife werden die für die spätere Hardware-Performance-Evaluation relevanten Timer
+initialisiert.
+Gleichzeitig wird eine explizite Limitierung der Frame-Taktung (\texttt{AwaitCapacity()}) erzwungen, um zu verhindern,
+dass die \ac{CPU} der asynchronen \ac{GPU}-Abarbeitung zeitlich zu weit vorausläuft.
+Ein derartiger Rückstand der Grafikkarte würde die Latenz- und Profiler-Messungen andernfalls systematisch verfälschen.
+
+% Input.
+Im direkten Anschluss steuert ein dezidiertes \texttt{InputController}-Modul die Modifikation des Szenenzustands.
+Diese Komponente ermöglicht eine manuelle Interaktion zur Laufzeit, um spezifische Performance-Metriken, visuelle
+Artefakte oder systemische Limitierungen der einzelnen Pipelines interaktiv untersuchen zu können.
+
+% Culling & Upload.
+Vor der eigentlichen Datenübertragung an die \ac{GPU} wird die Geometrie einem \ac{CPU}-seitigen logischen Pass
+unterzogen.
+Ein \textit{View-Frustum-Culling} dient hierbei als Filter, um Geometrien, die sich außerhalb des
+sichtbaren Bereichs der Kamera befinden, von der weiteren Verarbeitung auszuschließen.
+Für die verbleibenden, sichtbaren Entitäten erfolgt anschließend der \ac{PCIe}-Speichertransfer
+(\texttt{rlUpdateVertexBuffer()}) der Modell-Transformationsmatrizen und Style-IDs.
+
+% Dispatch.
+Nachdem die Datenpräparation auf der \ac{CPU} abgeschlossen ist, wird die Ausführung der selektierten Rendering-Pipeline
+orchestriert.
+In dieser Phase (\textit{Render Dispatch}) werden die notwendigen Zustandsänderungen der \ac{API} vorgenommen und die
+instanziierten Draw-Calls an die \ac{GPU} übermittelt.
+Die Grafikhardware übernimmt daraufhin, asynchron zum Main-Thread, die Rasterisierung und Ausführung der definierten
+Shader-Logik.
+Die exakte Implementierung der Rendering-Pipelines wird in den nachfolgenden Kapiteln evaluiert.
+
+% Telemetry Drain.
+Den Abschluss eines Frame-Zyklus bildet die Präsentation des finalen Bildes auf dem Bildschirm.
+Zusätzlich werden die asynchronen Hardware-Timer der \ac{GPU} ausgelesen (\texttt{QueryOldestResult()}).
+Dieser \textit{Drain}-Prozess erfolgt explizit nicht-blockierend, um die fortlaufende Ausführung der \ac{GPU} für
+nachfolgende Messungen nicht durch künstliche \ac{CPU}-Stalls zu unterbrechen.
+Hierdurch wird gewährleistet, dass der tatsächliche Render-Overhead der Pipelines isoliert quantifizierbar bleibt.
+
+% Ablaufdiagramm: Frame Lebenszyklus
+\begin{figure}[htbp]
+    \centering
+    \resizebox{\textwidth}{!}{%
+        \begin{tikzpicture}[
+            >=Latex,
+            font=\sffamily,
+        % Styles für UML-Elemente
+            activity/.style={rectangle, draw=black, thick, rounded corners, inner sep=6pt, minimum width=4.8cm,
+            align=center, fill=white},
+            crosslane/.style={rectangle, draw=black, thick, rounded corners, inner sep=6pt, minimum width=5.0cm,
+            align=center, fill=gray!10},
+            branchact/.style={rectangle, draw=black, thick, rounded corners, inner sep=6pt, minimum width=3.0cm,
+            minimum height=1.2cm, text width=3.0cm, align=center, fill=white},
+            hwblock/.style={rectangle, draw=black, thick, rounded corners, inner sep=8pt, minimum width=6.0cm,
+            align=center, fill=gray!20},
+            end/.style={circle, draw=black, fill=white, minimum size=0.5cm, double=black, double distance=1.5pt},
+            edge/.style={->, thick, rounded corners=3pt},
+            dataedge/.style={->, thick, dashed, draw=blue!80!black, rounded corners=3pt}
+        ]
+            % Hintergrund
+            \draw[thick, dotted, gray] (-3.5, 3.0) -- (16.0, 3.0);
+            \node[anchor=south west, text=gray, font=\sffamily\bfseries] at (-3.5, 3.1) {Engine Initialisierung};
+
+            \draw[thick, dotted, gray] (-3.5, 0.2) -- (16.0, 0.2);
+            \node[anchor=south west, text=gray, font=\sffamily\bfseries] at (9.0, 0.3) {CPU-Logik \&
+            Haupt-Render-Schleife};
+
+            \draw[thick, dotted, gray] (-3.5, -8.7) -- (16.0, -8.7);
+            \node[anchor=south west, text=gray, font=\sffamily\bfseries] at (-3.5, -8.6) {GPU Pipeline Ausführung};
+
+            \draw[thick, dotted, gray] (-3.5, -17.2) -- (16.0, -17.2);
+            \node[anchor=south west, text=gray, font=\sffamily\bfseries] at (-3.5, -17.1) {Abschluss \& Telemetrie};
+
+            % Swimlanes und Header
+            \draw[thick, loosely dashed, gray] (7.0, 4.5) -- (7.0, -21.0);
+            \node[font=\bfseries\large, anchor=south] at (2.5, 3.8) {CPU};
+            \node[font=\bfseries\large, anchor=south] at (11.5, 3.8) {GPU};
 
 
-\section{Mathematisch-Technische Spezifikation der NPR-Komponenten}
-\label{sec:0402_npr_specification}
+            % Knoten Definitionen
+            % Phase 1
+            \node[activity] (init) at (2.5, 1.8) {Engine Setup \\ \texttt{RenderContext::Init()} \\
+            {\scriptsize (Shader \& FBO Allokation)}};
+            \node[activity] (sync) at (2.5, -1.2) {Zeitmessung \& Limitierung \\ \texttt{AwaitCapacity()} \\
+            {\scriptsize (Blockiert bei GPU-Rückstand)}};
+            \node[activity] (input) at (2.5, -3.2) {State-Injektion \\ \texttt{InputController}};
+            \node[activity] (culling) at (2.5, -5.2) {Logischer Szenen-Pass \\ \texttt{UpdateVisibility()} \\
+            {\scriptsize (Frustum-Culling \& Licht)}};
+            \node[crosslane] (upload) at (7.0, -7.2) {VBO Speicher-Transfer (PCIe) \\ \texttt{rlUpdateVertexBuffer()} \\
+            {\scriptsize (Szene-Objekte inkl. Style-IDs)}};
+            \node[activity] (dispatch) at (2.5, -9.7) {Render Dispatch \\ {\scriptsize (GPU-Kommandos absetzen)}};
+            \node[diamond, aspect=2.5, draw=black, thick, align=center, fill=white, inner sep=1pt] (routing) at
+            (11.5, -10.7) {Render-Pfad?};
+            \node[branchact] (fwd) at (8.3, -12.7) {Forward \\ Pipeline};
+            \node[branchact] (uber) at (11.5, -12.7) {Deferred-Uber \\ Pipeline};
+            \node[branchact] (vol) at (14.7, -12.7) {Deferred-Volume \\ Pipeline};
+            \coordinate (merge_point) at (11.5, -14.2);
+            \node[hwblock] (gpu_render) at (11.5, -15.7) {\textbf{Asynchrone Ausführung der Grafikpipelines} \\
+            {\scriptsize (Rasterisierung, G-Buffer \& Shader)}};
+            \node[activity] (present) at (11.5, -18.7) {Ausgabe des fertigen Frames \\ auf dem Bildschirm};
+            \node[activity] (drain) at (2.5, -18.7) {Telemetrie Drain \\ \texttt{QueryOldestResult()}};
 
-Beschreibung der einzelnen Zeicheneffekte unabhängig von den eigentlichen Render-Wegen, damit sich Erklärungen später nicht im Text wiederholen.
+            % Kontrollfluss
+            \draw[edge] (init) -- (sync);
+            \draw[edge] (sync) -- (input);
+            \draw[edge] (input) -- (culling);
+            \draw[edge] (culling.south) |- (upload.west);
+            \draw[edge] (upload.south) |- (dispatch.east);
+            \draw[edge] (dispatch.south) -- (drain.north);
+            \draw[edge] (drain.south) -- ++(0, -0.4) -| (-4.0, -1.2) -- (sync.west) node[pos=0.25, above=2pt,
+            font=\scriptsize\bfseries] {Nächster Frame};
+            \draw[edge] (routing.west) -| (fwd.north);
+            \draw[edge] (routing.south) -- (uber.north);
+            \draw[edge] (routing.east) -| (vol.north);
+            \draw[thick] (fwd.south) |- (merge_point);
+            \draw[thick] (vol.south) |- (merge_point);
+            \draw[thick] (uber.south) -- (merge_point);
+            \draw[edge] (merge_point) -- (gpu_render.north);
+            \draw[edge] (gpu_render.south) -- (present.north);
 
-\subsection{Lokale Shading-Modelle}
-\label{subsec:040201_local_shading_models}
-Erklärung von Toon-Shading für harte Farbstufen und von Gooch-Shading für technische Farbverläufe auf Objektoberflächen.
+            % Datenfluss
+            \draw[dataedge] (dispatch.east) -| (routing.north) node[pos=0.25, above=2pt, font=\scriptsize]
+                {Push Commands};
+            \draw[dataedge] (gpu_render.west) -- (7.0, -15.7) -- (7.0, -18.7) -- (drain.east) node[midway, below=2pt,
+            font=\scriptsize] {Timer (bereit)};
 
-\subsection{Filter- und Frequenzraum-Operationen}
-\label{subsec:040202_filter_operations}
-Erklärung von Rechenmatrizen zur Erkennung von Kanten im Tiefenbild und im Richtungsbild der Oberflächen. Beschreibung des Algorithmus zur Bildglättung ohne das Verwischen wichtiger Strukturen.
+        \end{tikzpicture}%
+    }
+    \caption[UML-Aktivitätsdiagramm des Frame-Lebenszyklus]{UML-Aktivitätsdiagramm des Frame-Lebenszyklus innerhalb des
+    HyDra-Frameworks.}
+    \label{fig:render_loop_swimlane}
+\end{figure}
 
-\subsection{Geometriebasierte NPR-Stilisierung}
-\label{subsec:040203_geometry_npr}
-Technische Erklärung der Außenlinien-Erzeugung durch das Aufblähen der Geometrie entlang ihrer Eckpunkte und das anschließende Ausblenden verdeckter Seiten.
+\subsection{Szeneverwaltung}
+\label{subsec:040102_scene_management}
 
+% Einleitung.
+Die inhaltliche Verwaltung der dargestellten Szene wird im \ac{HyDra}-Framework von einem dedizierten
+Szenenmanager-Modul (\texttt{SceneManager}) übernommen.
+Dieses verwaltet den deterministischen Aufbau der Geometrie, insbesondere die Punktlicht-Proxies und die beleuchteten
+Geometrien.
+Die Geometrien werden prozedural mithilfe eines festgelegten Seeds erstellt.
+Es wird sichergestellt, dass jeder Programmaufruf oder jede Änderung durch den Input-Controller zu vollständiger
+Szeneparität hinsichtlich der Geometrieverteilung unter den gegebenen Parametern Objektanzahl, Punktlichtanzahl,
+Lichtintensität und Objektdichte (Radius des Objektclusters) führt.
+Die Szeneparität zwischen Aufrufen und bei Laufzeit-Manipulationen ist während der Performancemessungen hinsichtlich der
+untersuchten (Stil-)Entropie, beispielsweise bezüglich der Style-ID-Verteilung oder Geometrieüberlappungen, von
+besonders großer Wichtigkeit.
 
-\section{Pipeline-Implementierungen und architektonische Restriktionen}
-\label{sec:0403_pipeline_implementations}
+% Datenhaltung.
+Die Datenhaltung der Szenegeometrien und Punktlicht-Proxies mitsamt ihrer assoziierten Style-IDs und
+Transformationsmatrizen erfolgt in Arrays, die mit der Maximalanzahl der erstellbaren Objekte vorallokiert wurden.
+Jeder Geometrie wird ein Index zugewiesen, anhand dessen für jedes Objekt drei Arrays für die Style-ID, die räumliche
+Position und die bereits vorab berechnete Transformationsmatrix gespeichert werden
+(\ac{SoA}-Muster)~\cite[S.~793]{akenine-mollerRealtimeRendering2019}.
 
-Erklärung der drei gebauten Render-Wege und Beschreibung der jeweiligen technischen Grenzen für die spätere Auswertung.
+% Entropie.
+Hervorzuheben ist hier die Logik bezüglich der Stilentropie-Steuerung, die zwischen gestreuten (hohe Entropie) und
+geordneten (niedrige Entropie) Verteilungen wechselt.
+Die Zuweisung der Stil-ID erfolgt in Listing ~\ref{lst:style_assignment}.
 
-\subsection{Forward Rendering Pipeline}
-\label{subsec:040301_forward_pipeline}
-Umsetzung des klassischen Render-WegS.~Erklärung, warum sich globale Bildeffekte hier nicht ohne Weiteres für einzelne Objekte nutzen lassen. Aufzeigen von Hardware-Größenlimits beim Übertragen der Lichtdaten von der CPU.
+% Entropie Listing.
+\begin{listing}[htbp]
+    \begin{minted}{cpp}
+float styleId;
+if (state.useClusteredStyles) {
+    float normAngle = std::fmod(angle, 2.0f * PI);
+    if (normAngle < 0.0f)
+        normAngle += 2.0f * PI;
+    // Divide the 2PI circle by the current number of active styles
+    const float slice = (2.0f * PI) / numStyles;
+    const int clusterIndex =
+        std::clamp(static_cast<int>(normAngle / slice), 0, static_cast<int>(numStyles - 1));
+    styleId = activeStyles[clusterIndex];
+} else {
+    // Distribute using the current pool size
+    styleId = activeStyles[i % static_cast<int>(numStyles)];
+}
+    \end{minted}
+    \caption{Berechnung der \texttt{styleId}-Verteilung basierend auf dem Cluster-Status.}
+    \label{lst:style_assignment}
+\end{listing}
 
-\subsection{Deferred-Uber Pipeline}
-\label{subsec:040302_deferred_uber_pipeline}
-Trennung von Geometrie und Schattierung über ein einfaches Vollbild-Viereck. Erklärung, warum bestimmte Filter zwingend erst ganz am Ende auf das fertige Bild angewendet werden können, und wie sich ein großer Shader negativ auf die parallele Ausführung auswirkt.
+% Culling-Mechanismus.
+Die Prüfung der Sichtbarkeit erfolgt mittels eines klassischen Schnitttests der Bounding-Spheres gegen die sechs Ebenen
+des Kamera-View-Frustums~\cite[S.~688, Abschn. \textit{Frustum Culling}]{gregoryGameEngineArchitecture2018}.
+Darüber hinaus wird die Größe (der Radius) der Light-Volume-Proxies für die Deferred-Volume-Pipeline durch die
+Lichtintensität beeinflusst~\cite[S.~891]{akenine-mollerRealtimeRendering2019}.
+Im Rahmen des View-Frustum-Cullings werden diese ebenfalls berücksichtigt, um die Darstellung von Lichtern, deren
+Wirkungsbereich vollständig außerhalb des Sichtfeldes liegt, zu vermeiden und somit keine unnötigen
+Beleuchtungsberechnungen für spätere Performance-Evaluationen zu verursachen.
 
-\subsection{Deferred Light-Volume Pipeline}
-\label{subsec:040303_light_volume_pipeline}
-Nutzung von einfachen Hilfskörpern zur räumlichen Begrenzung des LichtS.~Nachweis von Vorteilen bei der getrennten Berechnung von Effekten pro Objekt und Analyse von Fehlern bei weit entfernten oder sehr kleinen Objekten.
+% Forward Unterschied.
+Das Resultat des Szeneaufbaus ist abhängig von der gewählten Rendering-Pipeline.
+Während die Deferred-Pipelines die sichtbaren Instanzen als zusammenhängende, lineare Arrays für den Upload erhalten,
+erzwingt das Forward-Rendering eine Aufspaltung der Daten.
+Der SceneManager durchläuft hierfür eine Iteration über die Style-IDs der sichtbaren Objekte und ordnet diese in
+pipelinespezifische Queues (z.\ B.\ \texttt{fwdTransformsGooch}, \texttt{fwdTransformsToon}) an.
+Dieser Sortiervorgang auf der \ac{CPU} ist eine architektonische Notwendigkeit des Forward-Ansatzes, um
+kostenintensive Shader-State-Changes auf der \ac{GPU} zu
+bündeln~\cite[S.~795 u. S.~886]{akenine-mollerRealtimeRendering2019}.
 
+\subsection{Datenfluss der Stilisierung und G-Buffer Layout}
+\label{subsec:040103_g-buffer_layout}
 
-\section{Telemetrie- und Orchestrator-Architektur}
-\label{sec:0404_telemetry_and_orchestrator}
+% Style-Id Datenfluss.
+Für jedes Objekt werden Style-IDs definiert, die die verschiedenen verwendeten Shading-Effekte referenzieren.
+Die Definition dieser Style-IDs erfolgt über dynamische Vertex-Buffer (\ac{VAO}s und \ac{VBO}).
+Schließlich werden die Style-IDs als instanziierte Vertex-Attribute für jede Geometrie in den Vertex-Shader
+übertragen.
+Die Style-IDs werden nicht pro Vertex, sondern einmal pro Instanz im Vertex-Shader ausgelesen, um sie
+effizient an den Fragment-Shader weiterzureichen, der die \ac{G-Buffer}Textur
+erstellt~\cite[S.~797-798]{akenine-mollerRealtimeRendering2019}.
+In der Forward Pipeline erfolgt die Mitlieferung der Style-IDs pro verarbeiteter Geometrie direkt in den
+Shader-Aufrufen (Draw-Calls).
 
-Beschreibung des Codes zur Steuerung des Programms und zur genauen Messung der Ausführungszeiten.
+% G-buffer Layout.
+Wie in Tabelle~\ref{tab:gbuffer_layout} aufgezeigt wird für das \texttt{\ac{RT}0} (Albedo) ein 8-Bit-Format
+(\texttt{R8G8B8A8}) genutzt.
+Für den Normalen-Puffer (\texttt{\ac{RT}1}) wird hingegen ein 16-Bit-Format \texttt{R16G16B16A16} verwendet.
+Diese erhöhte Präzision ist eine architektonische Notwendigkeit, da geringere Bittiefen bei den nachfolgenden
+Screen-Space-Lichtberechnungen unzureichend sind~\cite[Folie~37]{AdvancesRealTimeRendering}.
+Die genauen visuellen Auswirkungen (Banding-Artefakte), die diesen Kompromiss zugunsten einer höheren Speicherbandbreite
+erzwingen, werden in der Evaluation der Deferred-Volume-Pipeline in Kapitel~\ref{subsec:040203} im Detail dargelegt.
 
-\subsection{Der Render-Orchestrator}
-\label{subsec:040401_render_orchestrator}
-Zentraler Code-Teil zur Verwaltung des Programmablaufs und für das Umschalten zwischen den drei Render-Wegen während der Laufzeit.
+\begin{table}[htbp]
+    \centering
+    \caption{Spezifikation des G-Buffer-Layouts im \ac{HyDra}-Framework.}
+    \label{tab:gbuffer_layout}
+    \small
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabularx}{\textwidth}{l | l X X X X}
+        \hline
+        \textbf{Render Target} & \textbf{Format} & \textbf{Kanal R} & \textbf{Kanal G} & \textbf{Kanal B} &
+        \textbf{Alpha} \\
+        \hline
+        \textit{RT0 (Albedo)}  & \texttt{R8G8B8A8}        & \texttt{BaseColor R}    & \texttt{BaseColor G}
+        & \texttt{BaseColor B}    & \texttt{BaseColor A}    \\
+        \textit{RT1 (Normal)}  & \texttt{R16G16B16A16}    & \texttt{World Normal X} & \texttt{World Normal Y}
+        & \texttt{World Normal Z} & \textbf{Style-ID}       \\
+        \textit{Depth}         & \texttt{8-Bit Grayscale} & \texttt{Linear Depth}   & \texttt{--}
+        & \texttt{--}             & \texttt{--}             \\
+        \hline
+    \end{tabularx}
+\end{table}
 
-\subsection{Die Telemetrie-Infrastruktur}
-\label{subsec:040402_telemetry_infrastructure}
-Umsetzung von asynchronen \ac{API}-Abfragen zur Zeitmessung auf der Grafikkarte, ohne das System künstlich auszubremsen. Architektur zur zusätzlichen Erfassung von Grafikspeicher-Auslastung und Befehls-Zählern.
+% Die Style-ID.
+Der semantische Kern der hybriden Stilisierung liegt in der Persistierung der durchgereichten Instanz-Metadaten.
+Wie in Tabelle ~\ref{tab:gbuffer_layout} ersichtlich, wird die komprimierte Style-ID in den ungenutzten Alpha-Kanal des
+Normalen-\ac{RT} encodiert.
+Durch dieses Mapping stehen den nachgelagerten Deferred-Shadern sämtliche benötigten Metadaten pro Fragment zur
+Verfügung.
+Dadurch kann die \ac{GPU} im Shading-Pass dynamisch und selektiv den korrekten \ac{NPR}-Algorithmus auswählen.
 
-
-\section{Zusammenfassung}
-\label{sec:0405_summary}
-
-Kurzer Rückblick auf das gebaute System und Überleitung zur praktischen Überprüfung der genannten technischen Grenzen im nächsten Kapitel.

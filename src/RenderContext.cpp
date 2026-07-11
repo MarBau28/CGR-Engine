@@ -1,4 +1,6 @@
 #include "../include/RenderContext.h"
+
+#include <array>
 #include <rlgl.h>
 #include <string>
 
@@ -130,7 +132,7 @@ void RenderContext::Initialize(const EngineState &engineState, const SceneManage
     instancedMaterial.maps[MATERIAL_MAP_ALBEDO].texture = obstacleTexture;
 
     // Load dynamic VBO for style IDs (Lights)
-    const std::vector instancedLightStyleIds(Config::EngineSettings::MAX_LIGHTS, 0.0f);
+    constexpr std::array<float, Config::EngineSettings::MAX_LIGHTS> instancedLightStyleIds{};
     lightStyleIdVboId = rlLoadVertexBuffer(
         instancedLightStyleIds.data(), Config::EngineSettings::MAX_LIGHTS * sizeof(float), false);
 

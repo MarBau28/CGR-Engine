@@ -6,7 +6,7 @@
       <pdf-viewer>BUILT-IN-PDF-VIEWER</pdf-viewer>
       <require-focus>false</require-focus>
       <viewer-command />
-      <compiler-arguments>-pdf -outdir=build</compiler-arguments>
+      <compiler-arguments>-pdf -outdir=build -shell-escape</compiler-arguments>
       <envs />
       <expand-macros-in-environment-variables>false</expand-macros-in-environment-variables>
       <before-run-command />

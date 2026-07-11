@@ -38,6 +38,15 @@
 \usepackage{placeins}
 \usepackage{etoolbox}
 
+\usepackage{tikz}
+\usetikzlibrary{
+    shapes.geometric, % Für die Rauten (Entscheidungen)
+    arrows.meta,      % Für moderne Pfeilspitzen
+    positioning,      % Für relative Platzierung (besser als absolute Koordinaten)
+    calc,             % Für Berechnungen von Abständen
+    chains            % Optional, falls Sie den Flow automatisch verketten wollen
+}
+
 \pretocmd{\section}{\FloatBarrier}{}{}
 \pretocmd{\subsection}{\FloatBarrier}{}{}
 
@@ -48,44 +57,24 @@
 \usepackage[printonlyused,withpage]{acronym}
 
 % --- Code Listings (C++ & GLSL) ---
-\usepackage{listings}
+\usepackage[outputdir=build]{minted}
 \usepackage{xcolor}
 
-\definecolor{codegreen}{rgb}{0,0.6,0}
-\definecolor{codegray}{rgb}{0.5,0.5,0.5}
-\definecolor{codepurple}{rgb}{0.58,0,0.82}
-\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
-
-\lstdefinestyle{engineStyle}{
-    backgroundcolor=\color{backcolour},
-    commentstyle=\color{codegreen},
-    keywordstyle=\color{blue}\bfseries,
-    numberstyle=\tiny\color{codegray},
-    stringstyle=\color{codepurple},
-    basicstyle=\ttfamily\footnotesize,
-    breakatwhitespace=false,
+% Theme
+\usemintedstyle{manni}
+\definecolor{pastelBg}{rgb}{0.96, 0.97, 0.98}
+\setminted{
+    fontsize=\footnotesize,
+    fontfamily=tt,
+    linenos=true,
+    numbersep=8pt,
     breaklines=true,
-    captionpos=b,
-    keepspaces=true,
-    numbers=left,
-    numbersep=5pt,
-    showspaces=false,
-    showstringspaces=false,
-    showtabs=false,
-    tabsize=2,
+    samepage=true,
     frame=leftline,
-    rulecolor=\color{black}
+    framerule=1.5pt,
+    framesep=3mm
 }
-\lstset{style=engineStyle}
-
-\lstdefinelanguage{GLSL}{
-    morekeywords={attribute, const, uniform, varying, layout, centroid, flat, smooth, noperspective, break, continue,
-    do, for, while, switch, case, default, if, else, in, out, inout, float, int, void, bool, true, false, invariant,
-    discard, return, mat2, mat3, mat4, vec2, vec3, vec4, ivec2, ivec3, ivec4, sampler2D},
-    morecomment=[l]{//},
-    morecomment=[s]{/*}{*/},
-    morestring=[b]",
-}
+\renewcommand{\theFancyVerbLine}{\ttfamily\tiny\color{gray!80}\arabic{FancyVerbLine}}
 
 % --- Literaturverzeichnis (IEEE) ---
 \usepackage[
@@ -162,7 +151,7 @@
     \clearpage
     \listoftables
     \clearpage
-    \lstlistoflistings
+    \listoflistings
     \clearpage
     \input{Verzeichnisse/abkuerzungen}
     \clearpage
@@ -182,7 +171,7 @@
     % 15-20 Seiten
     \input{Kapitel/04_Konzeption_Realisierung}
 
-    % 12-15 Seiten
+    % 12-15 Seiten (Final 25)
     \input{Kapitel/05_Evaluation}
 
     % 8-12 Seiten
