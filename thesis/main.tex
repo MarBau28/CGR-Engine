@@ -50,6 +50,14 @@
 \pretocmd{\section}{\FloatBarrier}{}{}
 \pretocmd{\subsection}{\FloatBarrier}{}{}
 
+\renewcommand{\topfraction}{0.9}        % Max. Anteil der Seite oben für Grafiken (Standard: 0.7)
+\renewcommand{\bottomfraction}{0.8}     % Max. Anteil der Seite unten für Grafiken (Standard: 0.3)
+\renewcommand{\textfraction}{0.07}      % Min. Anteil der Seite für Text (Standard: 0.2)
+\renewcommand{\floatpagefraction}{0.75} % Min. Füllgrad einer reinen Float-Seite (Standard: 0.5)
+\setcounter{topnumber}{4}               % Max. Anzahl Grafiken oben pro Seite
+\setcounter{bottomnumber}{4}            % Max. Anzahl Grafiken unten pro Seite
+\setcounter{totalnumber}{6}             % Max. Anzahl Grafiken pro Seite insgesamt
+
 % --- Externe PDFs einbinden ---
 \usepackage{pdfpages}
 
@@ -112,7 +120,7 @@
     }{}
 }
 
-\addbibresource{Verzeichnisse/literatur.bib}
+\addbibresource{verzeichnisse/literatur.bib}
 
 % --- Hyperlinks (Immer zuletzt laden) ---
 \usepackage[hidelinks]{hyperref}
@@ -127,10 +135,10 @@
     \pagenumbering{gobble}
 
     % Erste Seite (Deckblatt)
-    \includepdf[pages={1}]{Verzeichnisse/Bachelor_Deckblatt_Abschlussarbeit.pdf}
+    \includepdf[pages={1}]{sonstiges/Bachelor-Deckblatt-Abschlussarbeit.pdf}
 
     % Zweite Seite (Eidesstattliche Erklärung)
-    \includepdf[pages={2}]{Verzeichnisse/Bachelor_Deckblatt_Abschlussarbeit.pdf}
+    \includepdf[pages={2}]{sonstiges/Bachelor-Deckblatt-Abschlussarbeit.pdf}
 
     \clearpage
 
@@ -144,7 +152,7 @@
 
     \clearpage
 
-    % --- Verzeichnisse ---
+    % --- verzeichnisse ---
     \tableofcontents
     \clearpage
     \listoffigures
@@ -153,32 +161,32 @@
     \clearpage
     \listoflistings
     \clearpage
-    \input{Verzeichnisse/abkuerzungen}
+    \input{verzeichnisse/abkuerzungen}
     \clearpage
 
     % --- Zone 3: Arabische Zahlen (1, 2, 3...) ---
     \pagenumbering{arabic}
 
     % 3-5 Seiten (Final 4)
-    \input{Kapitel/01_Einführung}
+    \input{kapitel/01_Einführung}
 
     % 6-9 Seiten
-    \input{Kapitel/02_Grundlagen}
+    \input{kapitel/02_Grundlagen}
 
     % 5-8 Seiten (Final 6)
-    \input{Kapitel/03_Stand_der_Technik}
+    \input{kapitel/03_Stand_der_Technik}
 
     % 15-20 Seiten
-    \input{Kapitel/04_Konzeption_Realisierung}
+    \input{kapitel/04_Konzeption_Realisierung}
 
     % 12-15 Seiten (Final 25)
-    \input{Kapitel/05_Evaluation}
+    \input{kapitel/05_Evaluation}
 
     % 8-12 Seiten
-    \input{Kapitel/06_Diskussion}
+    \input{kapitel/06_Diskussion}
 
     % 2-3 Seiten
-    \input{Kapitel/07_Fazit_Ausblick}
+    \input{kapitel/07_Fazit_Ausblick}
 
     \clearpage
 
@@ -191,6 +199,6 @@
     \clearpage
 
     \appendix
-    % \input{Kapitel/09_Anhang}
+    % \input{kapitel/09_Anhang}
 
 \end{document}
