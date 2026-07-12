@@ -218,7 +218,8 @@ if (state.useClusteredStyles) {
     styleId = activeStyles[i % static_cast<int>(numStyles)];
 }
     \end{minted}
-    \caption{Berechnung der \texttt{styleId}-Verteilung basierend auf dem Cluster-Status.}
+    \caption{C++ Code zur Berechnung der \texttt{styleId}-Verteilung basierend auf dem Cluster-Status in
+    HyDra-Framework.}
     \label{lst:style_assignment}
 \end{listing}
 
@@ -266,8 +267,6 @@ erzwingen, werden in der Evaluation der Deferred-Volume-Pipeline in Kapitel~\ref
 
 \begin{table}[htbp]
     \centering
-    \caption{Spezifikation des G-Buffer-Layouts im \ac{HyDra}-Framework.}
-    \label{tab:gbuffer_layout}
     \small
     \renewcommand{\arraystretch}{1.3}
     \begin{tabularx}{\textwidth}{l | l X X X X}
@@ -283,6 +282,8 @@ erzwingen, werden in der Evaluation der Deferred-Volume-Pipeline in Kapitel~\ref
         & \texttt{--}             & \texttt{--}             \\
         \hline
     \end{tabularx}
+    \caption{Spezifikation des G-Buffer-Layouts im \ac{HyDra}-Framework.}
+    \label{tab:gbuffer_layout}
 \end{table}
 
 % Die Style-ID.
@@ -290,8 +291,7 @@ Der semantische Kern der hybriden Stilisierung liegt in der Persistierung der du
 Wie in Tabelle ~\ref{tab:gbuffer_layout} ersichtlich, wird die komprimierte Style-ID in den ungenutzten Alpha-Kanal des
 Normalen-\ac{RT} encodiert.
 Durch dieses Mapping stehen den nachgelagerten Deferred-Shadern sämtliche benötigten Metadaten pro Fragment zur
-Verfügung.
-Dadurch kann die \ac{GPU} im Shading-Pass dynamisch und selektiv den korrekten \ac{NPR}-Algorithmus auswählen.
+Verfügung und die \ac{GPU} kann im Shading dynamisch und selektiv den korrekten \ac{NPR}-Algorithmus auswählen.
 
 
 \section{Pipeline-Architekturen und systematische Restriktionen}
@@ -312,10 +312,11 @@ quantitative Performance-Evaluation in Kapitel~\ref{ch:05_evaluation} zu legen.
 \label{subsec:040201_forward_pipeline}
 
 % Grundlagen der Verarbeitung.
-Die Implementierung der Forward-Pipeline innerhalb des \ac{HyDra}-Frameworks folgt grundsätzlich der klassischen
-Standardimplementierung, wie in Kapitel~\ref{ForwardExplanation} dargelegt.
-Die verwendete Forward-Pipeline stellt zudem den Basisansatz des naiven Forwards dar und wird entsprechen ohne
-zusätzliche Optimierungen wie einen Z-Prepass oder sonstige Varianten implementiert.
+Die Umsetzung der Forward-Pipeline innerhalb des \ac{HyDra}-Frameworks folgt der klassischen
+Standardimplementierung, wie in Kapitel~\ref{ForwardExplanation} dargelegt und stellt eine vergleichende
+\textquote{Baseline} dar.
+Die Forward-Pipeline wird entsprechend ohne zusätzliche Optimierungen wie einen Z-Prepass oder anderweitige Variationen
+implementiert.
 
 % Stilisierung.
 Wie in Kapitel~\ref{subsec:040102_scene_management} dargelegt, erfolgt die selektive Stilisierung in der
@@ -324,10 +325,10 @@ Forward-Pipeline unmittelbar während der Drawcalls der in Batches instanziierte
 Demzufolge wird jedem Objekt der entsprechende Fragment-Shader sowie der damit assoziierte \ac{NPR}-Stil direkt
 zugewiesen.
 
+% Uniform Limits.
 Dieser Ansatz weist, vor allem in Hinblick auf die selektive Stilisierung, allerdings diverse Schwachstellen und
 Limitationen auf.
-Eine wesentliche Schwachstelle ist die grundlegende Begrenzung in Form von grundlegend vorherrschenden
-Uniform-Buffer-Limits.
+Eine wesentliche Schwachstelle ist die Begrenzung in Form von vorherrschenden Uniform-Buffer-Limits.
 In der für das Framework gewählten Grafik-\ac{API} OpenGL 3.3 erfolgt die Übergabe der Lichtdaten-Arrays standardmäßig über
 \ac{UBO}s, um den \ac{CPU}-seitigen Overhead einzelner Uniform-Zuweisungen pro Lichtquelle zu
 minimieren~\cite[S.~798]{akenine-mollerRealtimeRendering2019}.
@@ -360,12 +361,12 @@ erforderlich~\cite[Abschn.~5]{magdicsPostprocessingNPREffects2013}.
 Im Rahmen des implementierten Forward-Renderings erfolgt die Anwendung der Shader direkt und isoliert auf die einzelnen
 Geometrien innerhalb der Draw-Calls, wodurch keine Umgebungsbezogenen Daten (semantische Objektidentität) des finalen
 Bildes während des Shadings auf der \ac{GPU} vorhanden sind.
-Eine selektive Realisierung solcher Effekte ist in Forward-Pipelines also schlichtweg nicht möglich.
+Eine selektive Realisierung solcher Effekte ist in naiven Single-Pass Forward-Pipelines also nicht möglich.
 In Bezug auf den im \ac{HyDra}-Framework implementierten Effekt zur Darstellung von Konturen kann in der
 Forward-Pipeline, anstelle der in den Deferred-Pipelines verwendeten Sobel-Outlines (Screen-Space-Methode) das bedingt
 gleichwertige Inverted-Hull-Verfahren (Object-Space-Methode) zur Kantenzeichnung verwendet werden
 (siehe Abbildung~\ref{fig:040201_outline_comparison}).
-Diese nur äußerst bedingte visuelle Parität muss also für etwaige vergleichende Evaluationen berücksichtigt werden.
+Diese nur äußerst bedingte visuelle Parität muss für etwaige vergleichende Evaluationen berücksichtigt werden.
 
 % Abbildung aus Engine.
 \begin{figure}[htbp]
@@ -388,5 +389,215 @@ Diese nur äußerst bedingte visuelle Parität muss also für etwaige vergleiche
     \caption{Vergleich von Kontureffekten in Forward und Deferred mittels Inverted-Hull- und Sobel-Outline-Verfahren.}
     \label{fig:040201_outline_comparison}
 \end{figure}
+
+\subsection{Deferred-Uber Rendering Pipeline}
+\label{subsec:040201_deferred_uber_pipeline}
+
+% Einleitung und Aufbau
+Im \ac{HyDra}-Framework wird zur Referenz eines einfachen Deferred-Ansatzes eine Deferred-Pipeline in einer
+Single-Pass-Architektur (bezogen auf den Lighting-Pass) mittels Uber-Shader-Struktur implementiert
+(vergleiche ~\ref{Kapitel2Uber}).
+Dieser Ansatz wird gewählt, um Deferred Shading in seiner grundlegendsten Form, vergleichbar mit dem naiven
+Forward-Ansatz, zu untersuchen und die Einflüsse etwaiger Optimierungsverfahren möglichst gering zu halten.
+Deferred-Architekturen mit einem einzigen Lighting-Pass finden in der Praxis, ähnlich
+wie naive Forward-Ansätze, allerdings nur selten Anwendung (vergleiche Kapitel~\ref{sec:0301_academic_state}).
+
+% Uniform Limit.
+Aufgrund der Charakteristik des Deferred-Uber-Ansatzes, bei dem nur ein Lighting-Pass erfolgt, unterliegt auch diese
+Pipeline den in Kapitel ~\ref{subsec:040201_forward_pipeline} beschriebenen Restriktionen der Grafik-\ac{API} und
+Hardware in Bezug auf die Uniform-Buffer-Limits und ist somit durch eine Maximalanzahl von 500 gleichzeitigen
+Punktlichtquellen gekennzeichnet (vergleiche~\ref{eq:ubo-limits}).
+
+% Branching in Uber.
+Listing~\ref{lst:deferred_branching_structure} skizziert die Kontrollstruktur des monolithischen Uber-Shaders.
+Auf Hardware-Ebene zwingen diese \texttt{if-else}-Zweige die \ac{GPU} bei unterschiedlicher Fragment-Stilisierung in
+eine ineffiziente, sequenzielle Abarbeitung.
+Weisen benachbarte Fragmente innerhalb desselben Warps unterschiedliche \texttt{Style-IDs} auf, müssen alle betroffenen
+Code-Pfade nacheinander durchlaufen werden (Warp Divergence)~\cite[S.~32]{akenine-mollerRealtimeRendering2019}.
+Die performancetechnischen Auswirkungen werden in der empirischen Evaluation in Kapitel~\ref{ch:05_evaluation}
+(insbesondere in Abschnitt~\ref{subsec:050501_entropy_eval}) quantitativ untersucht.
+
+% Listing Uber-Shader
+\begin{listing}[htbp]
+    \begin{minted}{glsl}
+// Extract Normal and StyleID (Decode from 8-bit "Alpha"-channel)
+int styleID = int(round(normalData.a * 255.0));
+
+// Masking check (for light sources and sky box)
+if (styleID == 0) {
+    // ...
+    return;
+}
+
+if (styleID == 2) {
+    // GOOCH SHADING ...
+
+} else if (styleID == 3) {
+    // SELECTIVE SOBEL OUTLINING & TOON ...
+
+    if (isEdge) {
+        finalColor = vec4(0.0, 0.0, 0.0, 1.0);
+    } else {
+        // TOON SHADING ...
+    }
+
+} else if (styleID == 4) {
+    // KUWAHARA FILTER (Pre-Lit) ...
+
+} else {
+    // styleID == 1 or Fallback for Debug
+    useBlinnFallback = true;
+}
+
+// BASELINE BLINN-PHONG FALLBACK
+if (useBlinnFallback) {
+    // ...
+}
+    \end{minted}
+    \caption{GLSL-Pseudocode des Deferred-Uber Lighting-Passes im HyDra-Framework}
+    \label{lst:deferred_branching_structure}
+\end{listing}
+
+% Post Lit Zwang.
+Eine weitere Einschränkung der Deferred-Uber-Pipeline ist, dass bei der selektiven Darstellung klassischer
+Post-Process-Effekte (Bildraum-Filter), wie dem im \ac{HyDra}-Framework verwendeten Kuwahara-Filter, auf
+\textit{Pre-Lit}-Varianten der Effekte zurückgegriffen werden muss.
+Der Begriff Pre-Lit beschreibt die Anwendung des Bildraum-Filters auf die unbeleuchtete Geometrie, bevor die reguläre
+Beleuchtungsberechnung (Blinn-Phong) erfolgt.
+Da der Kuwahara-Filter für die Bestimmung von Mittelwert und Varianz die Farbinformationen der Nachbarpixel innerhalb
+eines definierten Radius benötigt, müsste für eine \textit{Post-Lit}-Variante (Filterung des fertig beleuchteten Bildes)
+das finale Beleuchtungsergebnis der gesamten Nachbarschaft vorliegen.
+In einem Single-Pass-Uber-Shader würde dies erfordern, die globale Lichtschleife für jedes einzelne Kernel-Sample
+redundant zu evaluieren.
+Bei einer hohen Anzahl an Lichtquellen führt dies zu einer kombinatorischen Explosion der algorithmischen Komplexität
+($\mathcal{O}(\text{Filter-Samples} \times \text{Lichtanzahl})$ pro Pixel), was eine
+Echtzeit-Ausführung ausschließt.
+Abbildung~\ref{fig:040202_pre-post-lit_comparison} zeigt den stilistischen Unterschied von Pre- udn Post-Lit verfahren
+im \ac{HyDra}-Framework anhand des implementierten Kuwahara-Filters.
+
+% Abbildung aus Engine.
+\begin{figure}[htbp]
+    \centering
+% Linkes Bild
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Abbildungen/hydra_capture_20260712_123807}
+        \caption{Pre-Lit Kuwahara in Deferred-Uber}
+        \label{fig:hydra_pre-lit}
+    \end{subfigure}
+    \hfill
+% Rechtes Bild
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Abbildungen/hydra_capture_20260712_123817}
+        \caption{Post-Lit Kuwahara in Deferred-Volume}
+        \label{fig:hydra_post-lit}
+    \end{subfigure}
+    \caption{Visueller Vergleich von Pre-Lit und Post-Lit Verfahren in HyDra mittels Kuwahara-Filter.}
+    \label{fig:040202_pre-post-lit_comparison}
+\end{figure}
+
+\subsection{Deferred-Volume Rendering Pipeline}
+\label{subsec:040203_deferred_volume_pipeline}
+
+% Einführung und Entscheidung.
+Zusätzlich zur Deferred-Uber-Pipeline wurde im \ac{HyDra}-Framework eine weitere Deferred-Pipeline implementiert, um die
+ebenfalls weit verbreiteten Multi-Pass-Rendering-Verfahren (bezogen auf den Lighting-Pass) zu repräsentieren und
+vergleichend heranzuziehen.
+Dieses Paradigma reflektiert den in der Praxis wesentlich verbreiteteren Ansatz in
+Deferred-Pipelines~\cite[Folie~5]{lauritzenDeferredRenderingCurrent}, ohne dabei auf fortgeschrittene
+Optimierungsverfahren zurückzugreifen.
+Zu diesem Zweck wird die Deferred-Volume-Pipeline implementiert.
+Deferred Rendering mit Light-Volumes zeichnet sich, wie in Kapitel~\ref{KapitelVolumes} dargelegt, durch das Zeichnen
+von Proxy-Geometrien (hier in Form einer Kugel) um die entsprechenden Punktlichtquellen aus.
+Der vorliegende Ansatz löst den in der Deferred-Uber-Pipeline verwendeten Uber-Shader in zwei ausgelagerte Pässe auf.
+Dies erfolgt, indem die Beleuchtungslogik in isolierte, iterative Draw-Calls verpackt wird.
+
+% Performance-Tease.
+Die Charakteristische-Last der Deferred-Volume-Pipeline zeigt sich hier in einem anderen Bereich und
+wird, durch das additive Blending der Light-Volumes, im Framebuffer in den \ac{ROP}s und in der \ac{VRAM}-Bandbreite
+verortet~\cite[Folie~9]{lauritzenDeferredRenderingCurrent}[S.~676]{gregoryGameEngineArchitecture2018}.
+Die genauen performancetechnischen Auswirkungen werden in der empirischen Evaluation in Kapitel~\ref{ch:05_evaluation}
+(insbesondere in Abschnitt~\ref{subsec:050402_light_intensity_and_overlap_eval}) quantitativ analysiert.
+
+% Banding.
+Ein signifikanter architektonischer Unterschied zwischen der monolithischen Deferred-Uber-Pipeline und der
+Deferred-Volume-Pipeline äußert sich in der Anfälligkeit für visuelle Quantisierungsartefakte (Color Banding) bei der
+Verwendung von Bildformaten mit niedriger Bit-Tiefe (8-Bit pro Kanal) innerhalb der \ac{G-Buffer}.
+In Ansätzen mit einem einzigen Lighting-Pass erfolgt die Akkumulation der Lichtbeiträge innerhalb einer Schleife auf
+Treiberebene in lokalen \ac{GPU}-Registern mit nativer
+32-Bit-Fließkommapräzision~\cite[Kap.~11.2.5.1, Abschn.~\textit{Shader Registers}]{gregoryGameEngineArchitecture2018}.
+Im Gegensatz dazu entkoppelt die Deferred-Volume-Pipeline die Lichtberechnung in diskrete Pässe, deren
+Ergebnisse mittels additiven Hardware-Blending (\textit{Blending Stage}) im Framebuffer aufsummiert werden.
+Wird hierbei ein 8-Bit-Puffer verwendet, unterliegt das Zwischenergebnis nach der Evaluierung jedes
+einzelnen Lichtvolumens einer fortlaufenden Quantisierung sowie einer harten Rundung auf den Wertebereich $[0, 1]$
+(\textit{Clamping})~\cite[Kap.~4.1.7]{OpenGL33Core2010}.
+Die wiederholte Rundung der Lichtbeiträge führt zu einer Akkumulation von Rundungsfehlern, die sich visuell
+als stufenförmige Banding-Artefakte darstellen (siehe Abbildung~\ref{fig:hydra_banding_comparison}).
+Diese Artefakte sind besonders in künstlerischen und abstrahierenden Effekten, wei sie im \ac{NPR} anwendung finden
+von Signifikanz (siehe Abbildung~\ref{fig:hydra_clamping_comparison}).
+Die Deferred-Volume-Pipeline ist folglich zwingend auf \ac{HDR} mit mindestens 16-Bit-Fließkommapräzision zur
+Kompensation dieses Präzisionsverlusts und Vermeidung von Farbsättigung (\textit{Clamping}) angewiesen.
+Dieser Umstand erhöht die \ac{VRAM}-Belastung Deferred-Volume-Pipelines im Vergeblich zu den anderen Pipelines.
+
+% Quantisierungsartefakte (Color Banding)
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Abbildungen/hydra_capture_20260430_153519}
+        \caption{16-Bit Fließkommapräzision (HDR)}
+        \label{fig:hydra_volume_hdr_gradient}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Abbildungen/hydra_capture_20260430_153528}
+        \caption{8-Bit Fixpunktpräzision (LDR)}
+        \label{fig:hydra_volume_ldr_banding}
+    \end{subfigure}
+    \caption{Visueller Vergleich der Lichtakkumulation zur Isolation von Quantisierungsartefakten in
+    Deferred-Volume-Pipeline in HyDra-Framework.}
+    \label{fig:hydra_banding_comparison}
+\end{figure}
+
+% Sättigungsartefakte (Clamping)
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Abbildungen/hydra_capture_20260430_151409}
+        \caption{Verlustfreie Akkumulation (16-Bit HDR)}
+        \label{fig:hydra_kuwahara_hdr_correct}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Abbildungen/hydra_capture_20260430_151418}
+        \caption{Farbclamping und Posterisierung (8-Bit LDR)}
+        \label{fig:hydra_kuwahara_ldr_clamping}
+    \end{subfigure}
+    \caption{Auswirkung des Framebuffer-Präzisionsformats auf die Integrität des Kuwahara-Filters in
+    Deferred-Volume-Pipeline in HyDra-Framework.}
+    \label{fig:hydra_clamping_comparison}
+\end{figure}
+
+% Post-Lit Vorteil
+Im Gegensatz zur Deferred-Uber-Architektur bietet die Deferred-Volume-Architektur den Vorteil, dass Bildraumeffekte ohne
+den Zwang, Pre-Lit-Verfahren anzuwenden, mit Post-Lit-Verfahren erzielt werden können
+(vergleiche Abbildung~\ref{fig:040202_pre-post-lit_comparison}).
+Für die spätere Performance-Analyse (siehe Kapitel~\ref{ch:05_evaluation}) ist jedoch zu bemerken, dass diese
+Post-Lit-Evaluierungen mit einem leicht erhöhten algorithmischen Aufwand verbunden sind.
+Dieser begründet sich im Resolve-Pass der Deferred-Volume-Pipeline durch die multiplen Texturzugriffe pro Kernel-Sample
+(simultanes Abfragen von G-Buffer-Identitätsdaten und dem akkumulierten Lichtpuffer).
+
+
+%\begin{figure}[htbp]
+%    \centering
+%    \includegraphics[width=\textwidth]{Abbildungen/hydra_capture_20260524_103923}
+%    \caption{Artefaktbildung durch fixed-radius Bildraumfilterung in der Tiefendistanz.}
+%    \label{fig:npr_spatial_low_pixel_problem}
+%\end{figure}
+
 
 
