@@ -198,11 +198,13 @@ Position und die bereits vorab berechnete Transformationsmatrix gespeichert werd
 % Entropie.
 Hervorzuheben ist hier die Logik bezüglich der Stilentropie-Steuerung, die zwischen gestreuten (hohe Entropie) und
 geordneten (niedrige Entropie) Verteilungen wechselt.
-Die Zuweisung der Stil-ID erfolgt in Listing ~\ref{lst:style_assignment}.
+Die Zuweisung der Stil-ID erfolgt in Listing ~\ref{lst:style_assignment} und beschreibt die Gruppierung/Sortierung
+innerhalb des \ac{HyDra}-Frameworks in der kreisförmigen Objektwolke mit anteiliger Aufteilung der Stile.
 
 % Entropie Listing.
 \begin{listing}[htbp]
-    \begin{minted}{cpp}
+    \begin{codeframe}
+        \begin{minted}{cpp}
 float styleId;
 if (state.useClusteredStyles) {
     float normAngle = std::fmod(angle, 2.0f * PI);
@@ -217,7 +219,8 @@ if (state.useClusteredStyles) {
     // Distribute using the current pool size
     styleId = activeStyles[i % static_cast<int>(numStyles)];
 }
-    \end{minted}
+        \end{minted}
+    \end{codeframe}
     \caption{C++ Code zur Berechnung der \texttt{styleId}-Verteilung basierend auf dem Cluster-Status in
     HyDra-Framework.}
     \label{lst:style_assignment}
@@ -263,9 +266,12 @@ Für den Normalen-Puffer (\texttt{\ac{RT}1}) wird hingegen ein 16-Bit-Format \te
 Diese erhöhte Präzision ist eine architektonische Notwendigkeit, da geringere Bittiefen bei den nachfolgenden
 Screen-Space-Lichtberechnungen unzureichend sind~\cite[Folie~37]{AdvancesRealTimeRendering}.
 Die genauen visuellen Auswirkungen (Banding-Artefakte), die diesen Kompromiss zugunsten einer höheren Speicherbandbreite
-erzwingen, werden in der Evaluation der Deferred-Volume-Pipeline in Kapitel~\ref{subsec:040203} im Detail dargelegt.
+erzwingen, werden in der Evaluation der Deferred-Volume-Pipeline in Kapitel~\ref{subsec:040203_deferred_volume_pipeline}
+im Detail dargelegt.
 
 \begin{table}[htbp]
+    \caption{Spezifikation des G-Buffer-Layouts im \ac{HyDra}-Framework.}
+    \label{tab:gbuffer_layout}
     \centering
     \small
     \renewcommand{\arraystretch}{1.3}
@@ -276,14 +282,18 @@ erzwingen, werden in der Evaluation der Deferred-Volume-Pipeline in Kapitel~\ref
         \hline
         \textit{RT0 (Albedo)}  & \texttt{R8G8B8A8}        & \texttt{BaseColor R}    & \texttt{BaseColor G}
         & \texttt{BaseColor B}    & \texttt{BaseColor A}    \\
+
+        \hline
+
         \textit{RT1 (Normal)}  & \texttt{R16G16B16A16}    & \texttt{World Normal X} & \texttt{World Normal Y}
         & \texttt{World Normal Z} & \textbf{Style-ID}       \\
+
+        \hline
+
         \textit{Depth}         & \texttt{8-Bit Grayscale} & \texttt{Linear Depth}   & \texttt{--}
         & \texttt{--}             & \texttt{--}             \\
         \hline
     \end{tabularx}
-    \caption{Spezifikation des G-Buffer-Layouts im \ac{HyDra}-Framework.}
-    \label{tab:gbuffer_layout}
 \end{table}
 
 % Die Style-ID.
@@ -374,19 +384,20 @@ Diese nur äußerst bedingte visuelle Parität muss für etwaige vergleichende E
     % Linkes Bild
     \begin{subfigure}[b]{0.49\textwidth}
         \centering
-        \includegraphics[width=0.85\linewidth]{abbildungen/IMG-20260711205352333}
-        \caption{Inverted-Hull in Forward}
+        \includegraphics[width=0.85\linewidth]{abbildungen/hydra_capture_20260713_083726}
+        \caption{Inverted-Hull + Toon-Shading in Forward}
         \label{fig:hydra_inverted-hull}
     \end{subfigure}
     \hfill
     % Rechtes Bild
     \begin{subfigure}[b]{0.49\textwidth}
         \centering
-        \includegraphics[width=0.85\linewidth]{abbildungen/IMG-20260711205459842}
-        \caption{Sobel-Outlines in Deferred}
-        \label{fig:hydra_solebl-outlines}
+        \includegraphics[width=0.85\linewidth]{abbildungen/hydra_capture_20260713_083735}
+        \caption{Sobel-Outlines + Toon-Shading in Deferred}
+        \label{fig:hydra_sobel-outlines}
     \end{subfigure}
-    \caption{Vergleich von Kontureffekten in Forward und Deferred mittels Inverted-Hull- und Sobel-Outline-Verfahren.}
+    \caption{Toon-Shading und Vergleich von Kontureffekten in Forward- und Deferred-Pipelines mittels Inverted-Hull- und
+    Sobel-Outline-Verfahren in HyDra-Framework.}
     \label{fig:040201_outline_comparison}
 \end{figure}
 
@@ -419,7 +430,8 @@ Die performancetechnischen Auswirkungen werden in der empirischen Evaluation in 
 
 % Listing Uber-Shader
 \begin{listing}[htbp]
-    \begin{minted}{glsl}
+    \begin{codeframe}
+        \begin{minted}{glsl}
 // Extract Normal and StyleID (Decode from 8-bit "Alpha"-channel)
 int styleID = int(round(normalData.a * 255.0));
 
@@ -453,8 +465,9 @@ if (styleID == 2) {
 if (useBlinnFallback) {
     // ...
 }
-    \end{minted}
-    \caption{GLSL-Pseudocode des Deferred-Uber Lighting-Passes im HyDra-Framework}
+        \end{minted}
+    \end{codeframe}
+    \caption{GLSL-Code des Deferred-Uber Lighting-Passes im HyDra-Framework}
     \label{lst:deferred_branching_structure}
 \end{listing}
 
@@ -598,19 +611,19 @@ ausgelesen werden.
 \label{sec:0403_npr_payloads}
 
 % Einleitung und Auflistung.
-Für die Evaluation der zugrunde liegenden Stilisierungseffekte werden im \ac{HyDra}-Framework neben einer Baseline
-(Blinn-Phong-Schattierung) verschiedene \ac{NPR}-Effekte implementiert.
+Für die Evaluation der zugrunde liegenden Rendering-Pipelines werden im \ac{HyDra}-Framework neben einer Baseline
+(Blinn-Phong-Shading) verschiedene \ac{NPR}-Effekte implementiert.
 Im Folgenden werden die Charakteristika der verwendeten Stile sowie ihre grundlegende algorithmische Komplexität
 erläutert, um sie für die in Kapitel 5 durchgeführten Evaluationen zu kontextualisieren.
 Eine detaillierte Beschreibung der Implementierung wird in dieser Arbeit nicht vorgenommen, da für alle
-\ac{NPR}-Effekte und das Baseline-Shading die jeweils verbreiteten Standardlösungen implementiert wurden.
+\ac{NPR}-Effekte und das Baseline-Shading die jeweils etablierten Standardlösungen implementiert wurden.
 Die implementierten Effekte fungieren demnach lediglich als reine Payloads (Lastgeneratoren) für die Evaluation der
 selektiven Stilisierung unter Anwendung der verschiedenen Rendering-Verfahren.
 
 Für das \ac{HyDra}-Framework sind die in Tabelle~\ref{tab:shading_effects} beschriebenen Effekte bzw.\ Stile verwendet
 worden.
 
-\begin{longtable}{@{} p{3.5cm} p{6.0cm} p{6.0cm} @{}}
+\begin{longtable}{@{} p{0.2\textwidth} p{0.4\textwidth} p{0.35\textwidth} @{}}
     \caption{Vergleich der verwendeten Shading-Effekte und NPR-Stile in HyDra-Framework.}
     \label{tab:shading_effects} \\
     \toprule
@@ -631,40 +644,44 @@ worden.
     \bottomrule
     \endlastfoot
 
-    \textbf{Kuwahara}\newline \cite{kyprianidisImageVideoAbstraction2009}
-    \newline (siehe Abb.~\ref{fig:040202_pre-post-lit_comparison}) &
+    \textbf{Kuwahara}\newline \cites{kyprianidisImageVideoAbstraction2009}{papariArtisticEdgeCorner2007} &
     Iterative Kernel-Texture-Fetches in 4 Quadranten zur Varianz- und Mittelwertberechnung.
-    Radiusabhängige Schleifen. &
-    Erzeugt eine stilisierte, malerische Abstraktion (Painterly-Look) durch Homogenisierung lokaler Farbflächen.\\
+    Radiusabhängige Schleifen.
+    & Erzeugt eine stilisierte, malerische Abstraktion (Painterly-Look) durch Homogenisierung lokaler Farbflächen
+    (siehe Abb.~\ref{fig:040202_pre-post-lit_comparison}).\\
     \addlinespace
 
-    \textbf{Toon}\newline \cite{lakeStylizedRenderingTechniques2000}
-    \newline (siehe Abb.~\ref{fig:040201_outline_comparison}) &
+    \midrule
+
+    \textbf{Toon}\newline \cite{lakeStylizedRenderingTechniques2000} &
     Dot-Products ($N \cdot L$) und Quantisierung (Banding) der diffusen Beleuchtung über Floor/Step-Funktionen.
     & Reduziert kontinuierliche Schattierungsverläufe auf diskrete Helligkeitsstufen; Charakteristisch für die Ästhetik
-    klassischer Cel-Animationen. \\
+    klassischer Cel-Animationen (siehe Abb.~\ref{fig:040201_outline_comparison}). \\
     \addlinespace
 
-    \textbf{Gooch}\newline \cite{goochNonphotorealisticLightingModel1998}
-    \newline (siehe Abb.~\ref{fig:gooch_example}) &
+    \midrule
+
+    \textbf{Gooch}\newline \cite{goochNonphotorealisticLightingModel1998} &
     Lineare Interpolation zwischen definierten Cool- und Warm-Colors basierend auf dem Skalarprodukt ($N \cdot L$).
-    & Verbessert die visuelle Wahrnehmung von Geometriedetails durch Temperaturkontraste; Vorrangig verwendet für für
-    technische Illustrationen. \\
+    & Verbessert die visuelle Wahrnehmung von Geometriedetails durch Temperaturkontraste; Vorrangig verwendet für
+    technische Illustrationen (siehe Abb.~\ref{fig:gooch_example}). \\
     \addlinespace
 
-    \textbf{Sobel}\newline \cite[Kap.~3.3]{saitoComprehensibleRendering3D1990}
-    \newline (siehe Abb.~\ref{fig:hydra_solebl-outlines}) &
-    Diskrete $3\times3$ Kernel-Texture-Fetches auf Depth- und Normal-Buffern im \ac{G-Buffer} zur Gradienten- und
+    \midrule
+
+    \textbf{Sobel}\newline \cite[Kap.~3.3]{saitoComprehensibleRendering3D1990} &
+    Diskrete~$3\times3$ Kernel-Texture-Fetches auf Depth- und Normal-Buffern im \ac{G-Buffer} zur Gradienten- und
     Kantenerkennung.
     & Extrahiert und betont Geometrie- sowie Tiefendiskontinuitäten zur klaren visuellen Segmentierung von Objekten im
-    Bildraum. \\
+    Bildraum (siehe Abb.~\ref{fig:hydra_sobel-outlines}). \\
     \addlinespace
 
-    \textbf{Inverted-Hull}\newline \cite[Kap.~15.2.2]{akenine-mollerRealtimeRendering2019}
-    \newline (siehe Abb.~\ref{fig:hydra_inverted-hull}) &
+    \midrule
+
+    \textbf{Inverted-Hull}\newline \cite[Kap.~15.2.2]{akenine-mollerRealtimeRendering2019} &
     Verschieben der Oberfläche entlang der Normalen bei gleichzeitiger Umkehrung der gerenderten Flächen.
     & Generiert eine konsistente, geschlossene Außenkontur im Objektraum durch das vergrößerte Rendern der maskierten
-    Rückseiten. \\
+    Rückseiten (siehe Abb.~\ref{fig:hydra_inverted-hull}). \\
 \end{longtable}
 
 \begin{figure}[htbp]
@@ -674,12 +691,213 @@ worden.
     \label{fig:gooch_example}
 \end{figure}
 
-%\begin{figure}[htbp]
-%    \centering
-%    \includegraphics[width=0.85\linewidth]{abbildungen/hydra_capture_20260524_103923}
-%    \caption{Artefaktbildung durch fixed-radius Bildraumfilterung in der Tiefendistanz.}
-%    \label{fig:npr_spatial_low_pixel_problem}
-%\end{figure}
+% Kanten-Bleeding
+Ein inhärentes Problem der selektiven Kuwahara-Filterung in Deferred Pipelines äußert sich bei Objekten mit sehr
+geringer projizierter Bildschirmfläche.
+Da bei bildschirmbasierten Operatoren die Arbeit auf einer festen Pixel-Nachbarschaft erfolgt, kommt es bei einer
+Verkleinerung des Objekts (z.\ B.\ durch zunehmende Kameraentfernung) oder an den Objekträndern zu einem Verlust oder
+der inhaltlichen Verfälschung der notwendigen diskreten Abtastpunkte innerhalb der
+Objektgrenzen~\cite[Abschn.~5]{kyprianidisImageVideoAbstraction2009}
+(siehe Abb.~\ref{fig:npr_spatial_low_pixel_problem}).
+Innerhalb des \ac{HyDra}-Frameworks werden zur Umgehung dieser Effekte jene Samples verworfen, deren \texttt{styleID}
+nicht mit dem Zentrum übereinstimmt, um eine Verrechnung benachbarter Objekte mit unterschiedlicher Stilisierung zu
+verhindern.
+Diese werden durch einen konstanten Fallback-Wert in Form der unfiltrierten Basisfarbe des gezeichneten Pixels ersetzt
+(vergleiche Listing~\ref{lst:kuwahara_optimization}).
+Diese Modifikation dient der Gewährleistung einer stilistischen Parität des Kuwahara-Filters auch bei selektiver
+Anwendung des Effektes.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\linewidth]{abbildungen/hydra_capture_20260524_103923}
+    \caption{Kollabieren der selektiven Kuwahara-Bildraumfilterung bei weit entfernten und kleinen Geometrien in
+    HyDra-Framework (vergrößerte Darstellung).}
+    \label{fig:npr_spatial_low_pixel_problem}
+\end{figure}
+
+% Entropie Listing.
+\begin{listing}[htbp]
+    \begin{codeframe}
+        \begin{minted}{glsl}
+// Fetch neighbor's spatial and identity data
+vec4 neighborNormalData = texture(gNormalTex, sampleUV);
+int neighborStyleID = int(round(neighborNormalData.a * 255.0));
+vec3 col;
+
+// Validate Neighbor
+if (neighborStyleID != styleID) {
+    // Invalid: Clamp to the fully lit center pixel
+    col = centerCol;
+} else {
+    // Valid: Sample actual neighbor lit color + ambient
+    vec3 sampledLit = texture(litSceneTex, sampleUV).rgb;
+    vec3 sampledAlbedo = texture(texture0, sampleUV).rgb;
+    vec3 sampledAmbient = sampledAlbedo * ambientLightStrength;
+    col = sampledLit + sampledAmbient;
+}
+        \end{minted}
+    \end{codeframe}
+    \caption{GLSL Code zur Optimierung von Kuwahara-Filter-Sampling zur Mitigierung von Kanten-Bleeding Effekten in der
+    Deferred-Volume-Pipeline in HyDra-Framework.}
+    \label{lst:kuwahara_optimization}
+\end{listing}
+
+% Mathematisch
+Wie~\textcite[Abschn.~II-B]{papariArtisticEdgeCorner2007} darlegen, leidet die klassische Kuwahara-Filterstruktur unter
+einer inhärenten mathematischen Instabilität, sobald mehrere Subregionen identische Standardabweichungen aufweisen.
+Bei kleinen oder weit entfernten Geometrien wird dieser Zustand erzwungen.
+Da das Objekt nicht mehr genügend Pixel besitzt, um den Kernel zu füllen, dominieren die konstanten Fallback-Werte der
+Identitäts-Maskierung die Quadranten.
+Die Varianz der abgetasteten Nachbarpixel sinkt hierbei gegen null, wodurch der Algorithmus die mathematische Basis
+verliert, eine eindeutige Region zu isolieren.
 
 
+\section{Telemetrie \& Benchmark-Orchestrierung}
+\label{sec:0404_telemetry_and_benchmark_orchestrator}
+
+% Einleitung.
+Nachdem die architektonischen Limitationen und Charakteristika der implementierten Rendering-Pipelines dargelegt wurden,
+müssen für die detaillierten Performancemessungen in Kapitel~\ref{ch:05_evaluation} die verwendeten Telemetrie- und
+Benchmark-Orchestrierungsmodule definiert werden, um den Versuchsmethodik und produzierten Ergebnisse zu
+kontextualisieren.
+
+\subsection{Szenen- \& Zustandsparität}
+\label{subsec:040401_scene_and_state_parity}
+
+% Einleitung.
+Ein objektiver Vergleich und die Belastbarkeit empirischer Performancedaten der verschiedenen Rendering-Pipelines in der
+Echtzeitgrafik erfordern die technische Garantie, dass jede Pipeline pro Frame exakt denselben Workload verarbeitet.
+Wenn eine Architektur durch abweichende Frustum-Culling-Berechnungen oder abweichende Licht-Allokationen weniger Last
+auf die \ac{GPU} überträgt, verlieren die Untersuchungen ihre Validität.
+
+% Engine State.
+Die Systemarchitektur des \ac{HyDra}-Frameworks basiert zu diesem Zweck auf einem zentralen \texttt{EngineState}
+(vergleiche Listing~\ref{lst:Engine_State}).
+Dieser geteilte Zustand fungiert als zentrale Quelle für das Verhalten und den Gesamtaufbau der Szene sowie der
+verwendeten Rendering-Pipelines der gesamten Laufzeitumgebung.
+Das \texttt{BenchmarkOrchestrator}-Modul wendet vor dem Start und während jeder Testreihe sämtliche Variablenänderungen
+(wie Instanzenanzahl, Detailgrad oder Filter-Radien) exakt einmal auf den globalen Zustand an und variiert im
+Testverlauf lediglich die untersuchte unabhängige Variable (vergleiche Tab.~\ref{tab:independent_vars}).
+Wie in Kapitel~\ref{subsec:040102_scene_management} dargelegt nutzen alle untersuchten Rendering-Pipelines über die
+Variablen des \texttt{EngineState}s hinaus die gleiche Logik bezüglich Sichtbarkeitsprüfung und Geometrieverwaltung
+unter Verwendung des \texttt{SceneManager}-Moduls.
+Die Entkopplung von Datenhaltung und Render-Ausführung zielt demnach darauf ab, Divergenzen auf Szenen- und
+Geometrie-Verwaltungsebene zwischen den verschiedenen Pipelines zu vermeiden.
+
+% Engine State Listing.
+\begin{listing}[htbp]
+    \begin{codeframe}
+        \begin{minted}{cpp}
+// Architectural Rendering Paths
+enum class RenderPath { DeferredUber, DeferredVolume, Forward };
+
+// Centralized state container for the current frame
+struct EngineState {
+    RenderPath activeRenderPath = RenderPath::Forward;
+
+    // Core Metrics
+    bool use16BitHDR           = Config::DefaultState::Use16BitHDR;
+    int activeObstacleCount    = Config::DefaultState::ActiveObstacleCount;
+    int activeLightCount       = Config::DefaultState::ActiveLightCount;
+    float lightIntensity       = Config::EngineSettings::LightIntensity;
+    float ambientLightStrength = Config::EngineSettings::AmbientLightStrength;
+    int renderWidth            = Config::EngineSettings::ScreenWidth;
+    int renderHeight           = Config::EngineSettings::ScreenHeight;
+
+    // NPR Toggles
+    bool enableOutlines = Config::DefaultState::EnableOutlines;
+    bool enableKuwahara = Config::DefaultState::EnableKuwahara;
+    bool enableGooch    = Config::DefaultState::EnableGooch;
+    bool enableToon     = Config::DefaultState::EnableToon;
+
+    // Spatial & Stylistic Modifiers
+    int kuwaharaRadius       = Config::DefaultState::KuwaharaRadius;
+    float kuwaharaIntensity  = Config::DefaultState::KuwaharaIntensity;
+    float objectSphereRadius = Config::DefaultState::ObjectSphereRadius;
+    int currentLodIndex      = Config::DefaultState::CurrentLodIndex;
+
+    // Architecture & Distribution Flags
+    bool useClusteredStyles  = Config::DefaultState::UseClusteredStyles;
+    bool useLightSingularity = Config::DefaultState::UseLightSingularity;
+    bool useNprRoom          = Config::DefaultState::UseNprRoom;
+    bool renderFloor         = Config::DefaultState::RenderFloor;
+
+    // System Flags
+    bool requestScreenshot = false;
+};
+        \end{minted}
+    \end{codeframe}
+    \caption{C++ Code zur Beschreibung des Zentralen Engine-Zustands in HyDra-Framework}
+    \label{lst:Engine_State}
+\end{listing}
+
+\subsection{Asynchrone Hardware-Telemetrie}
+\label{subsec:040401_async_hardware_telemetry}
+
+% Einleitung
+Die Erfassung von Ausführungszeiten auf der Host-Seite (\ac{CPU}) ist für die Bewertung der reinen
+\ac{GPU}-Leistung unzureichend, da moderne Grafiktreiber hochgradig asynchron
+arbeiten~\cite[S.~1005]{akenine-mollerRealtimeRendering2019}.
+Die \ac{CPU} sendet Render-Kommandos an eine Warteschlange und setzt die Ausführung unmittelbar fort, noch bevor die
+\ac{GPU} das erste Polygon
+verarbeitet~\cite[Abschn.~\textit{The logical pipeline} 1-2]{pixeljetstreamPixelJetStream2015}.
+
+% Verfahren.
+Das \ac{HyDra}-Framework injiziert über \texttt{glQueryCounter} asynchrone Zeitstempel direkt in den
+\ac{GPU}-Befehlsstrom.
+Diese \textit{OpenGL Query Objects} ermöglichen eine hardwareseitige Zeiterfassung, um die Ausführungsdauer der
+einzelnen Render-Pässe isoliert zu messen~\cite[Kap.~2.14]{OpenGL33Core2010}.
+Da das unmittelbare Auslesen dieser Markierungen im selben Frame einen kritischen Pipeline-Stall erzeugen
+würde~\cite[S.~794]{akenine-mollerRealtimeRendering2019},
+implementiert die \texttt{GpuProfiler}-Klasse ein asynchrones Ring-Buffer-Verfahren~\cite[Kap.~34.2.5]{OpenGLInsights},
+um die Grafikkarten-Abläufe im Normalfall nicht zu blockieren (\textit{Non-Blocking}).
+Durch die strikte Begrenzung der maximal im Flug befindlichen Frame-Abfragen
+auf~\texttt{GpuProfiler::MAX\_IN\_FLIGHT = 16} verhindert der \texttt{BenchmarkOrchestrator} zudem bei hoher
+\ac{GPU}-Auslastung ein Überschreiben noch nicht ausgelesener Hardware-Abfragen der \ac{GPU} durch die \ac{CPU}.
+Der kontrollierte \textquote{Notfall-Stall} stoppt die \ac{CPU}-Befehlsübertragung und stellt somit sicher, dass jeder
+gerenderte Frame ohne Datenverlust lückenlos und chronologisch in die Telemetrie einfließt
+(vergleiche Listing~\ref{lst:orchestrator_stall}).
+
+% Orchestrator Listing:
+\begin{listing}[htbp]
+    \begin{codeframe}
+        \begin{minted}{cpp}
+// Queue up the raw CPU metrics for this frame
+pendingFrames.push(FrameRecord{...});
+
+// Process resolved frames
+while (!pendingFrames.empty()) {
+    const auto &[...] = pendingFrames.front();
+    const bool isDeferred = (recActiveRenderPath != RenderPath::Forward);
+
+    // Check if hardware queries are naturally ready
+    const bool geomReady       = !isDeferred || geomProfiler.IsOldestReady();
+    const bool lightReady      = lightProfiler.IsOldestReady();
+    const bool masterReady     = masterGpuProfiler.IsOldestReady();
+    const bool allQueriesReady = (geomReady && lightReady && masterReady);
+    const bool emergencyStallRequired =
+        (pendingFrames.size() >= GpuProfiler::MAX_IN_FLIGHT);
+
+    // Wait for all profilers to report, or force wait to clear capacity
+    if (allQueriesReady || emergencyStallRequired) {
+        double geomMs = 0.0, lightMs = 0.0, totalGpuMs = 0.0;
+
+        // Pass 'forceWait' down to TryGetOldestResult so thread blocks and waits for the OpenGL queries to resolve before extracting
+        if (isDeferred)
+            geomProfiler.TryGetOldestResult(geomMs, emergencyStallRequired);
+        lightProfiler.TryGetOldestResult(lightMs, emergencyStallRequired);
+        masterGpuProfiler.TryGetOldestResult(totalGpuMs, emergencyStallRequired);
+
+        telemetryWriter.AppendRow(...);
+        pendingFrames.pop();
+    } else {
+        break; // GPU data for the oldest frame is not ready; Pause writes
+    }
+}
+        \end{minted}
+    \end{codeframe}
+    \caption{C++ Code zu Ring-Buffer und Notfall-Stall Verfahren während der Benchmark-Orchestrierung in
+    HyDra-Framework}
+    \label{lst:orchestrator_stall}
+\end{listing}
 

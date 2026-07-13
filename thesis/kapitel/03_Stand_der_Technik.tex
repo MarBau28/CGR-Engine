@@ -204,7 +204,8 @@ hybriden Forward-Overlays besteht.
 Dass moderne Rendering-Pipelines hierbei zunehmend fragmentieren, veranschaulicht die Analyse der aktuellen
 AAA-Produktion \textit{PRAGMATA} (2026), deren selektives Post-Processing durch die Aufspaltung in dutzende isolierte
 Render-Pässe und eigens generierte Masken realisiert
-wird~\cite[Abschn.~\enquote{Frame}]{muhammadPrettyFramesPRAGMATA2026}.
+wird~\cite[Abschn.~\enquote{Frame}]{muhammadPrettyFramesPRAGMATA2026}
+(vergleiche Abb.~\ref{fig:pragmata_pipeline_analysis}).
 Während solche architektonischen Kompromisse für spezifische, isolierten Anwendungsfälle praktikabel sind, skalieren
 sie nur schwer für Szenen mit extrem hoher Material- und Stil-Entropie.
 Die Kombination aus steigendem Registerdruck, Bandbreitenlimits und der Fragmentierung in mehrere Rendering-Pässe wirft
@@ -212,6 +213,36 @@ die fundamentale Frage auf, an welchem Punkt die zugrundeliegenden Rendering-Arc
 Limits aufweisen.
 Aus dieser Diskrepanz zwischen hoch-spezialisierten Industrie-Workarounds und der Notwendigkeit einer skalierbaren
 Lösung ergibt sich die Forschungslücke der vorliegenden Arbeit, welche im folgenden systematisch eingegrenzt wird.
+
+% PRAGMATA 1
+\begin{figure}[b]
+    \centering
+    \begin{subfigure}[b]{0.75\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{abbildungen/pragmata_screenshot}
+        \caption{Finales Rendering einer Spielszene.}
+        \label{fig:pragmata_final}
+    \end{subfigure}
+    \caption{Visualisierung der Pipeline-Fragmentierung in modernen AAA-Produktionen am Beispiel von \textit{PRAGMATA}
+    (2026) zur Veranschaulichung spezialisierter Industrie-Workarounds~\cite{muhammadPrettyFramesPRAGMATA2026}.}
+    \label{fig:pragmata_pipeline_analysis}
+\end{figure}
+
+% PRAGMATA 2
+\begin{figure}[t]
+    \ContinuedFloat
+    \centering
+    \begin{subfigure}[b]{0.75\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{abbildungen/pragmata_gbuffer}
+        \caption{Frame-Analyse des korrespondierenden G-Buffers und der isolierten Render-Pässe.}
+        \label{fig:pragmata_passes}
+    \end{subfigure}
+    \caption{Visualisierung der Pipeline-Fragmentierung in modernen AAA-Produktionen am Beispiel von \textit{PRAGMATA}
+    (2026) zur Veranschaulichung spezialisierter Industrie-Workarounds~\cite{muhammadPrettyFramesPRAGMATA2026}
+    (Fortsetzung).}
+    \label{fig:pragmata_b}
+\end{figure}
 
 
 \section{Limitierungen bestehender Ansätze und Identifikation der Forschungslücke}

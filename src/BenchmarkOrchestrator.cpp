@@ -147,7 +147,7 @@ void BenchmarkOrchestrator::ApplySuiteState() {
 
     // Lighting (Matching the exact original explicit reset)
     currentState.activeLightCount     = 0;
-    currentState.ambientLightStrength = 1.0f; // Preserved: 5.1.x implicitly relies on this
+    currentState.ambientLightStrength = 1.0f;
     currentState.lightIntensity       = Config::EngineSettings::LightIntensity;
     currentState.useLightSingularity  = false;
 

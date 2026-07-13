@@ -204,7 +204,7 @@ void main()
                         vec2 offset = vec2(float(x) * offsets[i].x, float(y) * offsets[i].y);
                         vec2 sampleUV = fragTexCoord + offset * texelSize;
 
-                        // Fetch neighbor's spatial and identity data (for outline bleeding fix)
+                        // Fetch neighbor's spatial and identity data
                         vec4 neighborNormalData = texture(gNormalTex, sampleUV);
                         int neighborStyleID = int(round(neighborNormalData.a * 255.0));
                         vec3 col;

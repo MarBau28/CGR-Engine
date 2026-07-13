@@ -33,7 +33,7 @@
 \usepackage{graphicx}
 \usepackage{subcaption}
 \usepackage{float}
-\usepackage{scrhack}
+\usepackage[listings=false]{scrhack}
 \usepackage{booktabs}
 \usepackage{tabularx}
 \usepackage{placeins}
@@ -65,25 +65,36 @@
 % --- Abkürzungsverzeichnis ---
 \usepackage[printonlyused,withpage]{acronym}
 
-% --- Code Listings (C++ & GLSL) ---
-\usepackage[outputdir=build]{minted}
+% --- Code Listings ---
 \usepackage{xcolor}
-
-% Theme
+\usepackage[outputdir=build]{minted}
+\usepackage[most]{tcolorbox}
 \usemintedstyle{manni}
-\definecolor{pastelBg}{rgb}{0.96, 0.97, 0.98}
+\definecolor{academicBg}{rgb}{0.98, 0.98, 0.98}
+\definecolor{academicBorder}{rgb}{0.85, 0.85, 0.85}
 \setminted{
-    fontsize=\footnotesize,
-    fontfamily=tt,
     linenos=true,
-    numbersep=8pt,
+    numbersep=12pt,
+    fontfamily=tt,
+    fontsize=\footnotesize,
+    baselinestretch=1.1,
     breaklines=true,
-    samepage=true,
-    frame=leftline,
-    framerule=1.5pt,
-    framesep=3mm
+    breakindent=15pt
 }
-\renewcommand{\theFancyVerbLine}{\ttfamily\tiny\color{gray!80}\arabic{FancyVerbLine}}
+\renewcommand{\theFancyVerbLine}{\ttfamily\tiny\color{gray!50}\arabic{FancyVerbLine}}
+\newtcolorbox{codeframe}{
+    enhanced,
+    boxrule=0.5pt,
+    colframe=academicBorder,
+    colback=academicBg,
+    arc=2mm,                % Aktiviert abgerundete Ecken (Moderne Ästhetik)
+    top=3mm,
+    bottom=3mm,
+    left=8mm,
+    right=4mm,
+    before skip=4pt,
+    after skip=4pt
+}
 
 % --- Literaturverzeichnis (IEEE) ---
 \usepackage[

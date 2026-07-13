@@ -14,7 +14,7 @@ Untersuchung vermuteter Performance-Engpässe, bevor ein abschließender Macro-B
 ganzheitlich evaluiert.
 
 
-\section{Evaluationsmethodik \& Experimenten-Design}
+\section{Evaluationsmethodik \& Versuchsaufbau}
 \label{sec:0501_evaluation_methodology}
 
 % 5.1 Einleitung.
@@ -79,7 +79,7 @@ Der Uber-Shader umgeht diesen spezifische Speicher-Bottleneck konstruktionsbedin
 Im vorliegenden Kapitel werden die untersuchten Limitierungen ausschließlich auf Hardware-Leistungs-Ebene betrachtet.
 Spezifische harte Implementierungsgrenzen der Pipelines (wie etwa die Uniform-Buffer-Limitierungen der Forward- und
 Deferred-Uber-Architekturen) sowie etwaige künstlerische Qualitätsengpässe fließen nicht in die Messreihen ein.
-Diese Aspekte wurden bereits in Kapitel~\ref{sec:0403_pipeline_implementations} verortet und evaluiert.
+Diese Aspekte wurden bereits in Kapitel~\ref{sec:0402_pipelines_and_restrictions} verortet und evaluiert.
 Da weiterhin im Rahmen dieser Makro-Evaluation keine herstellerspezifischen Hardware-Profiler wie \textit{NVIDIA Nsight}
 eingesetzt wird, um Mikrometriken wie exakte Cache-Hit-Raten oder Thread-Maskierungen auf Siliziumebene auszulesen,
 werden die architektonischen Engpässe deduktiv aus den gemessenen Rendering-Laufzeiten abgeleitet.
@@ -294,7 +294,7 @@ Diese Parameter definieren die statische Baseline des Frameworks.
 Diese Werte bleiben konstant, um reproduzierbare Bedingungen für alle Messreihen zu gewährleisten, es sei denn, die
 jeweilige Test-Suite überschreibt sie explizit als unabhängige Variable.
 Tabelle~\ref{tab:controlled_vars} fasst die Standardkonfiguration der Kontrollvariablen zusammen.
-Besonders kritisch für die Validität der Messungen ist die definierte Warm-up-Phase in Echtzeit.
+Besonders kritisch für die Validität der Messungen ist die definierte Warm-up-Phase in Echtzeit von 10 Sekunden.
 
 % Tabelle der Kontrollvariablen
 \begin{table}[htbp]
@@ -784,7 +784,7 @@ Ziel dieser Evaluation ist die Untersuchung der Skalierbarkeit von Punktlichtern
 Dazu wird der klassische Ansatz der \ac{UBO}-Iteration (Forward und Deferred-Uber) mit der Rasterisierung von
 Proxy-Geometrie (Deferred-Volume) verglichen.
 Die Anzahl der Lichtquellen ($N_{\text{Light}}$) wird dabei logarithmisch von $10$ auf bis zu $5.000$ skaliert.
-Wie in Unterkapitel Kapitel~\ref{subsec:040301_forward_pipeline} beschrieben, sind sowohl die Forward-Pipeline
+Wie in Unterkapitel Kapitel~\ref{subsec:040201_forward_pipeline} beschrieben, sind sowohl die Forward-Pipeline
 als auch die Deferred-Uber-Pipeline hinsichtlich der maximal nutzbaren Lichtquellen durch die
 \ac{UBO}-Kapazität auf insgesamt 500 Punktlichter limitiert.
 Im Rahmen der Untersuchung der allgemeinen Skalierung erfolgt zudem eine Evaluation der Deferred-Volume-Pipeline mit bis
@@ -838,7 +838,7 @@ Aus den Beobachtungen kann abgeleitet werden, dass die Deferred-Pipelines bei st
 skalieren als naive Forward-Ansätze.
 Diese Erkenntnis validiert die in der Literatur beschriebene Überlegenheit von Deferred-Rendering im Bereich massiver
 Lichtevaluationen und bestätigt den primären Existenzgrund dieses Paradigmas im
-Allgemeinen~\cites[S.~1]{Thaler2011DeferredRendering}.
+Allgemeinen~\cite[S.~1]{Thaler2011DeferredRendering}.
 Obwohl die Deferred-Uber-Pipeline den gleichen \ac{UBO}-Loop ausführt wie der Forward-Ansatz, wird durch das
 Entkoppeln der Geometrie der Shading-Overdraw effektiv vermieden.
 Der Einsatz des \ac{G-Buffer}s gewährleistet, dass die Schleife für die Lichtberechnung lediglich für die auf dem
@@ -977,8 +977,8 @@ Abbildung~\ref{fig:5_4_3_decoupling_proof} zeigt, dass der vorgelagerte \ac{G-Bu
 diesem Kontext den primären weitestgehend linearen Skalierungsfaktor bei einer ansteigenden Instanzdichte für die beiden
 Deferred-Pipelines darstellt.
 Bei der Betrachtung der Forward-Pipeline-Renderzeit ist ein Anstieg der kombinierten Zeit zu verzeichnen
-(von \qty{1,11}{\milli\second} auf \qty{5,98}{\milli\second}, der jedoch nicht so katastrophal ausfällt, wie es die ursprüngliche
-Annahme vermuten ließe.
+(von \qty{1,11}{\milli\second} auf \qty{5,98}{\milli\second}), der jedoch nicht so katastrophal ausfällt, wie es die
+ursprüngliche Annahme vermuten ließe.
 Der Engine Overhead weist zudem bei sämtlichen Pipelines eine hohe Konstanz auf.
 
 % Ergebnis Graph.
