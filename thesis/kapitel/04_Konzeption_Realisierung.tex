@@ -5,9 +5,7 @@ Im folgenden Kapitel wird der Aufbau und die technische Umsetzung des in C++ und
 implementierten Test-Frameworks \ac{HyDra} beschrieben.
 Es werden die Struktur der Daten, die Implementierungen der untersuchten Rendering-Pipelines, die Implementierungen der
 verwendeten \ac{NPR}-Effekte, die individuellen architektonischen Limitationen sowie die Umsetzung der
-Leistungsmessungskomponenten erläutert.
-Das implementierte Programm fungiert als Untersuchungs- und Messinstrument, das eine Sandbox-Umgebung bereitstellt, in
-der das Verhalten der verschiedenen Rendering-Pipelines erprobt werden kann.
+Leistungsmessungskomponenten (Benchmark-Orchestrierung) erläutert.
 
 Der Aufbau des \ac{HyDra} Frameworks folgt im Wesentlichen den Kernparadigmen der maximalen Vergleichbarkeit und des
 Determinismus.
@@ -23,15 +21,16 @@ vom eigentlichen Rendering (\ac{GPU}-Dispatch) gekennzeichnet.
 Es wird garantiert, dass alle drei Rendering-Pipelines exakt denselben deterministischen Zustand als Eingabedaten
 erhalten.
 Ziel ist es, etwaigen individuellen \ac{CPU}-Overhead möglichst zu eliminieren.
-Für die Deferred-Pipelines wird zudem der Semantische G-Buffer aufbereitet, wofür im Rahmen der Szeneverwaltung
+Für die Deferred-Pipelines wird zudem der Semantische \ac{G-Buffer} aufbereitet, wofür im Rahmen der Szeneverwaltung
 zusätzlich die Vergabe von objektspezifischen \textit{Style-IDs} erfolgt.
 Ein weiterer Bestandteil dieser vorbereitenden \ac{CPU}-Logik ist das implementierte View-Frustum-Culling.
-Es fungiert als Filter, der die sichtbare Geometrie evaluiert, bevor die Grafikkarte involviert wird.
+Es fungiert als Filter, der die sichtbare Geometrie evaluiert, bevor die Grafikkarte involviert
+wird~\cite[Kap.~11.2.7, Abschn.~\textit{Frustum Culling}]{gregoryGameEngineArchitecture2018}.
 
 \subsection{Frame-Lebenszyklus}
 \label{subsec:040101_frame_lifecycle}
 
-% Init
+% Init.
 Wie in Abbildung~\ref{fig:render_loop_swimlane} dargestellt, durchläuft das Framework vor dem Eintritt in die
 Haupt-Rendering-Schleife ein initiales Setup.
 Diese Phase erfüllt im Wesentlichen zwei architektonische Aufgaben: Zum einen die Speicherallokation (\ac{VRAM}) der
@@ -47,7 +46,8 @@ Am Anfang der Haupt-Rendering-Schleife werden die für die spätere Hardware-Per
 initialisiert.
 Gleichzeitig wird eine explizite Limitierung der Frame-Taktung (\texttt{AwaitCapacity()}) erzwungen, um zu verhindern,
 dass die \ac{CPU} der asynchronen \ac{GPU}-Abarbeitung zeitlich zu weit vorausläuft.
-Ein derartiger Rückstand der Grafikkarte würde die Latenz- und Profiler-Messungen andernfalls systematisch verfälschen.
+Ein derartiger Rückstand der Grafikkarte würde die Latenz- und Profiler-Messungen andernfalls systematisch verfälschen
+(vgl.\ Kapitel~\ref{subsec:040402_async_hardware_telemetry}).
 
 % Input.
 Im direkten Anschluss steuert ein dezidiertes \texttt{InputController}-Modul die Modifikation des Szenenzustands.
@@ -58,25 +58,26 @@ Artefakte oder systemische Limitierungen der einzelnen Pipelines interaktiv unte
 Vor der eigentlichen Datenübertragung an die \ac{GPU} wird die Geometrie einem \ac{CPU}-seitigen logischen Pass
 unterzogen.
 Ein \textit{View-Frustum-Culling} dient hierbei als Filter, um Geometrien, die sich außerhalb des
-sichtbaren Bereichs der Kamera befinden, von der weiteren Verarbeitung auszuschließen.
+sichtbaren Bereichs der Kamera befinden, von der weiteren Verarbeitung
+auszuschließen~\cite[Kap.~11.2.7, Abschn.~\textit{Frustum Culling}]{gregoryGameEngineArchitecture2018}.
 Für die verbleibenden, sichtbaren Entitäten erfolgt anschließend der \ac{PCIe}-Speichertransfer
 (\texttt{rlUpdateVertexBuffer()}) der Modell-Transformationsmatrizen und Style-IDs.
 
 % Dispatch.
 Nachdem die Datenpräparation auf der \ac{CPU} abgeschlossen ist, wird die Ausführung der selektierten Rendering-Pipeline
 orchestriert.
-In dieser Phase (\textit{Render Dispatch}) werden die notwendigen Zustandsänderungen der \ac{API} vorgenommen und die
-instanziierten Draw-Calls an die \ac{GPU} übermittelt.
+In dieser Phase werden die notwendigen Zustandsänderungen durch das Szeneverwaltungs-Modul (\texttt{SceneManager})
+vorgenommen und die instanziierten Draw-Calls an die \ac{GPU} übermittelt.
 Die Grafikhardware übernimmt daraufhin, asynchron zum Main-Thread, die Rasterisierung und Ausführung der definierten
-Shader-Logik.
-Die exakte Implementierung der Rendering-Pipelines wird in den nachfolgenden Kapiteln evaluiert.
+Shader-Logik~\cite[S.~494]{OpenGLInsights}.
+Die exakte Implementierung der Rendering-Pipelines wird in den nachfolgenden Kapiteln erläutert.
 
 % Telemetry Drain.
 Den Abschluss eines Frame-Zyklus bildet die Präsentation des finalen Bildes auf dem Bildschirm.
 Zusätzlich werden die asynchronen Hardware-Timer der \ac{GPU} ausgelesen (\texttt{QueryOldestResult()}).
 Dieser \textit{Drain}-Prozess erfolgt explizit nicht-blockierend, um die fortlaufende Ausführung der \ac{GPU} für
-nachfolgende Messungen nicht durch künstliche \ac{CPU}-Stalls zu unterbrechen.
-Hierdurch wird gewährleistet, dass der tatsächliche Render-Overhead der Pipelines isoliert quantifizierbar bleibt.
+nachfolgende Messungen nicht durch künstliche \ac{CPU}-Stalls zu unterbrechen
+(vgl.\ Kapitel~\ref{subsec:040402_async_hardware_telemetry}).
 
 % Ablaufdiagramm: Frame Lebenszyklus
 \begin{figure}[htbp]
@@ -178,28 +179,24 @@ Hierdurch wird gewährleistet, dass der tatsächliche Render-Overhead der Pipeli
 % Einleitung.
 Die inhaltliche Verwaltung der dargestellten Szene wird im \ac{HyDra}-Framework von einem dedizierten
 Szenenmanager-Modul (\texttt{SceneManager}) übernommen.
-Dieses verwaltet den deterministischen Aufbau der Geometrie, insbesondere die Punktlicht-Proxies und die beleuchteten
-Geometrien.
+Dieses verwaltet den Aufbau der Geometrie, insbesondere die Punktlicht-Proxies und die beleuchteten Geometrien.
 Die Geometrien werden prozedural mithilfe eines festgelegten Seeds erstellt.
-Es wird sichergestellt, dass jeder Programmaufruf oder jede Änderung durch den Input-Controller zu vollständiger
+Damit wird sichergestellt, dass jeder Programmaufruf oder jede Änderung durch den Input-Controller zu vollständiger
 Szeneparität hinsichtlich der Geometrieverteilung unter den gegebenen Parametern Objektanzahl, Punktlichtanzahl,
-Lichtintensität und Objektdichte (Radius des Objektclusters) führt.
-Die Szeneparität zwischen Aufrufen und bei Laufzeit-Manipulationen ist während der Performancemessungen hinsichtlich der
-untersuchten (Stil-)Entropie, beispielsweise bezüglich der Style-ID-Verteilung oder Geometrieüberlappungen, von
-besonders großer Wichtigkeit.
+Lichtintensität und Objektdichte (Radius der Objektwolke) führt.
 
 % Datenhaltung.
 Die Datenhaltung der Szenegeometrien und Punktlicht-Proxies mitsamt ihrer assoziierten Style-IDs und
 Transformationsmatrizen erfolgt in Arrays, die mit der Maximalanzahl der erstellbaren Objekte vorallokiert wurden.
 Jeder Geometrie wird ein Index zugewiesen, anhand dessen für jedes Objekt drei Arrays für die Style-ID, die räumliche
 Position und die bereits vorab berechnete Transformationsmatrix gespeichert werden
-(\ac{SoA}-Muster)~\cite[S.~793]{akenine-mollerRealtimeRendering2019}.
+(\ac{SoA}-Muster~\cite[S.~793]{akenine-mollerRealtimeRendering2019}).
 
 % Entropie.
 Hervorzuheben ist hier die Logik bezüglich der Stilentropie-Steuerung, die zwischen gestreuten (hohe Entropie) und
 geordneten (niedrige Entropie) Verteilungen wechselt.
 Die Zuweisung der Stil-ID erfolgt in Listing ~\ref{lst:style_assignment} und beschreibt die Gruppierung/Sortierung
-innerhalb des \ac{HyDra}-Frameworks in der kreisförmigen Objektwolke mit anteiliger Aufteilung der Stile.
+innerhalb des \ac{HyDra}-Frameworks in der kreisförmigen Objektwolke mit anteiliger Verteilung der Stile.
 
 % Entropie Listing.
 \begin{listing}[htbp]
@@ -402,22 +399,22 @@ Diese nur äußerst bedingte visuelle Parität muss für etwaige vergleichende E
 \end{figure}
 
 \subsection{Deferred-Uber Rendering Pipeline}
-\label{subsec:040201_deferred_uber_pipeline}
+\label{subsec:040202_deferred_uber_pipeline}
 
 % Einleitung und Aufbau
 Im \ac{HyDra}-Framework wird zur Referenz eines einfachen Deferred-Ansatzes eine Deferred-Pipeline in einer
 Single-Pass-Architektur (bezogen auf den Lighting-Pass) mittels Uber-Shader-Struktur implementiert
-(vergleiche ~\ref{Kapitel2Uber}).
+(vgl.\ Kapitel~\ref{Kapitel2Uber}).
 Dieser Ansatz wird gewählt, um Deferred Shading in seiner grundlegendsten Form, vergleichbar mit dem naiven
 Forward-Ansatz, zu untersuchen und die Einflüsse etwaiger Optimierungsverfahren möglichst gering zu halten.
 Deferred-Architekturen mit einem einzigen Lighting-Pass finden in der Praxis, ähnlich
-wie naive Forward-Ansätze, allerdings nur selten Anwendung (vergleiche Kapitel~\ref{sec:0301_academic_state}).
+wie naive Forward-Ansätze, allerdings nur selten Anwendung (vgl.\ Kapitel~\ref{sec:0301_academic_state}).
 
 % Uniform Limit.
 Aufgrund der Charakteristik des Deferred-Uber-Ansatzes, bei dem nur ein Lighting-Pass erfolgt, unterliegt auch diese
 Pipeline den in Kapitel ~\ref{subsec:040201_forward_pipeline} beschriebenen Restriktionen der Grafik-\ac{API} und
 Hardware in Bezug auf die Uniform-Buffer-Limits und ist somit durch eine Maximalanzahl von 500 gleichzeitigen
-Punktlichtquellen gekennzeichnet (vergleiche~\ref{eq:ubo-limits}).
+Punktlichtquellen gekennzeichnet (vgl.\ Kapitel~\ref{eq:ubo-limits}).
 
 % Branching in Uber.
 Listing~\ref{lst:deferred_branching_structure} skizziert die Kontrollstruktur des monolithischen Uber-Shaders.
@@ -598,7 +595,7 @@ Dieser Umstand erhöht die \ac{VRAM}-Belastung Deferred-Volume-Pipelines im Verg
 % Post-Lit Vorteil
 Im Gegensatz zur Deferred-Uber-Architektur bietet die Deferred-Volume-Architektur den Vorteil, dass Bildraumeffekte,
 ohne den Zwang Pre-Lit-Verfahren anzuwenden, mit Post-Lit-Verfahren aufbereitet werden können
-(vergleiche Abbildung~\ref{fig:040202_pre-post-lit_comparison}).
+(vgl.\ Abbildung~\ref{fig:040202_pre-post-lit_comparison}).
 Für die spätere Performance-Analyse (siehe Kapitel~\ref{ch:05_evaluation}) ist jedoch zu bemerken, dass diese
 Post-Lit-Evaluierungen mit einem leicht erhöhten algorithmischen Aufwand verbunden sind.
 Dieser begründet sich im Resolve-Pass der Deferred-Volume-Pipeline durch die multiplen Texturzugriffe pro Kernel-Sample,
@@ -648,7 +645,7 @@ worden.
     Iterative Kernel-Texture-Fetches in 4 Quadranten zur Varianz- und Mittelwertberechnung.
     Radiusabhängige Schleifen.
     & Erzeugt eine stilisierte, malerische Abstraktion (Painterly-Look) durch Homogenisierung lokaler Farbflächen
-    (siehe Abb.~\ref{fig:040202_pre-post-lit_comparison}).\\
+    (siehe Abbildung~\ref{fig:040202_pre-post-lit_comparison}).\\
     \addlinespace
 
     \midrule
@@ -656,7 +653,7 @@ worden.
     \textbf{Toon}\newline \cite{lakeStylizedRenderingTechniques2000} &
     Dot-Products ($N \cdot L$) und Quantisierung (Banding) der diffusen Beleuchtung über Floor/Step-Funktionen.
     & Reduziert kontinuierliche Schattierungsverläufe auf diskrete Helligkeitsstufen; Charakteristisch für die Ästhetik
-    klassischer Cel-Animationen (siehe Abb.~\ref{fig:040201_outline_comparison}). \\
+    klassischer Cel-Animationen (siehe Abbildung~\ref{fig:040201_outline_comparison}). \\
     \addlinespace
 
     \midrule
@@ -664,7 +661,7 @@ worden.
     \textbf{Gooch}\newline \cite{goochNonphotorealisticLightingModel1998} &
     Lineare Interpolation zwischen definierten Cool- und Warm-Colors basierend auf dem Skalarprodukt ($N \cdot L$).
     & Verbessert die visuelle Wahrnehmung von Geometriedetails durch Temperaturkontraste; Vorrangig verwendet für
-    technische Illustrationen (siehe Abb.~\ref{fig:gooch_example}). \\
+    technische Illustrationen (siehe Abbildung~\ref{fig:gooch_example}). \\
     \addlinespace
 
     \midrule
@@ -673,7 +670,7 @@ worden.
     Diskrete~$3\times3$ Kernel-Texture-Fetches auf Depth- und Normal-Buffern im \ac{G-Buffer} zur Gradienten- und
     Kantenerkennung.
     & Extrahiert und betont Geometrie- sowie Tiefendiskontinuitäten zur klaren visuellen Segmentierung von Objekten im
-    Bildraum (siehe Abb.~\ref{fig:hydra_sobel-outlines}). \\
+    Bildraum (siehe Abbildung~\ref{fig:hydra_sobel-outlines}). \\
     \addlinespace
 
     \midrule
@@ -681,7 +678,7 @@ worden.
     \textbf{Inverted-Hull}\newline \cite[Kap.~15.2.2]{akenine-mollerRealtimeRendering2019} &
     Verschieben der Oberfläche entlang der Normalen bei gleichzeitiger Umkehrung der gerenderten Flächen.
     & Generiert eine konsistente, geschlossene Außenkontur im Objektraum durch das vergrößerte Rendern der maskierten
-    Rückseiten (siehe Abb.~\ref{fig:hydra_inverted-hull}). \\
+    Rückseiten (siehe Abbildung~\ref{fig:hydra_inverted-hull}). \\
 \end{longtable}
 
 \begin{figure}[htbp]
@@ -698,12 +695,12 @@ Da bei bildschirmbasierten Operatoren die Arbeit auf einer festen Pixel-Nachbars
 Verkleinerung des Objekts (z.\ B.\ durch zunehmende Kameraentfernung) oder an den Objekträndern zu einem Verlust oder
 der inhaltlichen Verfälschung der notwendigen diskreten Abtastpunkte innerhalb der
 Objektgrenzen~\cite[Abschn.~5]{kyprianidisImageVideoAbstraction2009}
-(siehe Abb.~\ref{fig:npr_spatial_low_pixel_problem}).
+(siehe Abbildung~\ref{fig:npr_spatial_low_pixel_problem}).
 Innerhalb des \ac{HyDra}-Frameworks werden zur Umgehung dieser Effekte jene Samples verworfen, deren \texttt{styleID}
 nicht mit dem Zentrum übereinstimmt, um eine Verrechnung benachbarter Objekte mit unterschiedlicher Stilisierung zu
 verhindern.
 Diese werden durch einen konstanten Fallback-Wert in Form der unfiltrierten Basisfarbe des gezeichneten Pixels ersetzt
-(vergleiche Listing~\ref{lst:kuwahara_optimization}).
+(vgl.\ Listing~\ref{lst:kuwahara_optimization}).
 Diese Modifikation dient der Gewährleistung einer stilistischen Parität des Kuwahara-Filters auch bei selektiver
 Anwendung des Effektes.
 
@@ -772,12 +769,12 @@ auf die \ac{GPU} überträgt, verlieren die Untersuchungen ihre Validität.
 
 % Engine State.
 Die Systemarchitektur des \ac{HyDra}-Frameworks basiert zu diesem Zweck auf einem zentralen \texttt{EngineState}
-(vergleiche Listing~\ref{lst:Engine_State}).
+(vgl.\ Listing~\ref{lst:Engine_State}).
 Dieser geteilte Zustand fungiert als zentrale Quelle für das Verhalten und den Gesamtaufbau der Szene sowie der
 verwendeten Rendering-Pipelines der gesamten Laufzeitumgebung.
 Das \texttt{BenchmarkOrchestrator}-Modul wendet vor dem Start und während jeder Testreihe sämtliche Variablenänderungen
 (wie Instanzenanzahl, Detailgrad oder Filter-Radien) exakt einmal auf den globalen Zustand an und variiert im
-Testverlauf lediglich die untersuchte unabhängige Variable (vergleiche Tab.~\ref{tab:independent_vars}).
+Testverlauf lediglich die untersuchte unabhängige Variable (vgl.\ Tab.~\ref{tab:independent_vars}).
 Wie in Kapitel~\ref{subsec:040102_scene_management} dargelegt nutzen alle untersuchten Rendering-Pipelines über die
 Variablen des \texttt{EngineState}s hinaus die gleiche Logik bezüglich Sichtbarkeitsprüfung und Geometrieverwaltung
 unter Verwendung des \texttt{SceneManager}-Moduls.
@@ -788,13 +785,9 @@ Geometrie-Verwaltungsebene zwischen den verschiedenen Pipelines zu vermeiden.
 \begin{listing}[htbp]
     \begin{codeframe}
         \begin{minted}{cpp}
-// Architectural Rendering Paths
-enum class RenderPath { DeferredUber, DeferredVolume, Forward };
-
 // Centralized state container for the current frame
 struct EngineState {
     RenderPath activeRenderPath = RenderPath::Forward;
-
     // Core Metrics
     bool use16BitHDR           = Config::DefaultState::Use16BitHDR;
     int activeObstacleCount    = Config::DefaultState::ActiveObstacleCount;
@@ -803,25 +796,21 @@ struct EngineState {
     float ambientLightStrength = Config::EngineSettings::AmbientLightStrength;
     int renderWidth            = Config::EngineSettings::ScreenWidth;
     int renderHeight           = Config::EngineSettings::ScreenHeight;
-
     // NPR Toggles
     bool enableOutlines = Config::DefaultState::EnableOutlines;
     bool enableKuwahara = Config::DefaultState::EnableKuwahara;
     bool enableGooch    = Config::DefaultState::EnableGooch;
     bool enableToon     = Config::DefaultState::EnableToon;
-
     // Spatial & Stylistic Modifiers
     int kuwaharaRadius       = Config::DefaultState::KuwaharaRadius;
     float kuwaharaIntensity  = Config::DefaultState::KuwaharaIntensity;
     float objectSphereRadius = Config::DefaultState::ObjectSphereRadius;
     int currentLodIndex      = Config::DefaultState::CurrentLodIndex;
-
     // Architecture & Distribution Flags
     bool useClusteredStyles  = Config::DefaultState::UseClusteredStyles;
     bool useLightSingularity = Config::DefaultState::UseLightSingularity;
     bool useNprRoom          = Config::DefaultState::UseNprRoom;
     bool renderFloor         = Config::DefaultState::RenderFloor;
-
     // System Flags
     bool requestScreenshot = false;
 };
@@ -832,7 +821,7 @@ struct EngineState {
 \end{listing}
 
 \subsection{Asynchrone Hardware-Telemetrie}
-\label{subsec:040401_async_hardware_telemetry}
+\label{subsec:040402_async_hardware_telemetry}
 
 % Einleitung
 Die Erfassung von Ausführungszeiten auf der Host-Seite (\ac{CPU}) ist für die Bewertung der reinen
@@ -856,38 +845,29 @@ auf~\texttt{GpuProfiler::MAX\_IN\_FLIGHT = 16} verhindert der \texttt{BenchmarkO
 \ac{GPU}-Auslastung ein Überschreiben noch nicht ausgelesener Hardware-Abfragen der \ac{GPU} durch die \ac{CPU}.
 Der kontrollierte \textquote{Notfall-Stall} stoppt die \ac{CPU}-Befehlsübertragung und stellt somit sicher, dass jeder
 gerenderte Frame ohne Datenverlust lückenlos und chronologisch in die Telemetrie einfließt
-(vergleiche Listing~\ref{lst:orchestrator_stall}).
+(vgl.\ Listing~\ref{lst:orchestrator_stall}).
 
 % Orchestrator Listing:
 \begin{listing}[htbp]
     \begin{codeframe}
         \begin{minted}{cpp}
-// Queue up the raw CPU metrics for this frame
-pendingFrames.push(FrameRecord{...});
-
 // Process resolved frames
 while (!pendingFrames.empty()) {
     const auto &[...] = pendingFrames.front();
-    const bool isDeferred = (recActiveRenderPath != RenderPath::Forward);
-
+    ...
     // Check if hardware queries are naturally ready
-    const bool geomReady       = !isDeferred || geomProfiler.IsOldestReady();
-    const bool lightReady      = lightProfiler.IsOldestReady();
-    const bool masterReady     = masterGpuProfiler.IsOldestReady();
+    ...
     const bool allQueriesReady = (geomReady && lightReady && masterReady);
     const bool emergencyStallRequired =
         (pendingFrames.size() >= GpuProfiler::MAX_IN_FLIGHT);
-
     // Wait for all profilers to report, or force wait to clear capacity
-    if (allQueriesReady || emergencyStallRequired) {
+if (allQueriesReady || emergencyStallRequired) {
         double geomMs = 0.0, lightMs = 0.0, totalGpuMs = 0.0;
-
-        // Pass 'forceWait' down to TryGetOldestResult so thread blocks and waits for the OpenGL queries to resolve before extracting
+        // Pass 'forceWait' down so thread blocks and waits for queries to resolve before extracting
         if (isDeferred)
             geomProfiler.TryGetOldestResult(geomMs, emergencyStallRequired);
         lightProfiler.TryGetOldestResult(lightMs, emergencyStallRequired);
         masterGpuProfiler.TryGetOldestResult(totalGpuMs, emergencyStallRequired);
-
         telemetryWriter.AppendRow(...);
         pendingFrames.pop();
     } else {
@@ -901,3 +881,112 @@ while (!pendingFrames.empty()) {
     \label{lst:orchestrator_stall}
 \end{listing}
 
+\subsection{Engine-Determinismus und Frame-Locking}
+\label{subsec:040403_determinism_and_frame_locking}
+
+% Einführung.
+Für die Makro-Benchmark-Synthese (siehe Kapitel~\ref{sec:0506_macro_eval}) wird im Gegensatz zu den Evaluationen mit
+statischen Blickwinkeln und unbewegter Geometrie eine Kamerafahrt durch die Szene in mehreren Durchgängen verwendet.
+Da die untersuchten Rendering-Pipelines innerhalb des \ac{HyDra}-Frameworks nacheinander geprüft werden, muss eine klare
+Metrik für den Messrahmen dieser Versuche festgelegt werden.
+Eine einfache, zeitlich getaktete Kamerafahrt erweist sich an dieser Stelle als unzureichend, da zu erwarten ist, dass
+die in dieser Arbeit untersuchten Rendering-Pipelines signifikante Unterschiede in den absoluten Ausführungszeiten
+aufweisen.
+Eine an Systemzeit gekoppelte Kameraführung würde folglich zwangsläufig zu räumlichen Divergenzen zwischen den
+Testdurchläufen führen, da die Kamera ihre Durchläufe an zunehmend verschiedenen räumlichen Punkten beenden und
+beginnen würde.
+Eine Framezeit gekoppelte Kameraführung hätte einen gleichen Effekt.
+In jedem einzelnen Frame muss exakt derselbe Szeneninhalt an die Pipelines übergeben werden (räumliche Parität), um
+valide Vergleichsdaten während einer dynamischen Kamerafahrt zu generieren.
+
+% Frame-Locking.
+Vor diesem Hintergrund erzwingt das \ac{HyDra}-Framework absoluten Determinismus während für diese Bewegungssequenzen
+durch ein striktes \textquote{Frame-Locking}.
+Der Fortschritt der Simulation wird ausschließlich durch einen diskreten Frame-Index gesteuert.
+Für jede Benchmark-Sequenz aus~\ref{sec:0506_macro_eval} wird ein linearer Interpolationskoeffizient $t$ berechnet.
+\begin{equation}
+    t = \frac{\texttt{currentFrame}}{\texttt{targetFrameCount}}
+    \label{eq:frame_time_ratio}
+\end{equation}
+Dieser Koeffizient bestimmt die exakte Positionierung und Orientierung der Kamera entlang eines vordefinierten Pfades.
+Der \texttt{targetFrameCount} beschreibt hier die gesamte Menge an Frames, die pro Durchlauf/Messung aufgezeichnet
+werden soll.
+Diese softwaretechnische Maßnahme führt dazu, dass unabhängig von der tatsächlichen Render-Dauer eines Frames stets
+mathematisch identische Szeneninhalte berechnet werden.
+
+% Abschluss und Überleitung.
+Das Zusammenwirken dieser deterministischen Bewegungssequenzen und der anschließenden asynchronen Telemetrie-Erfassung
+bildet den vollständigen Lebenszyklus eines Benchmark-Frames.
+Die Architektur dieses Prozesses innerhalb des \ac{HyDra}-Frameworks wird in Abbildung ~\ref{fig:macro_telemetry_flow}
+zusammenfassend dargestellt.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[
+        >=Latex,
+        node distance=0.6cm and 1.5cm,
+        font=\sffamily\small,
+        base/.style={draw, align=center, minimum height=0.7cm, minimum width=3.5cm},
+        startstop/.style={base, rounded corners, fill=gray!15},
+        process/.style={base, fill=white},
+        decision/.style={draw, diamond, aspect=2, inner sep=2pt, text width=2.5cm, align=center},
+        queue/.style={base, fill=blue!05, rounded corners=2mm}
+    ]
+
+        % Nodes
+        \node (start) [startstop] {Frame initialisieren};
+        \node (dec_macro) [decision, below=of start] {Makro-Bench?\\(5.6)};
+        \node (cam_update) [process, right=of dec_macro, xshift=0.5cm] {Frame-Locking ($t$)\\Kamera interpolieren};
+        \node (state) [process, below=of dec_macro] {Zustandsmutation\\(LOD, Geometrie, Lights)};
+        \node (q_start) [process, below=of state] {GPU-Profiler: \texttt{Begin()}\\(Start-Query)};
+        \node (render) [process, below=of q_start] {Rendering-Pipeline\\(Forward / Uber / Volume)};
+        \node (q_end) [process, below=of render] {GPU-Profiler: \texttt{End()}\\(End-Query)};
+        \node (enqueue) [queue, below=of q_end] {\texttt{pendingFrames.push()}\\(Metriken einreihen)};
+        \node (dec_empty) [decision, below=of enqueue] {\texttt{pendingFrames}\\leer?};
+        \node (end) [startstop, left=of dec_empty, xshift=-0cm] {Frame abschließen};
+        \node (dec_full) [decision, below=of dec_empty] {\texttt{pendingFrames}\\voll?};
+        \node (block_wait) [process, right=of dec_full, xshift=0.5cm] {\texttt{forceWait = true}\\CPU blockiert
+            (Stall)};
+        \node (dec_ready) [decision, below=of dec_full] {GPU-Daten\\verfügbar?};
+        \node (extract) [process, right=of dec_ready, xshift=0.5cm] {Datenextraktion\\CSV-Export \& \texttt{pop()}};
+
+        % Macro-Branch
+        \draw[->] (start) -- (dec_macro);
+        \draw[->] (dec_macro) -- node[above, font=\footnotesize] {Ja} (cam_update);
+        \draw[->] (dec_macro) -- node[right, font=\footnotesize] {Nein} (state);
+        \draw[->] (cam_update) |- (state);
+
+        % Core Pipeline
+        \draw[->] (state) -- (q_start);
+        \draw[->] (q_start) -- (render);
+        \draw[->] (render) -- (q_end);
+        \draw[->] (q_end) -- (enqueue);
+        \draw[->] (enqueue) -- (dec_empty);
+
+        % Loop Start & Exit
+        \draw[->] (dec_empty) -- node[above, font=\footnotesize] {Ja} (end);
+        \draw[->] (dec_empty) -- node[right, font=\footnotesize] {Nein (\texttt{while})} (dec_full);
+
+        % Emergency Stall Path
+        \draw[->] (dec_full) -- node[above, font=\footnotesize] {Ja} (block_wait);
+        \draw[->] (block_wait) -- (extract);
+
+        % Async Path
+        \draw[->] (dec_full) -- node[right, font=\footnotesize] {Nein} (dec_ready);
+        \draw[->] (dec_ready) -- node[above, font=\footnotesize] {Ja (Async)} (extract);
+
+        % Loop Back
+        \draw[->] (extract.east) -- ++(0.4,0) |- (dec_empty.east);
+
+        % Async Break
+        \draw[->] (dec_ready) -| node[above left, font=\footnotesize] {Nein (\texttt{break})} (end.south);
+
+    \end{tikzpicture}
+    \caption{Architektur des Benchmark-Lebenszyklus. Der \textit{Control Flow} differenziert zwischen statischen Messungen und Frame-Locking (Suite 5.6) sowie zwischen asynchroner Telemetrie-Extraktion und forcierten CPU-Stalls bei Überlauf des Ring-Buffers.}
+    \label{fig:macro_telemetry_flow}
+\end{figure}
+
+Die technische Konzeption der Rendering-Pipelines sowie die Etablierung einer präzisen Telemetrie-Architektur, die in
+diesem Kapitel dargestellt wurden, bilden das strukturelle Fundament der vorliegenden Evaluationssoftware.
+Im folgenden Kapitel wird diese Architektur als isolierte Testumgebung genutzt, um die übrigen Hardware-Performance
+orientierten Forschungsfragen anhand systematischer empirischer Versuche quantitativ zu beantworten.

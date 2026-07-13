@@ -103,8 +103,18 @@
     maxcitenames=1,
     mincitenames=1,
     doi=true,
-    isbn=false
+    isbn=true,
+    url=true
 ]{biblatex}
+
+\AtEveryBibitem{
+    \iffieldundef{doi}
+    {}
+    {
+        \clearfield{url}
+        \clearfield{isbn}
+    }
+}
 
 \DefineBibliographyStrings{ngerman}{
     presentedat = {präsentiert auf der\addspace},
@@ -194,7 +204,7 @@
     % 12-15 Seiten (Final 25)
     \input{kapitel/05_Evaluation}
 
-    % 8-12 Seiten
+    % 6-9 Seiten
     \input{kapitel/06_Diskussion}
 
     % 2-3 Seiten

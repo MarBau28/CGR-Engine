@@ -10,7 +10,7 @@ Performance-Engpässe unter einer systematischen Skalierung von Szenenkomplexit�
 Der erste Abschnitt definiert die methodischen Rahmenbedingungen sowie die technischen Spezifikationen des
 Versuchsaufbaus, um eine belastbare Beantwortung der Forschungsfragen zu gewährleisten.
 Darauf aufbauend erfolgt die schrittweise Datenauswertung anhand spezifischer Kontrollgruppen und der gezielten
-Untersuchung vermuteter Performance-Engpässe, bevor ein abschließender Macro-Benchmark die gewonnenen Erkenntnisse
+Untersuchung vermuteter Performance-Engpässe, bevor ein abschließender Makro-Benchmark die gewonnenen Erkenntnisse
 ganzheitlich evaluiert.
 
 
@@ -1104,7 +1104,7 @@ Frameworks.
 \end{figure}
 
 % Deduktion.
-In den theoretischen Grundlagen (vgl.\ Kapitel~\ref{subsec:020204_dynamic_branching_and_warp_divergence}) wurde
+In den theoretischen Grundlagen (vgl.\\ Kapitel~\ref{subsec:020204_dynamic_branching_and_warp_divergence}) wurde
 dargelegt, dass die \ac{GPU} Instruktionen im \ac{SIMT}-Verfahren in sogenannten \textit{Warps} verarbeitet.
 Der signifikante Leistungseinbruch der Deferred-Uber-Pipeline im gestreuten Szenario stellt die praktische
 Manifestation der \textit{Warp Divergence} dar und verifiziert \hyperlink{hyp:H2}{Hypothese H2} vollumfänglich.
@@ -1122,7 +1122,7 @@ zusätzliche Hypothese eines erhöhten Register-Drucks aufstellen.
 Die Implementierung eines zusätzlichen Rendering-Stils im monolithischen Code-Pfad bedingt potenziell die Allokation
 weiterer \ac{VGPR} pro Thread.
 Es kann deduziert werden, dass sich dadurch die globale Auslastung (Occupancy) der Recheneinheiten verringert
-(vgl.~Kapitel~\ref{subsec:020203_register_pressure_limitations}).
+(vgl.\~Kapitel~\ref{subsec:020203_register_pressure_limitations}).
 An dieser Stelle ist jedoch eine methodische Limitierung der vorliegenden Testarchitektur zu berücksichtigen.
 Aufgrund der Tatsache, dass die Messung der isolierten Beleuchtungs-Laufzeit ($t_{\text{Light}}$) keine
 Low-Level-Telemetriedaten liefert, kann diese spezifische Ursache nicht abschließend empirisch verifiziert werden.
@@ -1136,8 +1136,8 @@ Registerdruck zum Leistungsabfall der Deferred-Uber-Pipeline beiträgt.
 Der folgende Versuch fokussiert sich ausschließlich auf die Deferred-Pipelines (Deferred-Uber und \
 textit{Deferred\_Volume}).
 Die vorliegende Untersuchung widmet sich der Analyse der Einflüsse kernelbasierter \ac{NPR}-Effekte.
-Aufgrund der Tatsache, dass solche kernelbasierten Effekte in der Forward-Pipeline auf Objektebene nicht realistisch
-anwendbar sind (vgl.\ Kapitel~\ref{subsec:040301_forward_pipeline}) und nur auf gesamter Screen-Space-Ebene anwendbar
+Durch die Tatsache, dass solche kernelbasierten Effekte in der Forward-Pipeline auf Objektebene nicht realistisch
+anwendbar sind (vgl.\\ Kapitel~\ref{subsec:040201_forward_pipeline}) und nur auf gesamter Screen-Space-Ebene anwendbar
 sind, kann keine Zielbild-Parität erreicht werden.
 Ein aussagekräftiger Vergleich mit den Deferred-Pipelines ist somit nicht möglich.
 Für die nachfolgende Evaluation wird der implementierte Kuwahara-Filter herangezogen.
@@ -1189,7 +1189,7 @@ Es ergibt sich beim Sprung von $R=2$ ($27$ Samples) auf $R=16$ ($1.175$ Samples)
 % Deduktion.
 Die Tatsache, dass die Deferred-Volume-Pipeline im Vergleich zur Deferred-Uber-Pipeline eine
 geringere Effizienz aufweist, lässt sich auf eine algorithmische Asymmetrie in der Filter-Implementierung zurückführen.
-Wie bereits in Kapitel~\ref{subsec:040202_filter_operations} dargelegt, erfordern die beiden Architekturen
+Wie bereits in Kapitel~\ref{subsec:040202_deferred_uber_pipeline} dargelegt, erfordern die beiden Architekturen
 unterschiedliche Ansätze bei der Evaluierung des Kuwahara-Filters.
 Die Deferred-Uber-Pipeline operiert als \textit{Pre-Lit}-Filter, um einen algorithmischen Ineffizienz-Kollaps durch
 redundante Beleuchtungsberechnungen pro Nachbarpixel zu verhindern.
@@ -1198,14 +1198,14 @@ berechnet die aufwendige Beleuchtung erst nach Abschluss des Filters für das fi
 Die Deferred-Volume-Architektur appliziert den Filter im \textit{Resolve}-Pass hingegen auf das bereits
 akkumulierte Licht der Szene (\textit{Post-Lit}).
 Dies ermöglicht zwar eine \textquote{echtere} Darstellung des Kuwahara-Effektes, erzwingt jedoch innerhalb der innersten
-Kuwahara-Schleife einen zusätzlichen Texturlesezugriff auf den \textit{Light Accumulation Buffer}
-(siehe algorithmische Beschreibung in Kapitel~\ref{subsec:040202_filter_operations}).
+Kuwahara-Schleife zusätzliche Texturlesezugriffe auf den \textit{Light Accumulation Buffer}
+(vergleiche Kapitel~\ref{subsec:040203_deferred_volume_pipeline}).
 
 Über die Auswirkungen der asymmetrischen Implementationen des Kernel-Filters (Kuwahara) hinaus kann kein signifikanter
 Unterschied in der Handhabung von Kernel-Effekten zwischen den untersuchten Deferred-Pipelines festgestellt werden.
 
 
-\section{{Macro-Benchmark Synthese}}
+\section{{MaKro-Benchmark-Synthese}}
 \label{sec:0506_macro_eval}
 
 % Kapiteleinleitung.
@@ -1279,7 +1279,7 @@ Rechenlast mit \qty{0,72}{\milli\second} (Deferred-Uber) sowie $+\qty{1,01}{\mil
 deutlich effizienter ab (vgl.\ Ergebnisse aus~\ref{subsec:050401_light_count_eval}).
 Die Aktivierung der gestreuten \ac{NPR}-Stile im dritten Pass (\ac{NPR}-Parity) offenbart schließlich die
 architektonischen Schwächen des Deferred-Uber-Shaders, der durch \textit{Warp Divergence} und Registerdruck
-eine Zusatzlast von \qty{0,10}{\milli\second} erfährt (vgl.\ \ref{subsec:050501_entropy_eval}).
+eine Zusatzlast von \qty{0,10}{\milli\second} erfährt (vgl.~\ref{subsec:050501_entropy_eval}).
 Das Deferred-Volume-Rendering erweist sich mit einer minimalen Erhöhung von lediglich $+\qty{0,03}{\milli\second}$ als
 nahezu immun gegen diese stilistische Entropie, während die Forward-Pipeline um weitere $+\qty{0,17}{\milli\second}$
 degradiert.

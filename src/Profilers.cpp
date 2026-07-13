@@ -74,7 +74,7 @@ bool GpuProfiler::TryGetOldestResult(double &outElapsedMs, const bool forceWait)
     GLuint64 startTimeNs = 0;
     GLuint64 endTimeNs   = 0;
 
-    // during teardown/flush
+    // Get finished query (stall CPU as long as possible if needed)
     glGetQueryObjectui64v(startQueries[oldestFrame], GL_QUERY_RESULT, &startTimeNs);
     glGetQueryObjectui64v(endQueries[oldestFrame], GL_QUERY_RESULT, &endTimeNs);
 
