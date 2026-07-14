@@ -30,7 +30,8 @@ architektonischer Engpässe.
 
 % Forward Rendering.
 Der primäre architektonische Nachteil klassischer Forward-Rendering-Ansätze liegt, wie in
-Abschnitt~\ref{subsec:020101_forward_rendering_core} dargelegt, im multiplikativen Aufwand von $\mathcal{O}(G \cdot L)$ bei hoher
+Abschnitt~\ref{subsec:020101_forward_rendering} dargelegt, im multiplikativen Aufwand von
+$\mathcal{O}(N_{\text{obj}} \cdot N_{\text{light}})$ bei hoher
 Geometrie- und Beleuchtungskomplexität.
 Zusätzlich zu dieser Komplexität ergibt sich eine kombinatorische Explosion der Shader-Permutationen, sobald diverse
 Materialeigenschaften und Lichttypen in einer Szene verrechnet werden müssen.
@@ -48,8 +49,8 @@ die hohe Flexibilität bei der Materialauswertung, erhalten bleibt.
 
 % Deferred Rendering.
 Deferred-Rendering-Pipelines haben sich in Umgebungen mit hoher geometrischer Komplexität und anspruchsvollen
-Beleuchtungsszenarien weitestgehend durchgesetzt, weisen jedoch ebenfalls diverse architektonische Limitierungen
-auf.
+Beleuchtungsszenarien weitestgehend durchgesetzt~\cite[Abschn.~2]{mallettDeferredAdaptiveCompute2018}, weisen jedoch
+ebenfalls diverse architektonische Limitierungen auf.
 Der signifikanteste Flaschenhals ist die hohe Auslastung der Speicherbandbreite (Memory Bandwidth), welche durch den
 permanenten Schreib- und Lesezugriff auf den \ac{G-Buffer} induziert
 wird~\cite[S.~55]{burnsVisibilityBufferCacheFriendly2013}.
@@ -256,8 +257,8 @@ Da eine vollumfängliche Analyse sämtlicher industriespezifischer Workarounds d
 überschreiten würde, adressiert die vorliegende Untersuchung die bestehende Forschungslücke durch eine empirische
 Rückbesinnung auf die architektonischen Fundamente.
 Die Evaluation der systematischen Verschiebung von Performance-Engpässen erfolgt über den Vergleich primärer
-Rendering-Paradigmen: naives Forward Rendering, simples Deferred Shading mit \textit{G-Buffer}-Packing über
-\textit{Style-IDs} und Uber-Shader sowie Deferred Light-Volumes als Referenz für Multi-Pass-Architekturen.
+Rendering-Paradigmen: naives Forward Rendering, simples Deferred Shading mit \ac{G-Buffer}-Packing über
+Style-IDs und Uber-Shader sowie Deferred Light-Volumes als Referenz für Multi-Pass-Architekturen.
 Ziel ist die Erarbeitung einer empirischen Basis für eine fundierte Entscheidungsmatrix.
 
 % Die spezifische Forschungslücke (Granularität vs.~globales Post-Processing).
@@ -275,11 +276,12 @@ an welchen Stellen sich die primären Performance-Engpässe manifestieren.
 % Der Mangel an empirischer Evidenz (Das Messproblem).
 Theoretische Performance-Engpässe, wie etwa Bandbreitenlimitierungen in \acs{G-Buffer}n oder Register Pressure bei
 Uber-Shader, sind in der Literatur zwar
-dokumentiert~\cite[Abschn.~6]{schiedDeferredAttributeInterpolation2015, akenine-mollerRealtimeRendering2019};
+dokumentiert~\cites[S.~881]{akenine-mollerRealtimeRendering2019}[Abschn.~2.6]{Thaler2011DeferredRendering}
+[Abschn.~6]{schiedDeferredAttributeInterpolation2015};
 wie~\textcite[S.~905]{akenine-mollerRealtimeRendering2019} jedoch anmerken, verschieben sich diese Limitierungen in
 der Praxis sehr dynamisch in Abhängigkeit von der Szenenkomplexität.
 Der aktuellen Literatur mangelt es folglich an einer isolierten, komparativen und empirischen Systemanalyse, welche
-diese Engpässe spezifisch im Kontext des \ac{NPR}quantifiziert.
+diese Engpässe spezifisch im Kontext des \ac{NPR} quantifiziert.
 
 % Abgrenzung und Negative-Scope.
 Die Gewährleistung valider empirischer Messungen erfordert eine strikte Limitierung des Untersuchungsraums.

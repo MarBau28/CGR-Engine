@@ -1,49 +1,314 @@
 \chapter{Grundlagen}
 \label{ch:02_grundlagen}
 
-In diesem Kapitel werden die theoretischen Fundamente der untersuchten Rendering-Pipelines definiert.
-Dazu gehört die Abgrenzung der verschiedenen Render-Pfade, die Spezifikation der physischen Hardware-Flaschenhälse sowie die Einordnung der Konzepte im Kontext der Stilisierung.
+% Kapitelübersicht.
+In diesem Kapitel werden die theoretischen Grundlagen der untersuchten Rendering-Pipelines und der verwendeten Verfahren
+definiert und erörtert.
+Hierzu zählen die technischen Grundlagen der diversen Rendering-Paradigmen, die Spezifikation der physischen
+Hardware-Flaschenhälse sowie die Einordnung der Konzepte im Kontext der Stilisierung.
 
 
-\section{Rendering-Paradigmen und algorithmische Komplexität}
-\label{sec:0201_rendering_paradigms_and_complexity}
+\section{Rendering-Paradigmen}
+\label{sec:0201_rendering_paradigms}
 
-Dieser Abschnitt widmet sich der formalen Definition und Gegenüberstellung von klassischen und entkoppelten Render-Pfaden unter Berücksichtigung ihrer inhärenten Skalierbarkeit.
+% Einleitung.
+Im Folgenden werden die formalen Definitionen und die Gegenüberstellung von klassischen und entkoppelten Render-Pfaden
+unter Berücksichtigung ihrer inhärenten Skalierbarkeit erörtert.
 
 \subsection{Forward Rendering}
-\label{subsec:020101_forward_rendering_core}
-Beschreibung der klassischen Render-Pipeline mit der direkten Berechnung von Geometrie und Schattierung in einem Durchlauf. Erläuterung des theoretischen Aufwandsverhaltens bei steigender Objekt- und Lichtanzahl.
+\label{subsec:020101_forward_rendering}
+
+% Funktionsweise.
+Naives Forward Rendering (im Folgenden als Bezeichnung von Single-Lighting-Pass Forward-Varianten verwendet) zeichnet
+sich durch das Iterieren über einzelne Geometrien und Bearbeiten von Shading-Operationen pro Objekt aus.
+Es erfolgt zunächst eine Evaluierung aller Lichter, die ein potenzielles Objekt in einer Szene beeinflussen.
+In einer weiteren Schleife werden diese Lichter anschließend für das jeweilige Objekt zusammen mit etwaigen anderen
+Materialeigenschaften verrechnet und
+angewendet~\cite[Folie~\textit{Forward Rendering – Single Pass}]{valientDeferredRenderingKillzone}
+(vgl.\ ~\ref{fig:naive_forward_rendering_flow}).
+Die Beleuchtungsberechnung finden also untrennbar gekoppelt im selben Render-Pass (Fragment-Shader) statt.
+
+\begin{figure}[htbp]
+    \centering
+    \resizebox{0.85\textwidth}{!}{%
+        \begin{tikzpicture}[
+            >=Latex,
+            node distance=0.7cm and 1.5cm,
+            font=\sffamily\small,
+            base/.style={draw, align=center, minimum height=0.7cm, minimum width=3.5cm},
+            startstop/.style={base, rounded corners, fill=gray!15},
+            process/.style={base, fill=white},
+            decision/.style={draw, diamond, aspect=2, inner sep=2pt, text width=2.2cm, align=center}
+        ]
+
+            % Nodes
+            \node (start) [startstop] {Szenen-Rendering starten};
+
+            % Outer Loop: Objects
+            \node (dec_obj) [decision, below=of start] {Alle Objekte\\gerendert?};
+            \node (end) [startstop, right=of dec_obj, xshift=1cm] {Rendering abgeschlossen};
+            \node (bind_obj) [process, below=of dec_obj] {Geometrie \& individuelles\\Material/Shader binden};
+
+            % Lights
+            \node (dec_light) [decision, below=of bind_obj] {Alle Lichter\\evaluiert?};
+            \node (calc_light) [process, right=of dec_light, xshift=0.8cm] {Beleuchtung akkumulieren
+            \\(Fragment-Shader)};
+
+            % Draw Call
+            \node (draw) [process, below=of dec_light] {Pixel in Framebuffer schreiben};
+
+            % Edges - Main Flow
+            \draw[->] (start) -- (dec_obj);
+            \draw[->] (dec_obj) -- node[above, font=\footnotesize] {Ja} (end);
+            \draw[->] (dec_obj) -- node[right, font=\footnotesize] {Nein} (bind_obj);
+            \draw[->] (bind_obj) -- (dec_light);
+            \draw[->] (dec_light) -- node[right, font=\footnotesize] {Ja} (draw);
+
+            % Edges - Lights
+            \draw[->] (dec_light) -- node[above, font=\footnotesize] {Nein} (calc_light);
+            \draw[->] (calc_light.north) -- ++(0,0.5) -| (dec_light.north);
+
+            % Edges - Objects
+            \draw[->] (draw.west) -- ++(-1.0,0) |- node[near start, left, font=\footnotesize] {Nächstes Objekt}
+            (dec_obj.west);
+
+        \end{tikzpicture}
+    }
+    \caption{UML-Aktivitätsdiagramm des naiven Forward-Rendering-Paradigmas.
+    Die direkte Verschachtelung der Objekt- und Lichtevaluierung zeigt die inhärente quadratische Komplexität.}
+    \label{fig:naive_forward_rendering_flow}
+\end{figure}
+
+% Komplexität.
+Dieser Umstand führt zu einem grundlegenden theoretischen Aufwand des Forward-Renderings, der sich proportional zur
+Anzahl der Geometrien und der einfallenden Lichtquellen verhält (quadratische Komplexität).
+~\cite[Abschn.~1]{Thaler2011DeferredRendering}.
+\begin{equation}
+    \mathcal{O}(N_{\text{obj}} \cdot N_{\text{light}})
+    \label{eq:forward_shading_complexity}
+\end{equation}
+Wobei $N_{\text{obj}}$ die Objektanzahl und $N_{\text{light}}$ die Anzahl der aktiven, Lichtquellen definiert.
+
+% Overdraw-Teaser.
+Auf Hardware-Ebene manifestiert sich diese Komplexität in der Rasterisierung.
+Da die Beleuchtungsschleife für jedes erzeugte Fragment ausgeführt wird, skaliert die Rechenlast massiv mit der
+Pixelfläche der Objekte~\cite[Abschn.~3.2]{haradaForwardBringingDeferred2012}.
+Verdeckt ein nachfolgend gezeichnetes Objekt ein bereits berechnetes Fragment, war die vorherige, rechenintensive
+Lichtauswertung obsolet.
+Dieses ineffiziente Verhalten wird als \textit{Shading Overdraw} bezeichnet und in
+Abschnitt~\ref{2.2.1} detailliert beleuchtet.
+
+% Vorteile.
+Die direkte Kopplung von Geometrie und Material bietet in der Praxis jedoch auch diverse Vorteile.
+Es kann jedes Objekt ohne sonstige Workarounds seinen eigenen hochspezialisierten Shader
+binden~\cite[Abschn.~1]{haradaForwardBringingDeferred2012}.
+Dies ist insbesondere vor dem Hintergrund der Evaluation dieser Arbeit bezüglich selektiver Stilisierungen mittels
+\ac{NPR}-Effekten von Relevanz.
 
 \subsection{Deferred Rendering}
-\label{subsec:020102_deferred_rendering_core}
-Erklärung der entkoppelten Pipeline und der Zwischenspeicherung von Geometriedaten in separaten Puffern. Aufzeigen der Effizienzgewinne bei der Schattierung durch den Einsatz geometrischer Hilfskörper.
+\label{subsec:020102_deferred_rendering}
+
+% Funktionsweise.
+Deferred-Rendering zeichnet sich im Gegensatz zu Forward-Rendering durch die eindeutige Trennung von
+Geometrieverarbeitung und dem Shading der Geometrie aus.
+Die Geometrien sowie alle damit assoziierten Werte, wie etwa Normalen (Ausrichtungen), Albedos
+(Farbinformationen) oder Tiefeninformationen, werden in einem eigenständigen, separaten Pass verarbeitet und in
+einen Zwischenspeicher, dem sogenannten \ac{G-Buffer}, in Form eines \ac{FBO} geschrieben (bildschirmfüllendes Quad).
+In diesem Pass werden explizit keine Shading-Operationen, wie etwa die Beleuchtung der Objekte, durchgeführt.
+Erst in einem nachgelagerten Pass werden schließlich dei IInformation aus dem \ac{G-Buffer} verwendet, um die
+Beleuchtung und sonstige Materialeigenschaften auf Screen-Space-Ebene auszuwerten und zu berechnen
+(vgl.\ ~\ref{fig:deferred_rendering_flow}).~\cites[Abschn.~2]{Thaler2011DeferredRendering}
+[Kap.~20.1]{akenine-mollerRealtimeRendering2019}
+[Folie~\textit{Deferred Rendering}]{valientDeferredRenderingKillzone}
+
+% Diagram.
+\begin{figure}[htbp]
+    \centering
+    \resizebox{0.95\textwidth}{!}{%
+        \begin{tikzpicture}[
+            >=Latex,
+            node distance=0.8cm and 1.5cm,
+            font=\sffamily\small,
+            base/.style={draw, align=center, minimum height=0.7cm, minimum width=3.5cm},
+            startstop/.style={base, rounded corners, fill=gray!15},
+            process/.style={base, fill=white},
+            decision/.style={draw, diamond, aspect=2, inner sep=2pt, text width=2.2cm, align=center},
+            storage/.style={base, fill=blue!05, rounded corners=2mm}
+        ]
+
+            % Nodes
+            \node (start) [startstop] {Szenen-Rendering starten};
+
+            % Geometry Pass
+            \node (dec_obj) [decision, below=of start] {Alle Objekte\\verarbeitet?};
+            \node (write_g) [process, below=of dec_obj] {Geometrie, Normalen, Albedo\\extrahieren};
+            \node (store_g) [process, below=of write_g] {In G-Buffer (FBO) schreiben\\(Explizit kein Shading)};
+
+            % Buffer State Transition
+            \node (gbuffer) [storage, right=of dec_obj, xshift=1.5cm] {G-Buffer vollständig\\(Geometrie-Pass beendet)};
+
+            % Lighting Pass
+            \node (dec_light) [decision, below=of gbuffer] {Alle Lichter\\evaluiert?};
+            \node (read_g) [process, below=of dec_light] {Daten aus G-Buffer lesen\\(Screen-Space)};
+            \node (calc_light) [process, below=of read_g] {Shading berechnen\\(Nur sichtbare Fragmente)};
+
+            % End
+            \node (end) [startstop, right=of dec_light, xshift=1.5cm] {Rendering abgeschlossen};
+
+            % Edges - Geometry Loop
+            \draw[->] (start) -- (dec_obj);
+            \draw[->] (dec_obj) -- node[right, font=\footnotesize] {Nein} (write_g);
+            \draw[->] (write_g) -- (store_g);
+            \draw[->] (store_g.west) -- ++(-1.0,0) |- node[near start, left, font=\footnotesize] {Nächstes Objekt}
+            (dec_obj.west);
+
+            % Edges - Transition
+            \draw[->] (dec_obj) -- node[above, font=\footnotesize] {Ja} (gbuffer);
+            \draw[->] (gbuffer) -- (dec_light);
+
+            % Edges - Lighting Loop
+            \draw[->] (dec_light) -- node[right, font=\footnotesize] {Nein} (read_g);
+            \draw[->] (read_g) -- (calc_light);
+            \draw[->] (calc_light.west) -- ++(-1.0,0) node[below right, font=\footnotesize, xshift=-2cm]
+                {Nächstes Licht} |- (dec_light.west);
+
+            % Edges - End
+            \draw[->] (dec_light) -- node[above, font=\footnotesize] {Ja} (end);
+
+        \end{tikzpicture}
+    }
+    \caption{UML-Aktivitätsdiagramm des Deferred-Rendering-Paradigmas.
+    Die algorithmische Entkopplung von Geometrieverarbeitung (linker Pfad) und Beleuchtungsberechnung
+        (mittlerer Pfad) zeigt die inhärent lineare Komplexität.
+        Shading-Operationen erfolgen ausschließlich im Screen-Space für sichtbare Fragmente.}
+    \label{fig:deferred_rendering_flow}
+\end{figure}
+
+% Komplexität.
+Algorithmisch bedingt die additive Entkopplung demnach einen linearen, theoretischen Aufwand für
+Deferred-Rendering-Paradigmen~\cite[Abschn.~3]{fonsecaDeferredShadingTutorial}.
+\begin{equation}
+    \mathcal{O}(N_{\text{obj}} + N_{\text{light}})
+    \label{eq:deferred_shading_complexity}
+\end{equation}
+Hierbei definiert $N_{\text{obj}}$ die Anzahl der Objekte während der initialen Geometriephase (G-Buffer-Pass) und
+$N_{\text{light}}$ die Anzahl der aktiven Lichtquellen.
+Die Shading-Operationen werden folglich nur für die tatsächlich sichtbaren Fragmente (Pixel) berechnet.
+
+% Uber Shader/
+Werden Deferred-Ansätze nur in einem einzigen, dem Geometrie-Pass nachgelagerten, Pass umgesetzt, kommt es bei
+der Umsetzung unterschiedlicher Materialeigenschaften und möglichen Stilisierungen zwangsweise zu einer monolithischen
+Shader-Struktur im finalen Fragment-Shader und sogenannten
+\textit{Uber-Shadern}~\cites[S.~881]{akenine-mollerRealtimeRendering2019}[Abschn.~2.6]{Thaler2011DeferredRendering}
+[Abschn.~6]{schiedDeferredAttributeInterpolation2015}.
+Für die in dieser Arbeit implementierten Single-Pass Deferred-Pipeline
+(im weiteren Verlauf \textit{Deferred-Uber} genannt) ist dieser Umstand vor dem Hintergrund der selektiven stilisierung
+mit \ac{NPR}-Effekten besonders bedeutend.
+
+% Light Volumes.
+Ein erweiterter und gängiger Ansatz der Implementierung von Deferred-Pipelines stellt eine Multi-Pass Shading
+Architektur unter der verwendung von \textit{Light-Volumes} dar~\cites[Abschn.~2]{mallettDeferredAdaptiveCompute2018}
+[Folie~"Conventional Deferred Shading"]{lauritzenDeferredRenderingCurrent}.
+In diesem Ansatz werden die Lichtquellen um spezielle Proxy-Geometrien erweitert, die jeweils den Wirkungsbereich dieser
+Lichtquellen darstellen~\cite[Abschn.~2.2]{Thaler2011DeferredRendering}.
+Für diesen Ansatz muss das eigentliche Shading in zwei separate Pässe aufgeteilt werden.
+Nach dem initialen Geometrie-Pass, in dem der \ac{G-Buffer} ohne die entsprechenden Proxy-Geometrien beschrieben wurde,
+werden die Light-Volumes in einem separaten Lighting-Pass rasterisiert~\cites[Abschn.~2]{Thaler2011DeferredRendering}
+[S.~884--886]{akenine-mollerRealtimeRendering2019}.
+Innerhalb dieses Prozesses werden ausschließlich die Beleuchtungseinflüsse für die betroffenen Fragmente durch das
+Auslesen des \ac{G-Buffer}s berechnet und in ein separates \ac{FBO} (\textquote{Lighting-Buffer})
+geschrieben~\cite[Abschn.~3.1]{fonsecaDeferredShadingTutorial}.
+Die Einflüsse etwaiger überlappender Light-Volumes werden durch automatisierte additive \textit{Blending}-Operationen
+auf den speziell dafür ausgelegten \acp{ROP} der \ac{GPU}
+akkumuliert~\cite[Kap.~11.2.4.10]{gregoryGameEngineArchitecture2018}.
+In einem finalen Resolve-Pass werden schließlich die Basis-Materialeigenschaften (wie etwa Farbinformationen) aus dem
+\ac{G-Buffer} mit der akkumulierten Beleuchtung kombiniert und um finale Shading- oder Post-Processing-Effekte
+ergänzt~\cite[Abschn.~2.3]{Thaler2011DeferredRendering}.
+
+\begin{figure}[htbp]
+    \centering
+    \resizebox{0.95\textwidth}{!}{%
+        \begin{tikzpicture}[
+            >=Latex,
+            node distance=0.8cm and 1.5cm,
+            font=\sffamily\small,
+            base/.style={draw, align=center, minimum height=0.7cm, minimum width=3.5cm},
+            startstop/.style={base, rounded corners, fill=gray!15},
+            process/.style={base, fill=white},
+            decision/.style={draw, diamond, aspect=2, inner sep=2pt, text width=2.2cm, align=center},
+            storage/.style={base, fill=blue!05, rounded corners=2mm}
+        ]
+
+            % Nodes
+            \node (start) [storage] {G-Buffer initialisiert\\(Geometrie-Pass beendet)};
+
+            % Lighting Pass
+            \node (dec_vol) [decision, below=of start] {Alle Light-Volumes\\gerastert?};
+            \node (raster) [process, below=of dec_vol] {Proxy-Geometrie\\rasterisieren};
+            \node (read_g) [process, below=of raster] {G-Buffer auslesen\\(Nur betroffene Fragmente)};
+            \node (accumulate) [process, below=of read_g] {In Lighting-Buffer schreiben\\(Additives Blending
+            via \ac{ROP}s)};
+
+            % Resolve Pass
+            \node (buffer_ready) [storage, right=of dec_vol, xshift=1.8cm] {Lighting-Buffer\\vollständig};
+            \node (resolve) [process, below=of buffer_ready] {Resolve-Pass:\\Albedo \& Licht kombinieren};
+            \node (post) [process, below=of resolve] {Finales Shading \&\\Post-Processing};
+            \node (end) [startstop, below=of post] {Rendering abgeschlossen};
+
+            % Edges - Lighting Pass
+            \draw[->] (start) -- (dec_vol);
+            \draw[->] (dec_vol) -- node[right, font=\footnotesize] {Nein} (raster);
+            \draw[->] (raster) -- (read_g);
+            \draw[->] (read_g) -- (accumulate);
+            \draw[->] (accumulate.west) -- ++(-1.0,0) |- node[pos=0.5, above left, font=\footnotesize]
+                {Nächstes Volume} (dec_vol.west);
+
+            % Edges - Resolve Pass
+            \draw[->] (dec_vol) -- node[above, font=\footnotesize] {Ja} (buffer_ready);
+            \draw[->] (buffer_ready) -- (resolve);
+            \draw[->] (resolve) -- (post);
+            \draw[->] (post) -- (end);
+
+        \end{tikzpicture}
+    }
+    \caption{UML-Aktivitätsdiagramm der Multi-Pass-Architektur für Deferred-Rendering mittels Light-Volumes.
+    Im Lighting-Pass (linker Pfad) werden Proxy-Geometrien gerastert und überlappende Einflüsse per Hardware-Blending
+    in einem separatem FBO akkumuliert.
+    Der Resolve-Pass (rechter Pfad) kombiniert diese Daten anschließend mit den initialen Materialinformationen.}
+    \label{fig:deferred_light_volumes_flow}
+\end{figure}
 
 
-\section{Hardware-Limitierungen und Performance-Metriken}
-\label{sec:0202_hardware_limitations_and_metrics}
-
-Dieser Abschnitt spezifiziert die physischen Ausführungseinheiten moderner Grafikhardware, welche die kritischen Engpässe bei der praktischen Ausführung der Render-Pfade bilden.
-
-\subsection{Fragment-Overdraw und Fillrate}
-\label{subsec:020201_fragment_overdraw_and_fillrate}
-Thematisierung mehrfach gezeichneter Pixel auf identischen Koordinaten. Betrachtung der resultierenden Last für die Füllrate und softwareseitiger Optimierungen wie dem Z-Prepass.
-
-\subsection{Speicherbandbreite (Memory Bandwidth)}
-\label{subsec:020202_memory_bandwidth_limitations}
-Analyse der Durchsatzgrenzen beim Zugriff auf den Videospeicher. Erläuterung des Lese- und Schreibaufwands durch breite Pufferstrukturen und additive Mischvorgänge.
-
-\subsection{Register Pressure}
-\label{subsec:020203_register_pressure_limitations}
-Behandlung der limitierten internen Speichereinheiten pro Rechenkern. Beschreibung der Auswirkungen auf die Thread-Parallelisierung bei der Nutzung großer, kombinierter Shader-Programme.
-
-\subsection{Dynamic Branching und Warp Divergence}
-\label{subsec:020204_dynamic_branching_and_warp_divergence}
-Erläuterung der synchronen Funktionsweise von Thread-Gruppen auf Hardware-Ebene. Beschreibung der sequenziellen Serialisierung bei ungleichen Verzweigungsbedingungen auf Pixelebene.
-
-
-\section{Grundlagen der NPR Pipeline}
-\label{sec:0203_non_photorealistic_rendering_fundamentals}
-
-Dieser Abschnitt kategorisiert die raumbezogenen Konzepte der NPR-Generierung zur selektiven, isolierten Stilisierung von Szenenobjekten.
-
-Abwägung von Stilisierungsverfahren direkt auf der dreidimensionalen Szenengeometrie im Vergleich zu nachgelagerten, globalen Filtern auf dem fertigen zweidimensionalen Bild. Gegenüberstellung von präziser Objekttrennung und Laufzeit-Konstanz.
+%\subsection{Deferred Rendering}
+%\label{subsec:020102_deferred_rendering_core}
+%Erklärung der entkoppelten Pipeline und der Zwischenspeicherung von Geometriedaten in separaten Puffern. Aufzeigen der Effizienzgewinne bei der Schattierung durch den Einsatz geometrischer Hilfskörper.
+%
+%
+%\section{Hardware-Limitierungen und Performance-Metriken}
+%\label{sec:0202_hardware_limitations_and_metrics}
+%
+%Dieser Abschnitt spezifiziert die physischen Ausführungseinheiten moderner Grafikhardware, welche die kritischen Engpässe bei der praktischen Ausführung der Render-Pfade bilden.
+%
+%\subsection{Fragment-Overdraw und Fillrate}
+%\label{subsec:020201_fragment_overdraw_and_fillrate}
+%Thematisierung mehrfach gezeichneter Pixel auf identischen Koordinaten. Betrachtung der resultierenden Last für die Füllrate und softwareseitiger Optimierungen wie dem Z-Prepass.
+%
+%\subsection{Speicherbandbreite (Memory Bandwidth)}
+%\label{subsec:020202_memory_bandwidth_limitations}
+%Analyse der Durchsatzgrenzen beim Zugriff auf den Videospeicher. Erläuterung des Lese- und Schreibaufwands durch breite Pufferstrukturen und additive Mischvorgänge.
+%
+%\subsection{Register Pressure}
+%\label{subsec:020203_register_pressure_limitations}
+%Behandlung der limitierten internen Speichereinheiten pro Rechenkern. Beschreibung der Auswirkungen auf die Thread-Parallelisierung bei der Nutzung großer, kombinierter Shader-Programme.
+%
+%\subsection{Dynamic Branching und Warp Divergence}
+%\label{subsec:020204_dynamic_branching_and_warp_divergence}
+%Erläuterung der synchronen Funktionsweise von Thread-Gruppen auf Hardware-Ebene. Beschreibung der sequenziellen Serialisierung bei ungleichen Verzweigungsbedingungen auf Pixelebene.
+%
+%
+%\section{Grundlagen der NPR Pipeline}
+%\label{sec:0203_non_photorealistic_rendering_fundamentals}
+%
+%Dieser Abschnitt kategorisiert die raumbezogenen Konzepte der NPR-Generierung zur selektiven, isolierten Stilisierung von Szenenobjekten.
+%
+%Abwägung von Stilisierungsverfahren direkt auf der dreidimensionalen Szenengeometrie im Vergleich zu nachgelagerten, globalen Filtern auf dem fertigen zweidimensionalen Bild. Gegenüberstellung von präziser Objekttrennung und Laufzeit-Konstanz.
