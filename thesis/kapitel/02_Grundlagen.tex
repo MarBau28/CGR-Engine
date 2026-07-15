@@ -95,8 +95,8 @@ Da die Beleuchtungsschleife für jedes erzeugte Fragment ausgeführt wird, skali
 Pixelfläche der Objekte~\cite[Abschn.~3.2]{haradaForwardBringingDeferred2012}.
 Verdeckt ein nachfolgend gezeichnetes Objekt ein bereits berechnetes Fragment, war die vorherige, rechenintensive
 Lichtauswertung obsolet.
-Dieses ineffiziente Verhalten wird als \textit{Shading Overdraw} bezeichnet und in
-Abschnitt~\ref{2.2.1} detailliert beleuchtet.
+Dieses ineffiziente Verhalten wird als \textit{Shading-Overdraw} bezeichnet und in
+Kapitel~\ref{subsec:020201_overdraw} detailliert beleuchtet.
 
 % Vorteile.
 Die direkte Kopplung von Geometrie und Material bietet in der Praxis jedoch auch diverse Vorteile.
@@ -220,7 +220,8 @@ Auslesen des \ac{G-Buffer}s berechnet und in ein separates \ac{FBO} (\textquote{
 geschrieben~\cite[Abschn.~3.1]{fonsecaDeferredShadingTutorial}.
 Die Einflüsse etwaiger überlappender Light-Volumes werden durch automatisierte additive \textit{Blending}-Operationen
 auf den speziell dafür ausgelegten \acp{ROP} der \ac{GPU}
-akkumuliert~\cite[Kap.~11.2.4.10]{gregoryGameEngineArchitecture2018}.
+akkumuliert~\cite[Kap.~11.2.4.10]{gregoryGameEngineArchitecture2018}
+(vergleiche Kap.~\ref{subsec:020202_memory_bandwidth}).
 In einem finalen Resolve-Pass werden schließlich die Basis-Materialeigenschaften (wie etwa Farbinformationen) aus dem
 \ac{G-Buffer} mit der akkumulierten Beleuchtung kombiniert und um finale Shading- oder Post-Processing-Effekte
 ergänzt~\cite[Abschn.~2.3]{Thaler2011DeferredRendering}.
@@ -251,9 +252,9 @@ ergänzt~\cite[Abschn.~2.3]{Thaler2011DeferredRendering}.
 
             % Resolve Pass
             \node (buffer_ready) [storage, right=of dec_vol, xshift=1.8cm] {Lighting-Buffer\\vollständig};
-            \node (resolve) [process, below=of buffer_ready] {Resolve-Pass:\\Albedo \& Licht kombinieren};
-            \node (post) [process, below=of resolve] {Finales Shading \&\\Post-Processing};
-            \node (end) [startstop, below=of post] {Rendering abgeschlossen};
+            \node (resolve) [process, below=of buffer_ready] {Resolve-Pass:\\Farbe \& Licht kombinieren \\
+            + Finales Shading \&\\Post-Processing};
+            \node (end) [startstop, below=of resolve] {Rendering abgeschlossen};
 
             % Edges - Lighting Pass
             \draw[->] (start) -- (dec_vol);
@@ -266,8 +267,7 @@ ergänzt~\cite[Abschn.~2.3]{Thaler2011DeferredRendering}.
             % Edges - Resolve Pass
             \draw[->] (dec_vol) -- node[above, font=\footnotesize] {Ja} (buffer_ready);
             \draw[->] (buffer_ready) -- (resolve);
-            \draw[->] (resolve) -- (post);
-            \draw[->] (post) -- (end);
+            \draw[->] (resolve) -- (end);
 
         \end{tikzpicture}
     }
@@ -279,36 +279,136 @@ ergänzt~\cite[Abschn.~2.3]{Thaler2011DeferredRendering}.
 \end{figure}
 
 
-%\subsection{Deferred Rendering}
-%\label{subsec:020102_deferred_rendering_core}
-%Erklärung der entkoppelten Pipeline und der Zwischenspeicherung von Geometriedaten in separaten Puffern. Aufzeigen der Effizienzgewinne bei der Schattierung durch den Einsatz geometrischer Hilfskörper.
-%
-%
-%\section{Hardware-Limitierungen und Performance-Metriken}
-%\label{sec:0202_hardware_limitations_and_metrics}
-%
-%Dieser Abschnitt spezifiziert die physischen Ausführungseinheiten moderner Grafikhardware, welche die kritischen Engpässe bei der praktischen Ausführung der Render-Pfade bilden.
-%
-%\subsection{Fragment-Overdraw und Fillrate}
-%\label{subsec:020201_fragment_overdraw_and_fillrate}
-%Thematisierung mehrfach gezeichneter Pixel auf identischen Koordinaten. Betrachtung der resultierenden Last für die Füllrate und softwareseitiger Optimierungen wie dem Z-Prepass.
-%
-%\subsection{Speicherbandbreite (Memory Bandwidth)}
-%\label{subsec:020202_memory_bandwidth_limitations}
-%Analyse der Durchsatzgrenzen beim Zugriff auf den Videospeicher. Erläuterung des Lese- und Schreibaufwands durch breite Pufferstrukturen und additive Mischvorgänge.
-%
-%\subsection{Register Pressure}
-%\label{subsec:020203_register_pressure_limitations}
-%Behandlung der limitierten internen Speichereinheiten pro Rechenkern. Beschreibung der Auswirkungen auf die Thread-Parallelisierung bei der Nutzung großer, kombinierter Shader-Programme.
-%
-%\subsection{Dynamic Branching und Warp Divergence}
-%\label{subsec:020204_dynamic_branching_and_warp_divergence}
-%Erläuterung der synchronen Funktionsweise von Thread-Gruppen auf Hardware-Ebene. Beschreibung der sequenziellen Serialisierung bei ungleichen Verzweigungsbedingungen auf Pixelebene.
-%
-%
-%\section{Grundlagen der NPR Pipeline}
-%\label{sec:0203_non_photorealistic_rendering_fundamentals}
-%
-%Dieser Abschnitt kategorisiert die raumbezogenen Konzepte der NPR-Generierung zur selektiven, isolierten Stilisierung von Szenenobjekten.
-%
-%Abwägung von Stilisierungsverfahren direkt auf der dreidimensionalen Szenengeometrie im Vergleich zu nachgelagerten, globalen Filtern auf dem fertigen zweidimensionalen Bild. Gegenüberstellung von präziser Objekttrennung und Laufzeit-Konstanz.
+\section{Hardware \& Performance}
+\label{sec:0202_hardware_and_perfomance_metrics}
+
+Die Evaluation der in dieser Arbeit betrachteten Architekturen und Paradigmen erfordert die Einordnung und
+Kontextualisierung einiger zentraler Phänomene, Metriken und allgemeiner Flaschenhälse auf Hardwareebene der \ac{GPU}.
+Im Folgenden werden die drei für diese Arbeit relevantesten Aspekte erörtert.
+
+\subsection{Fragment-Overdraw}
+\label{subsec:020201_overdraw}
+
+% Einleitung und Grundprinzip.
+Wie in Kapitel~\ref{subsec:040201_forward_pipeline} referenziert leiden vor allem klassische Forward-Rendering-Pipelines
+unter dem Phänomen des \textit{Fragment-Overdraws}~\cite[Abschn.~1.5]{Thaler2011DeferredRendering}.
+Dieses Phänomen beschreibt die Eigenschaft \ac{GPU}-Seitig unnötige Shading-Operationen auf Objekten auszuführen, die im
+späteren Verlauf von anderen Objekten teilweise oder gänzlich verdeckt und im Framebuffer überschrieben
+werden~\cites[S.~801--802]{akenine-mollerRealtimeRendering2019}[S.~55]{burnsVisibilityBufferCacheFriendly2013}.
+Dies führt zu einem massiven Konsum der verfügbaren Füllrate (fill rate) und resultiert in modernen Architekturen primär
+in Leistungsengpässen durch limitierte Speicherbandbreite und unnötige
+Fragment-Shader-Auslastung~\cite[S.~788 und 801--802]{akenine-mollerRealtimeRendering2019}.
+
+% Lösungen-early-z.
+Die Kompensation von Overdraw erfolgt in erster Linie durch zwei vorherrschende Prinzipien: das automatisierte
+\textit{Early-Z} auf \ac{GPU}-Hardwareebene und \textit{Z-Prepass}-Algorithmen.
+Wie~\textcite[Kap.~11.2.4.8]{gregoryGameEngineArchitecture2018} beschreiben sind Early-Z-Tests direkt auf der Hardware
+moderner \acp{GPU} verankerte Tiefen-Tests auf Fragmentebene, um diese zu verwerfen, sollte bereits ein
+übergelagerter Pixel an dieser Stelle im Framebuffer existieren.
+Die Pixel-Shader-Ebene (Fragment-Shader) wird somit für das entsprechende Fragment übersprungen.
+
+% Lösung Z-Prepass.
+Eine weitere gängige Praxis ist die Implementierung eines Z-Prepass-Algorithmus.
+Ein klassischer Z-Prepass-Algorithmus ist in zwei Phasen unterteilt.
+In der initialen Phase erfolgt die Erstellung eines \textit{Z-Buffers}.
+Im Rahmen dieses Prozesses werden opake Geometrien von vorne nach hinten (Front-to-Back) gerendert, wobei ausschließlich
+die Tiefenwerte der Fragmente in den Z-Buffer geschrieben werden.
+In der zweiten Phase erfolgt schließlich das vollständige Shading der sichtbaren Fragmente, das sich am erstellten
+Z-Buffer orientiert.
+\cite[Kap.~11.2, Abschn.~\textit{z-Prepass to the Rescue}]{gregoryGameEngineArchitecture2018}
+Gemäß dieser Prämisse durchlaufen sämtliche Objekte für dieses Verfahren die Geometrie-Pipeline (Vertex-Shader) zweimal,
+was eine zusätzliche Belastung der Performance zur Folge hat.
+
+\subsection{Speicherbandbreite}
+\label{subsec:020202_memory_bandwidth}
+
+% Einleitung.
+Eine signifikante Einschränkung in der Architektur von \ac{GPU}s stellt die Speicherbandbreite (Memory Bandwidth) dar.
+Sie definiert die maximale Übertragungsgeschwindigkeit von Daten zwischen dem dedizierten \ac{VRAM} und den
+eigentlichen Rechenkernen der \ac{GPU}~\cite[S.~30~u.~S.~791]{akenine-mollerRealtimeRendering2019}.
+Der Datenbus zwischen \ac{VRAM} und \ac{GPU} weist eine harte Kapazitätsgrenze auf, die in Gigabyte pro Sekunde (GB/s)
+gemessen wird.
+Jeder Render-Vorgang erfordert einen Datenaustausch über diesen Bus, beispielsweise während des Auslesens von Texturen
+und Geometrie oder dem Schreiben von finalen Farbwerten in den
+Framebuffer~\cite[S.~56]{burnsVisibilityBufferCacheFriendly2013}.
+Moderne \acp{GPU} sind mit leistungsstarken \acp{ALU} ausgestattet.
+Diese Einheiten ermöglichen die Ausführung von Berechnungen, wie etwa Fragment-Shading, mit einer hohen
+Geschwindigkeit~\cite[Kap.~23.2]{akenine-mollerRealtimeRendering2019}.
+Übersteigt der Bedarf an Lese- und Schreibzugriffen die physikalische Kapazität der Speicherbandbreite, stößt die
+Architektur an eine Grenze, auch wenn die \acp{ALU} theoretisch in der Lage wären, die reine Rechenlast zu
+bearbeiten~\cite[S.~791]{akenine-mollerRealtimeRendering2019}.
+In diesem Zustand limitiert die Datenübertragungsrate des Speichers die Gesamtleistung: Die \acp{ALU} verbleiben in
+Wartezuständen (\textit{Stalls}), da der Speicherbus die benötigten Daten nicht schnell genug übertragen
+kann~\cites[S.~31~u.~S.~791--792]{akenine-mollerRealtimeRendering2019}.
+
+% Deferred Grundproblem.
+Deferred-Rendering-Architekturen zeichnen sich durch eine besonders hohe Auslastung der Speicherbandbreite aus.
+Die Notwendigkeit, teils extrem große Datenmengen (Albedo, Normalen, Tiefe etc.) über \ac{MRT} in den \ac{G-Buffer}
+schreiben zu müssen (vgl.\ ~Kapitel~\ref{subsec:020102_deferred_rendering}), belastet die Speicherbandbreite deutlich
+mehr als klassisches
+Forward-Rendering~\cites[S.~32]{AdvancesRealTimeRendering}[Abschn.~2.1]{Thaler2011DeferredRendering}.
+Bei besonders großen Datenmengen innerhalb eines \ac{G-Buffer}s spricht man auch von
+\textit{Fat \ac{G-Buffer}n}~\cite[S.~71]{AdvancesRealTimeRendering}.
+
+% Read Modify Write in Light-Volumes.
+Nach dem Aufbau des \ac{G-Buffer}s im Geometrie-Pass manifestiert sich die Bandbreitenlimitierung ebenfalls im
+nachfolgenden Beleuchtungs-Pass, sollten Light-Volumes verwendet werden.
+Wie in Kapitel~\ref{subsec:020102_deferred_rendering} dargelegt, erfordert die Überlappung mehrerer Light-Volumes
+den Einsatz von additivem Hardware-Blending.
+Der Vorgang des Blendings erzeugt für jedes berechnete Fragment \ac{RMW}-Zyklen.
+Im Rahmen dieses Prozesses lädt die Hardware (\ac{GPU}) den bisherigen Farbwert des Pixels aus dem \ac{VRAM} (Read),
+addiert die neue Lichtintensität in der \ac{ALU} (Modify) und schreibt das Resultat schließlich in den Speicher
+(Write)~\cites[Kap.~18.2.5]{akenine-mollerRealtimeRendering2019}[S.~676]{gregoryGameEngineArchitecture2018}.
+Bei einer hohen lokalen Tiefenkomplexität der Lichtquellen
+(wenn sich mehrere Light Volumes über demselben Bildschirmbereich überschneiden), multipliziert sich diese
+Last~\cite[Folie~9]{lauritzenDeferredRenderingCurrent}.
+Der permanente \ac{RMW}-Zyklus führt in diesem Szenario zu einer Sättigung des Datenbusses und resultiert, wie zuvor
+beschrieben, in weiteren \ac{ALU}-Stalls.
+
+\subsection{Registerdruck \& Warp-Divergence}
+\label{subsec:020203_warp_divergence_and_register_pressure}
+
+% Register Pressure.
+Neben der limitierten Speicherbandbreite stellt der sogenannte Registerdruck (\textit{Register Pressure}) einen
+weiteren Leistungsengpass in der \ac{GPU}-Architektur dar~\cite[S.~801~u.~904]{akenine-mollerRealtimeRendering2019}.
+Jede \ac{GPU} verfügt über extrem schnellen lokalen Speicher in Form von
+Shader-Registern~\cite[Kap.~11.2.5.1,~Abschn.\textit{Shader Registers}]{gregoryGameEngineArchitecture2018}.
+Diese Register bilden die schnellste Speicherstufe der Hardware, sind jedoch in ihrer Kapazität pro Rechenkern streng
+limitiert~\cite[S.~791]{akenine-mollerRealtimeRendering2019}.
+Wenn ein Shader kompiliert, wird die maximale Anzahl an Registern, die ein einzelner Thread zur Laufzeit benötigt,
+ermittelt.
+Bei der Ausführung wird für jeden Thread diese Anzahl an benötigten Registern
+reserviert~\cites[Abschn.~\textit{The Logical Pipeline}, Punkt~8]{pixeljetstreamPixelJetStream2015}
+[S.~32]{akenine-mollerRealtimeRendering2019}.
+Das Phänomen des Registerdrucks beschreibt den Zustand, der eintritt, wenn ein Shader-Programm
+(wie beispielsweise ein rechenintensiver Fragment-Shader mit vielen Materialien oder \ac{NPR}-Stilen) eine so hohe
+Anzahl an Registern anfordert, dass diese stark beansprucht oder vollständig erschöpft
+werden und damit maximal gleichzeitig ausführbaren Threads
+limitiert~\cite[S.~32~u.~904]{akenine-mollerRealtimeRendering2019}.
+
+% Warp Divergence.
+Ergänzend zur Limitierung aktiver Threads durch den Registerdruck existiert mit der sogenannten \textit{Warp-Divergence}
+(oft auch als \textit{thread divergence} bezeichnet) ein weiterer Flaschenhals bezüglich der Threadverarbeitung auf
+der \ac{GPU}~\cite[S.~32]{akenine-mollerRealtimeRendering2019}.
+Die Verarbeitung von Threads durch die \ac{GPU} erfolgt nicht isoliert, sondern gebündelt in feste Gruppen, sogenannten
+\textit{Warps} (oft als \textit{Wavefronts} in AMD-Architekturen
+bezeichnet)~\cite[S.~31]{akenine-mollerRealtimeRendering2019}.
+Die Abarbeitung dieser Warps erfolgt entsprechend dem \ac{SIMD} beziehungsweise \ac{SIMT}-Paradigma.
+In der Praxis bedeutet dies, dass für alle Threads innerhalb eines Warps in jedem einzelnen Taktzyklus exakt dieselbe
+Instruktion ausgeführt wird.
+Diese Instruktion wird somit auf alle individuellen Datensätze der jeweiligen Threads im Warp angewendet, wie
+beispielsweise auf die ausgelesenen Texturwerte von räumlich benachbarten
+Pixeln~\cite[Kap.~23.2]{akenine-mollerRealtimeRendering2019}.
+Unter der Prämisse, dass der Shader-Code linear und uniform verläuft
+(alle Threads eines Warps können mit den gleichen Instruktionen abgearbeitet werden), ist die \ac{GPU} in der Lage,
+mit maximaler Parallelität zu arbeiten und Shading-Berechnungen signifikant zu optimieren.
+Ein architektonischer Bottleneck in Form von Warp-Divergence entsteht dann, wenn dieser hardwareseitig erzwungene
+Gleichschritt durch dynamische Verzweigungen im Code aufgebrochen wird.
+Treten dynamische Verzweigungen, beispielsweise durch \texttt{if/else}- oder \texttt{switch}-Bedingungen auf,
+evaluieren Threads desselben Warps unterschiedliche Codepfade und damit unterschiedliche
+Instruktionen~\cite[Kap.~3.1]{akenine-mollerRealtimeRendering2019}.
+Die \ac{GPU} wird dadurch gezwungen, diese abweichenden Pfade innerhalb des Warps strikt sequenziell zu berechnen.
+Die parallele Architektur verliert an dieser Stelle ihre Effizienz, da Threads, die auf die Berechnung
+ihres Pfades warten müssen, in dieser Zeit ungenutzt
+pausieren~\cites[Abschn.~\textit{The Logical Pipeline}, Punkt~6]{pixeljetstreamPixelJetStream2015}
+[S.~32]{akenine-mollerRealtimeRendering2019}.

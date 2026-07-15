@@ -575,7 +575,8 @@ massives Überschreiben von Pixeln).
         \begin{tabularx}{0.9\textwidth}{>{\sffamily}l X}
             Unabhängige Variable:    & Instanzen-Anzahl ($N_{\text{Inst}} \in \{2.000, \dots, 32.000\}$) \\
             Metrik (X-Achse):    & Theoretischer Overdraw-Faktor (($\approx 1{,}1$ bis $18{,}1$)) \\
-            Kontrollvariablen:       & Fixer Radius ($r_{\text{Spawn}} = 30{,}0$), $LOD = 1$, $N_{\text{Light}} = 0$ \\
+            Kontrollvariablen:       & Fixer Radius ($r_{\text{Spawn}} = 30{,}0$), $\ac{LOD} = 1$, $N_{\text{Light}} =
+            0$ \\
             Zielgröße:               & \ac{GPU}-Gesamtlaufzeit ($t_{\text{GPU}}$)
         \end{tabularx}
         \vspace{2mm}
@@ -602,7 +603,7 @@ Die nahezu deckungsgleichen Kurven demonstrieren, dass die umfangreichen G-Buffe
 äußerst hohen Overdraw keine \ac{VRAM}-Blockade induzieren.
 Da opake Geometrie gerendert wird, testet die \ac{GPU}-Hardware die Tiefe bereits vor dem eigentlichen Fragment-Shader.
 Es ist zu konstatieren, dass verdeckte Pixel-Fragmente auf Silizium-Ebene verworfen werden, bevor kostspielige
-Schreiboperationen in den Framebuffer oder G-Buffer stattfinden~\cite[S. 801]{akenine-mollerRealtimeRendering2019}.
+Schreiboperationen in den Framebuffer oder G-Buffer stattfinden. \cite[S. 801]{akenine-mollerRealtimeRendering2019}
 
 
 \section{{Bandbreite und Auflösung}}
@@ -619,7 +620,7 @@ Forward-Rendering evaluiert.
 % Einleitung.
 Der folgende Versuch zielt darauf ab, den Einfluss der Framebuffer-Auflösung (und der damit verbundenen Pixel-Anzahl)
 auf die \ac{VRAM}-Füllrate und den Shading-Aufwand zu evaluieren.
-Sowohl die Geometrie als auch die Lichtverhältnisse bleiben auf einen Standard von $N_{\text{Light}} = 100$ Lichtern und
+Sowohl die Geometrie als auch die Lichtverhältnisse bleiben auf einen Standard von $N_{\text{Light}} = 200$ Lichtern und
 $N_{\text{Inst}} = 5.000$ Objekt-Instanzen festgelegt.
 Im Rahmen der Evaluierung werden ausschließlich die Auflösung und damit gerenderten Pixel analysiert.
 Da Deferred Rendering die Beleuchtung strikt im 2D-Screen-Space berechnet, wird erwartet, dass die Kosten an die
@@ -636,8 +637,7 @@ Pixelanzahl gekoppelt sind~\cite[Abschn.~9.2]{Chapter9Deferred}.
             Unabhängige Variable:    & Basis-Auflösung ($R_{\text{Base}} \in \{480\text{p}, 720\text{p}, 1080\text{p},
             1440\text{p}, 4\text{K}\}$) \\
             Skalierung (Pixel):      & $409.920$ bis $8.294.400$ \\
-            Kontrollvariablen:       & $N_{\text{Inst}} = 5.000$, $LOD = 1$, $N_{\text{Light}} = 200$, Statische
-            Kamera \\
+            Kontrollvariablen:       & $N_{\text{Inst}} = 5.000$, $LOD = 1$, $N_{\text{Light}} = 200$ \\
             Zielgrößen:              & \ac{GPU}-Gesamtlaufzeit ($t_{\text{GPU}}$)
         \end{tabularx}
         \vspace{2mm}
@@ -666,16 +666,16 @@ Da in diesem Setup $N_{\text{Light}} = 200$ Lichter berechnet werden, führt die
 Beleuchtungsmathematik auf Fragmenten aus, die später von anderen Objekten verdeckt
 werden~\cite[S.~55]{burnsVisibilityBufferCacheFriendly2013}.
 Bei einer Anzahl von $8{,}3\text{ Millionen}$ Pixeln (4K) multipliziert sich diese redundante Rechenlast wesentlich
-stärker als bei den entkoppelten Deferred-Pipelines (ein \ac{ALU}-Limit wird schneller erreicht).
+stärker als bei den entkoppelten Deferred-Pipelines (ein \ac{ALU}-Limit wird schneller erreicht)
+~\cite[Abschn.~1]{mallettDeferredAdaptiveCompute2018}.
 Diese Vervielfachung der redundanten Rechenlast bei steigender Pixelanzahl stützt die Annahme aus
-\hyperlink{hyp:H1.1}{Hypothese H1.1}, wenngleich das absolute Limit hier durch die \ac{ALU}-Auslastung und nicht rein
-durch den geometrischen Overdraw definiert wird.
+\hyperlink{hyp:H1.1}{Hypothese H1.1}.
 
 \subsection{{Bandbreiten}}
 \label{subsec:050302_bandwidth_eval}
 
 % Einleitung.
-Ziel der folgenden Evaluation ist die Isolierung der absoluten Speicherbandbreite (Fill-Rate) und des Basis-Overheads.
+Ziel der folgenden Evaluation ist die Isolierung der absoluten Speicherbandbreite (Fillrate) und des Basis-Overheads.
 Der Versuchsaufbau gründet auf einem simplen binären Test.
 Die Szene ist in diesem Fall vollständig leer ($N_{\text{Inst}} = 0$, $N_{\text{Light}} = 0$).
 Es erfolgt lediglich eine Aktivierung bzw.\ Deaktivierung eines vollflächigen Boden-Quads (in 1080p und 4K Auflösung).
@@ -1104,7 +1104,7 @@ Frameworks.
 \end{figure}
 
 % Deduktion.
-In den theoretischen Grundlagen (vgl.\\ Kapitel~\ref{subsec:020204_dynamic_branching_and_warp_divergence}) wurde
+In den theoretischen Grundlagen (vgl.\\ Kapitel~\ref{subsec:020203_warp_divergence_and_register_pressure}) wurde
 dargelegt, dass die \ac{GPU} Instruktionen im \ac{SIMT}-Verfahren in sogenannten \textit{Warps} verarbeitet.
 Der signifikante Leistungseinbruch der Deferred-Uber-Pipeline im gestreuten Szenario stellt die praktische
 Manifestation der \textit{Warp Divergence} dar und verifiziert \hyperlink{hyp:H2}{Hypothese H2} vollumfänglich.
@@ -1122,7 +1122,7 @@ zusätzliche Hypothese eines erhöhten Register-Drucks aufstellen.
 Die Implementierung eines zusätzlichen Rendering-Stils im monolithischen Code-Pfad bedingt potenziell die Allokation
 weiterer \ac{VGPR} pro Thread.
 Es kann deduziert werden, dass sich dadurch die globale Auslastung (Occupancy) der Recheneinheiten verringert
-(vgl.\~Kapitel~\ref{subsec:020203_register_pressure_limitations}).
+(vgl.\~Kapitel~\ref{subsec:020203_warp_divergence_and_register_pressure}).
 An dieser Stelle ist jedoch eine methodische Limitierung der vorliegenden Testarchitektur zu berücksichtigen.
 Aufgrund der Tatsache, dass die Messung der isolierten Beleuchtungs-Laufzeit ($t_{\text{Light}}$) keine
 Low-Level-Telemetriedaten liefert, kann diese spezifische Ursache nicht abschließend empirisch verifiziert werden.
