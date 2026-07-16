@@ -1,5 +1,5 @@
 \chapter{Stand der Technik und verwandte Arbeiten}
-\label{ch:03_introduction}
+\label{ch:03_acedemic_and_industry_state}
 
 Dieses Kapitel analysiert den aktuellen Forschungsstand zu Forward- und Deferred-Rendering-Architekturen sowie moderne
 Industriepraktiken im Bereich hybrider Architekturen und selektiver Stilisierung.
@@ -43,7 +43,7 @@ jedoch nicht aus, um die Effizienz von Deferred-Ansätzen zu
 erreichen~\cite[S.~4]{Thaler2011DeferredRendering}.
 Modernere Techniken wie \textit{Clustered Forward} oder \textit{Forward+} adressieren dieses Problem, indem
 Lichtquellen in 2D-Kacheln oder 3D-Clustern räumlich sortiert
-werden~\cite{olssonClusteredDeferredForward2012, haradaForwardBringingDeferred2012}.
+werden~\cites{olssonClusteredDeferredForward2012, haradaForwardBringingDeferred2012}.
 Dies ermöglicht eine Effizienz, die Deferred-Ansätzen nahekommt, während der primäre Vorteil der Forward-Architektur,
 die hohe Flexibilität bei der Materialauswertung, erhalten bleibt.
 
@@ -73,7 +73,7 @@ Die Evaluierung semitransparenter Geometrie ist im reinen Deferred-Pfad nicht tr
 Dieses Defizit wird in der industriellen Praxis standardmäßig über einen nachgelagerten hybriden Forward-Pass für
 transparente Objekte gelöst~\cite[S.~56]{burnsVisibilityBufferCacheFriendly2013}.
 
-% NPR.
+% Non-Photorealistic-Rendering.
 Hinsichtlich des \ac{NPR}unterscheidet die aktuelle Literatur primär zwischen
 \textit{Object-Space}- und
 \textit{Screen-Space}-Methoden~\cite[S.~148]{magdicsPostprocessingNPREffects2013}.
@@ -259,7 +259,7 @@ Rückbesinnung auf die architektonischen Fundamente.
 Die Evaluation der systematischen Verschiebung von Performance-Engpässen erfolgt über den Vergleich primärer
 Rendering-Paradigmen: naives Forward Rendering, simples Deferred Shading mit \ac{G-Buffer}-Packing über
 Style-IDs und Uber-Shader sowie Deferred Light-Volumes als Referenz für Multi-Pass-Architekturen.
-Ziel ist die Erarbeitung einer empirischen Basis für eine fundierte Entscheidungsmatrix.
+Ziel ist die Erarbeitung einer empirischen Basis für ein fundiertes Entscheidungsmodell.
 
 % Die spezifische Forschungslücke (Granularität vs.~globales Post-Processing).
 Globale Screen-Space-Filter stellen in der Praxis einen einfachen und etablierten Standard
@@ -295,7 +295,7 @@ Die Schließung dieser Forschungslücke erfordert ein isoliertes Messinstrument,
 Rendering-Architekturen anhand ihrer reinen Basis-Paradigmen und frei von proprietärem Engine-Overhead evaluiert.
 Das im Rahmen der vorliegenden Arbeit entwickelte Evaluations-Framework \ac{HyDra} dient der methodischen Umsetzung
 dieses Vorhabens.
-Durch die Erhebung granularer Rohdaten unter skalierender Stil-Entropie und Szenenkomplexität soll eine heuristische
-Entscheidungsmatrix abgeleitet werden.
+Durch die Erhebung granularer Rohdaten unter skalierender Stil-Entropie und Szenenkomplexität soll ein heuristisches
+Entscheidungsmodell abgeleitet werden.
 Die technische Konzeption sowie die architektonischen Spezifika dieses Frameworks bilden den Schwerpunkt des
 nachfolgenden Kapitels.

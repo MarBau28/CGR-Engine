@@ -69,7 +69,8 @@ lassen eine messbare Degradation der Shading-Performance bei stark vermischten E
 
 % Hypothese Deferred_Volumes.
 Für die Deferred-Pipeline auf Basis von Light-Volumes postuliert \hypertarget{hyp:H3}{\textbf{Hypothese H3}}, dass diese
-Architektur eine hohe Resilienz gegenüber räumlicher Stil-Entropie aufweist und die Branching-Problematik des Uber-Shaders umgeht.
+Architektur eine hohe Resilienz gegenüber räumlicher Stil-Entropie aufweist und die Branching-Problematik des
+Uber-Shaders umgeht.
 Der primäre Leistungsengpass dieser Methode wird stattdessen in der Sättigung der Speicherbandbreite vermutet.
 Das additive \ac{HDR}-Blending bei einer hohen Anzahl überlappender Light-Volumes provoziert überproportional viele
 \ac{RMW}-Zyklen im Framebuffer (\ac{VRAM}).
@@ -93,53 +94,14 @@ Performance-Verhalten.
 Im Folgenden werden die Referenzdaten der Testumgebung und des verwendeten Software-Stacks beschrieben.
 Weiterhin werden die für die Testreihen angewendeten unabhängigen Variablen, abhängigen Variablen (Metriken) sowie die
 entsprechenden Kontrollvariablen dargelegt und definiert.
+Die referenzierten detaillierten tabellen sind hierzu sind im Anhang
+unter~\ref{ch:AA_configuration_and_variable_mapping} zu finden.
 
 % Einleitung zur Systemkonfiguration.
 Die in Tabelle~\ref{tab:hardware_specs} aufgezeigten Hardware-Spezifikationen bestimmen die absoluten physikalischen
-Leistungsgrenzen des Systems.
-Die in Tabelle~\ref{tab:software_specs} dokumentierten Software-Schnittstellen und Treiber-Versionen definieren die
-\ac{CPU}-seitige Code-Optimierung sowie den grundlegenden \ac{API}-Overhead.
-
-% Hardware-Tabelle
-\begin{table}[htbp]
-    \centering
-    \caption{Spezifikation der primären Test-Hardware.}
-    \label{tab:hardware_specs}
-    \renewcommand{\arraystretch}{1.2}
-    \begin{tabularx}{\textwidth}{@{} l X @{}}
-        \toprule
-        \textbf{Hardware-Komponente}      & \textbf{Spezifikation / Wert}                      \\
-        \midrule
-        Prozessor (\ac{CPU})                   & Intel Core i5-6600K @ $4\times~3.50$\,GHz          \\
-        Hauptspeicher (RAM)               & 16\,GB DDR4 (Dual-Channel) @ 3000\,MT/s            \\
-        Grafikkarte (\ac{GPU})                 & NVIDIA GeForce GTX 1660                            \\
-        \ac{GPU}-Architektur                   & Turing (TU116)                                     \\
-        \ac{VRAM}-Kapazität                    & 6\,GB GDDR5                                        \\
-        Theoretische \ac{VRAM}-Bandbreite      & 192,1\,GB/s                                        \\
-        Raster Operation Pipelines (ROPs)             & 48                                                 \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
-
-% Software-Tabelle
-\begin{table}[htbp]
-    \centering
-    \caption{Spezifikation der Software-Umgebung und API-Schnittstellen.}
-    \label{tab:software_specs}
-    \renewcommand{\arraystretch}{1.2}
-    \begin{tabularx}{\textwidth}{@{} l X @{}}
-        \toprule
-        \textbf{Software / \ac{API}} & \textbf{Version}               \\
-        \midrule
-        Betriebssystem          & Linux Mint 22.3 (Kernel 6.8.0) \\
-        Grafiktreiber           & NVIDIA 595.71.05               \\
-        C++ Compiler            & GCC 13.3.0                     \\
-        Anwendungs-Framework    & raylib 5.5                     \\
-        Grafik-\ac{API}             & OpenGL 3.3.0 Core Profile      \\
-        Shading Language        & GLSL 3.30                      \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
+Leistungsgrenzen des Systems auf dem dies vorliegenden Versuche durchgeführt wurden.
+Die in Tabelle~\ref{tab:software_specs} dokumentierten Software-Schnittstellen und Treiber-Versionen kontextualisieren
+die \ac{CPU}-seitige Code-Basis sowie den grundlegenden \ac{API}-Overhead.
 
 % Einleitung unabhängige Variablen.
 Nach der Definition der Hardware- und Software-Spezifikationen erfordert das Evaluation-Design eine exakte Abgrenzung
@@ -148,225 +110,24 @@ Diese Parameter manipuliert das Framework während der Testreihen systematisch.
 Es sollen Leistungsgrenzen der Hardware isoliert provoziert werden.
 Tabelle~\ref{tab:independent_vars} fasst das Variablen-Mapping zusammen.
 
-% Tabelle der unabhängigen Variablen
-\begin{table}[htbp]
-    \centering
-    \caption{Spezifikation der unabhängigen Variablen, deren formale Definition und Zuweisung zu den Test-Suites.}
-    \label{tab:independent_vars}
-    \small
-    \renewcommand{\arraystretch}{1.3}
-    \begin{tabularx}{\textwidth}{@{} >{\raggedright\arraybackslash}p{4.2cm} l l >{\raggedright\arraybackslash}X @{}}
-        \toprule
-        \textbf{Variable (Symbol \& CSV-Mapping)}
-        & \textbf{Wertebereich}
-        & \textbf{Kapitel}
-        & \textbf{Beschreibung} \\
-        \midrule
-
-        Render-Architektur ($A$) \newline \scriptsize{\texttt{activeRenderPath}}
-        & \textit{Enum} & Alle
-        & Die primäre architektonische Variable.
-        Rotiert durch Forward, Deferred-Uber und Deferred-Volume. \\
-
-        Geometrischer Detailgrad ($LOD$) \newline \scriptsize{\texttt{currentLodIndex}} &
-        $12$ bis $8.192$ Dreiecke
-        & 5.2.1
-        & Skaliert die Dreiecksanzahl pro zu renderndem Objekt. \\
-
-        Instanzen-Anzahl ($N_{\text{Inst}}$) \newline \scriptsize{\texttt{activeObstacleCount}}
-        & 1.000 bis 50.000
-        & 5.2.2, 5.2.3 &
-        Anzahl der gerenderten Geometrie-Instanzen. \\
-
-        Framebuffer-Auflösung ($R$) \newline \scriptsize{\texttt{renderResolution}}
-        & 480p bis 4K
-        & 5.3.1
-        & Absolute Render-Auflösung. \\
-
-        Screen-Space-Abdeckung ($C_{\text{Floor}}$) \newline \scriptsize{\texttt{renderFloor}}
-        & \textit{Boolean}
-        & 5.3.2
-        & Erzeugt eine Bildfüllende Geometrie. \\
-
-        Lichtquellen-Anzahl ($N_{\text{Light}}$) \newline \scriptsize{\texttt{activeLightCount}}
-        & 10 bis 5.000
-        & 5.4.1, 5.4.2
-        & Anzahl der aktiven dynamischen Punktlichter im View-Frustum. \\
-
-        Beleuchtungs-Radius ($r_{\text{Light}}$) \newline \scriptsize{\texttt{lightIntensity}}
-        & 0,5 bis 20,0
-        & 5.4.2
-        & Skaliert das Proxy-Volumen der Lichter. \\
-
-        Räumliche Entropie ($E_{\text{Spatial}}$) \newline \scriptsize{\texttt{useClusteredStyles}}
-        & \textit{Boolean}
-        & 5.5.1
-        & Steuert die Verteilung der Stile (geklustert vs. gestreut). \\
-
-        Stil-Kombinatorik ($S_{\text{Count}}$) \newline \scriptsize{\texttt{enableGooch/Toon}}
-        & 1 bis 3 Stile
-        & 5.5.2
-        & Skaliert die Anzahl der aktiv evaluierten Shading-Modelle. \\
-
-        Filter-Radius ($r_{\text{Kuwahara}}$) \newline \scriptsize{\texttt{kuwaharaRadius}}
-        & 2 bis 16
-        & 5.5.3
-        & Ausdehnung des Post-Processing-Kernels. \\
-
-        Makro-Pass ($P_{\text{Macro}}$) \newline \scriptsize{\texttt{Feature Accumulation}}
-        & Pass 1 bis 4
-        & 5.6
-        & Kumulative Aktivierung von Geometrie, Shading und Stil-Entropie über einen fixierten Kamerapfad. \\
-
-        \bottomrule
-    \end{tabularx}
-\end{table}
-
-% Einleitung abhängigen Variablen
+% Einleitung abhängigen Variablen.
 Im direkten Gegenzug zu den manipulierten Parametern erfasst das Telemetrie-Modul des Frameworks eine Reihe
 quantitativer Messgrößen.
 Diese abhängigen Variablen bilden die empirische Datengrundlage der Evaluationen.
 Die Aggregation der Daten pro Frame sowie deren tabellarische Aufarbeitung dienen der isolierten Beurteilung der
 Hardware- und Softwareleistung für die spätere statistische Auswertung.
 Tabelle~\ref{tab:dependent_vars} beschreibt die extrahierten Leistungs- und Szenenmetriken.
-Die \ac{GPU}-Laufzeiten werden dabei über asynchrone Hardware-Queries ermittelt, um ein Blockieren der \ac{CPU}-Pipeline zu
-verhindern.
+Die \ac{GPU}-Laufzeiten werden dabei über asynchrone Hardware-Queries ermittelt, um ein Blockieren der \ac{CPU}-Pipeline
+zu verhindern.
 
-% Tabelle der abhängigen Variablen
-\begin{table}[htbp]
-    \centering
-    \caption{Spezifikation der abhängigen Variablen (Metriken), deren formale Definition und CSV-Mapping.}
-    \label{tab:dependent_vars}
-    \small
-    \renewcommand{\arraystretch}{1.3}
-    \begin{tabularx}{\textwidth}{@{} >{\raggedright\arraybackslash}p{4.8cm} l >{\raggedright\arraybackslash}X @{}}
-        \toprule
-        \textbf{Metrik (Symbol \& CSV-Mapping)}
-        & \textbf{Kategorie}
-        & \textbf{Beschreibung} \\
-        \midrule
-
-        Logik-Laufzeit ($t_{\text{Logic}}$) \newline \scriptsize{\texttt{cpuLogicMs}}
-        & \ac{CPU}
-        & Dauer des logischen Szenen-Passes (Frustum Culling, Sichtbarkeitsprüfung und Matrix-Updates). \\
-
-        Dispatch-Laufzeit ($t_{\text{Dispatch}}$) \newline \scriptsize{\texttt{cpuRenderMs}}
-        & \ac{CPU}
-        & Dauer der \ac{API}-Befehlsübermittlung an den Grafiktreiber (\textit{Draw-Call Submission}). \\
-
-        Geometrie-Laufzeit ($t_{\text{Geom}}$) \newline \scriptsize{\texttt{geomMs}}
-        & \ac{GPU}
-        & Dauer des asynchronen Hardware-Queries für den Geometrie-Pass (G-Buffer-Generierung, entfällt bei Forward). \\
-
-        Beleuchtungs-Laufzeit ($t_{\text{Light}}$) \newline \scriptsize{\texttt{lightMs}}
-        & \ac{GPU}
-        & Dauer des asynchronen Hardware-Queries für Beleuchtung und \ac{NPR}-Berechnung (bei Forward inkludiert dies
-        zwangsläufig die Geometrielast). \\
-
-        \ac{GPU}-Gesamtlaufzeit ($t_{\text{GPU}}$) \newline \scriptsize{\texttt{totalGpuMs}}
-        & \ac{GPU}
-        & Aggregierte \ac{GPU}-Ausführungszeit des gesamten Frames, gemessen über Hardware-Timer-Queries. \\
-
-        System-Frame-Time ($t_{\text{Frame}}$) \newline \scriptsize{\texttt{totalFrameTimeMs}}
-        & System
-        & Absolute Frame-Latenz (Delta Time), gemessen über \ac{CPU}-High-Resolution-Timer (\texttt{std::chrono}). \\
-
-        Sichtbare Instanzen ($N_{\text{Vis}}$) \newline \scriptsize{\texttt{activeInstances}}
-        & Szene
-        & Anzahl der verarbeiteten Objekt-Instanzen nach dem Frustum Culling. \\
-
-        Gerenderte Dreiecke ($N_{\text{Tris}}$) \newline \scriptsize{\texttt{activeTris}}
-        & Szene
-        & Berechnete Summe der an die \ac{GPU} übermittelten Dreiecke ($N_{\text{Vis}} \times \text{Dreiecke des aktiven
-        LODs}$). \\
-
-        Overdraw-Faktor ($O_{\text{Draw}}$) \newline \scriptsize{\texttt{currentOverdraw}}
-        & Szene
-        & Theoretischer Überzeichnungsfaktor, basierend auf Frustum-Tiefe und räumlicher Instanzdichte. \\
-
-        \bottomrule
-    \end{tabularx}
-\end{table}
-
-% Einleitung Kontrollvariablen
+% Einleitung Kontrollvariablen.
 Den Abschluss des Variablen-Mappings bilden die Kontrollvariablen.
 Diese Parameter definieren die statische Baseline des Frameworks.
 Diese Werte bleiben konstant, um reproduzierbare Bedingungen für alle Messreihen zu gewährleisten, es sei denn, die
 jeweilige Test-Suite überschreibt sie explizit als unabhängige Variable.
 Tabelle~\ref{tab:controlled_vars} fasst die Standardkonfiguration der Kontrollvariablen zusammen.
-Besonders kritisch für die Validität der Messungen ist die definierte Warm-up-Phase in Echtzeit von 10 Sekunden.
-
-% Tabelle der Kontrollvariablen
-\begin{table}[htbp]
-    \centering
-    \caption{Spezifikation der Kontrollvariablen und der statischen System-Baseline.}
-    \label{tab:controlled_vars}
-    \small
-    \renewcommand{\arraystretch}{1.3}
-    \begin{tabularx}{\textwidth}{@{} l >{\raggedright\arraybackslash}p{4.8cm} >{\raggedright\arraybackslash}X @{}}
-        \toprule
-        \textbf{Kategorie} & \textbf{Variable (Symbol \& Mapping)} & \textbf{Standardwert (Baseline)} \\
-        \midrule
-
-        Rendering \& Pipeline
-        & \ac{HDR}-Genauigkeit ($HDR_{\text{16bit}}$) \newline \scriptsize{\texttt{use16BitHDR}}
-        & Aktiviert (Basis für RMW-Blending) \\
-
-        & Basis-Auflösung ($R_{\text{Base}}$) \newline \scriptsize{\texttt{renderResolution}}
-        & $1920 \times 1080$ Pixel (1080p) \\
-
-        & Screen-Space-Abdeckung ($C_{\text{Floor}}$) \newline \scriptsize{\texttt{renderFloor}}
-        & Aktiviert \\
-        \midrule
-
-        Verteilung \& Geometrie
-        & Basis-Instanzen ($N_{\text{Inst\_Base}}$) \newline \scriptsize{\texttt{activeObstacleCount}}
-        & 5.000 Objekte \\
-
-        & Spawn-Radius ($r_{\text{Spawn}}$) \newline \scriptsize{\texttt{objectSphereRadius}}
-        & 200,0 Einheiten \\
-
-        & Basis-Detailgrad ($LOD_{\text{Base}}$) \newline \scriptsize{\texttt{currentLodIndex}}
-        & 1 (Zweithöchste Detailstufe) \\
-
-        & Räumliche Entropie ($E_{\text{Spatial}}$) \newline \scriptsize{\texttt{useClusteredStyles}}
-        & Deaktiviert (Gestreute Verteilung) \\
-        \midrule
-
-        Licht-Physik
-        & Umgebungslicht ($I_{\text{Ambient}}$) \newline \scriptsize{\texttt{ambientLightStrength}}
-        & 1,0 (Neutrale Grundausleuchtung) \\
-
-        & Licht-Radius ($r_{\text{Light}}$) \newline \scriptsize{\texttt{lightIntensity}}
-        & 2,0 Einheiten \\
-
-        & Licht-Singularität ($S_{\text{Light}}$) \newline \scriptsize{\texttt{useLightSingularity}}
-        & Deaktiviert (Zufällige Verteilung) \\
-        \midrule
-
-        \ac{NPR} / Stilisierung
-        & Aktive Stile ($S_{\text{Count}}$) \newline \scriptsize{\texttt{enableGooch/Toon}}
-        & Deaktiviert (0 Stile, reine Basis-Beleuchtung) \\
-
-        & Post-Processing ($P_{\text{FX}}$) \newline \scriptsize{\texttt{enableOutlines/Kuwahara}}
-        & Deaktiviert \\
-
-        & Filter-Radius ($r_{\text{Kuwahara}}$) \newline \scriptsize{\texttt{kuwaharaRadius}}
-        & 4 Pixel \\
-
-        & Filter-Intensität ($i_{\text{Kuwahara}}$) \newline \scriptsize{\texttt{kuwaharaIntensity}}
-        & 4,0 \\
-        \midrule
-
-        Test-Orchestrierung
-        & Warm-up-Dauer ($T_{\text{Warmup}}$) \newline \scriptsize{\texttt{warmupDuration}}
-        & 10,0 Sekunden (Cache-Sättigung) \\
-
-        & Sampling-Dauer ($T_{\text{Sample}}$) \newline \scriptsize{\texttt{captureDuration}}
-        & 1.000 Frames (Statistische Mittelwertbildung) \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
+Besonders kritisch für die Validität der Messungen ist die definierte Warm-up-Phase in Echtzeit von \texttt{10}
+Sekunden.
 
 \subsection{{Versuchsablauf}}
 \label{subsec:050103_evaluateion_procedure}
@@ -374,7 +135,8 @@ Besonders kritisch für die Validität der Messungen ist die definierte Warm-up-
 % Aufwärmphase.
 Vor der aktiven Datenaufzeichnung durchläuft das System eine obligatorische Warm-up-Phase von zehn Sekunden.
 Dieser Prozess dient dazu, die Hardware-Caches und Textur-Caches
-aufzubauen~\cites[Kap.~18.4, Abschn.~\textit{Memory Issues}]{akenine-mollerRealtimeRendering2019}[]{NVIDIATuringArchitectureWhitepaper}.
+aufzubauen~\cites[Kap.~18.4, Abschn.~\textit{Memory Issues}]{akenine-mollerRealtimeRendering2019}
+[]{NVIDIATuringArchitectureWhitepaper}.
 Hierdurch werden inkonsistente Frametimes, die durch asynchrone Ladevorgänge, späte Speicherallokationen oder
 aufgeschobene Statusänderungen des Grafiktreibers in den ersten Frames
 entstehen~\cite[Kap.~18.4.2, Abschn.~\textit{State Changes}]{akenine-mollerRealtimeRendering2019},
@@ -415,7 +177,7 @@ Im Rahmen des nachfolgenden Kapitels werden Benchmarks und Erkenntnisse präsent
 Performance-Bottlenecks innerhalb der untersuchten Rendering-Pipelines zu evaluieren.
 Der Fokus liegt primär auf der Isolation der Hardware-Rasterizer und der \ac{CPU}-Draw-Call-Aufwände.
 
-\subsection{{LOD (Mikro-Geometrie)}}
+\subsection{{Level of Detail (Mikro-Geometrie)}}
 \label{subsec:050201_lod_eval}
 
 % Einleitung.
@@ -488,7 +250,7 @@ In der vorliegenden Untersuchung werden die Draw-Call-Generierung sowie die Ausf
 evaluiert.
 Die Durchführung des Tests erfolgt ohne Beleuchtungseinflüsse ($N_{\text{Light}} = 0$) und bei minimalem geometrischen
 Detailgrad ($LOD = 0$, 12-Dreieck-Würfel), um potenzielle \ac{GPU}-Engpässe zu eliminieren und eine isolierte
-Betrachtung der Host-Seite zu gewährleisten.
+Betrachtung der Host-Seite (\ac{CPU}) zu gewährleisten.
 Es wird primär die Hypothese geprüft, ob der \ac{CPU}-Overhead das Gesamtsystem limitiert, bevor die \ac{GPU}
 vollständig ausgelastet ist, und inwiefern architektonische Unterschiede zwischen den Rendering-Pipelines im
 Dispatch-Prozess auf der Host-Seite (\ac{CPU}) existieren.
@@ -520,7 +282,8 @@ Der Anstieg von $t_{\text{Dispatch}}$ verläuft zwar linear, verbleibt jedoch se
 Instanzen mit ca. \qty{7,8}{\milli\second} über alle Rendering-Pipelines hinweg stabil und effizient.
 Im Gegensatz dazu weist $t_{\text{Logic}}$ ein deutlich steileres Anstiegsverhalten auf, wobei sich die Forward-Pipeline
 bei zunehmender Last zunehmend von den Deferred-Pipelines entkoppelt: In der Traversierung des logischen Szenen-Passes
-generiert die Forward-Architektur eine messbar höhere \ac{CPU}-Last als die Deferred-Äquivalente.
+(State-Changes/Culling) generiert die Forward-Architektur eine messbar höhere \ac{CPU}-Last als die
+Deferred-Äquivalente.
 
 % Ergebnis Graph.
 \begin{figure}[htbp]
@@ -536,16 +299,15 @@ generiert die Forward-Architektur eine messbar höhere \ac{CPU}-Last als die Def
 Die Analyse ergibt, dass die reine \ac{API}-Befehlsübermittlung an die Grafikkarte bei keinem der untersuchten
 Rendering-Paradigmen einen primären Engpass darstellt.
 Darüber hinaus kann beobachtet werden, dass die umfangreichen mathematischen Operationen (Frustum Culling,
-\ac{MVP}-Matrix-Updates) die Datenverarbeitung der \ac{CPU} an ihre Grenzen bringt.
-Das Forward Rendering weist in diesem Kontext eine geringere Skalierbarkeit auf, da es pro Objekt auf der Host-Seite
-(\ac{CPU}) eine Lichtliste evaluieren und binden muss~\cite[S.~891]{akenine-mollerRealtimeRendering2019}.
-Wie~\textcite[S.~1]{Thaler2011DeferredRendering} beschreibt, müssen bei Single-Pass-Forward-Architekturen, wie sie in
-dem vorliegenden Framework implementiert sind, für jedes Objekt zunächst alle beeinflussenden Lichtquellen gesucht
-werden.
+\ac{MVP}-Matrix-Updates) die Datenverarbeitung der weitaus mehr größer belasten \ac{CPU}.
+Das Forward Rendering weist in diesem Kontext eine geringere Skalierbarkeit auf, da es pro Objekt auf der \ac{CPU} eine
+Lichtliste evaluieren und binden muss~\cite[S.~891]{akenine-mollerRealtimeRendering2019}.
+Wie~\textcite[S.~1]{Thaler2011DeferredRendering} beschreibt, müssen bei Single-Pass-Forward-Architekturen für jedes
+Objekt zunächst alle beeinflussenden Lichtquellen gesucht werden.
 Dieser Suchlauf kostet kontinuierlich \ac{CPU}-Zeit, auch wenn er bei $N_{\text{Light}} = 0$ für alle $N_{\text{Inst}}
 = 50.000$ Objekte vollständig ins Leere läuft.
-Das schlechtere Skalierungsverhalten der Forward-Pipeline innerhalb der Traversierung des logischen
-Szenen-Passes verifiziert weiterhin \hyperlink{hyp:H1.2}{Hypothese H1.2}.
+Das schlechtere Skalierungsverhalten der Forward-Pipeline bei verarbeitung des logischen Szenen-Passes afu der \ac{CPU}
+verifiziert somit \hyperlink{hyp:H1.2}{Hypothese H1.2}.
 
 % Limitationen.
 Dies stellt gleichzeitig eine architektonische Limitation des genutzten Frameworks dar, da eine alternative
@@ -839,8 +601,8 @@ skalieren als naive Forward-Ansätze.
 Diese Erkenntnis validiert die in der Literatur beschriebene Überlegenheit von Deferred-Rendering im Bereich massiver
 Lichtevaluationen und bestätigt den primären Existenzgrund dieses Paradigmas im
 Allgemeinen~\cite[S.~1]{Thaler2011DeferredRendering}.
-Obwohl die Deferred-Uber-Pipeline den gleichen \ac{UBO}-Loop ausführt wie der Forward-Ansatz, wird durch das
-Entkoppeln der Geometrie der Shading-Overdraw effektiv vermieden.
+Obwohl die Deferred-Uber-Pipeline den gleichen Loop zur Beleuchtungsberechnung ausführt wie der Forward-Ansatz, wird
+durch das Entkoppeln der Geometrie der Shading-Overdraw effektiv vermieden.
 Der Einsatz des \ac{G-Buffer}s gewährleistet, dass die Schleife für die Lichtberechnung lediglich für die auf dem
 Bildschirm tatsächlich sichtbaren Pixel ausgeführt wird.
 Die signifikante Überlegenheit des Deferred-Volume-Ansatzes lässt sich auf die Effizienz des lokal begrenzten
