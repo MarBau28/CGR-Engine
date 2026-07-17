@@ -1,16 +1,98 @@
 \chapter{Zusammenfassung und Ausblick}
 \label{ch:07_zusammenfassung_ausblick}
 
-Dieses abschließende Kapitel fasst die gesamte Arbeit kurz zusammen und gibt einen Ausblick auf zukünftige Entwicklungen.
+% Einleitung.
+Im Folgenden werden die in der vorliegenden Ausarbeitung gewonnenen Erkenntnisse in einem abschließenden Fazit unter
+Rückbesinnung auf die Kern-Forschungsfragen zusammengefasst.
+Es erfolgt die Ableitung eines Resümees bezüglich der Leistungsfähigkeit der untersuchten Rendering-Paradigmen im
+Kontext der selektiven Stilisierung.
+Auf dieser Grundlage werden konkrete Anforderungen für zukünftige Forschungs- und Entwicklungsarbeiten abgeleitet,
+insbesondere in Bezug auf das entwickelte Softwareartefakt (\ac{HyDra}-Framework).
 
 
-\section{Resümee der Arbeit}
-\label{sec:0701_resuemee}
+\section{Fazit der Arbeit}
+\label{sec:0701_conclusion}
 
-Kurzer Rückblick auf die ursprüngliche Herausforderung und das Ziel der Arbeit. Zusammenfassung der Entwicklung des Test-Frameworks und der wichtigsten Erkenntnisse über das Zusammenspiel von Geometriedichte, Lichtanzahl und der Vielfalt von Zeichenstilen. Abschließende Beschreibung des Nutzens der erstellten heuristischen Entscheidungsmatrix für die Praxis.
+% Prämisse.
+In der vorliegenden Untersuchung wurde der fundamentale, architektonische Konflikt zwischen der Skalierbarkeit komplexer
+Echtzeit-Rendering-Szenen unter hoher Stil-Entropie für selektives Non-Photorealistic Rendering (\ac{NPR}) adressiert.
+Das eigens entwickelte C++/OpenGL-Evaluations-Framework \ac{HyDra} wurde als isolierte Testumgebung zur Analyse der
+untersuchten Basis-Rendering-Paradigmen verwendet.
+Die Zusammenfassungen orientieren sich an den in Kapitel ~\ref{ch:06_diskussion} dargelegten Ergebnissen.
+
+% Vorgehen.
+Das methodische Vorgehen basierte auf der Durchführung systematischer, empirischer Tests der Rendering-Paradigmen unter
+kontrollierten Bedingungen.
+Im Rahmen der Untersuchung wurden die geometrische Dichte, die Beleuchtungskomplexität, Auflösungen, Bandbreiten und
+die räumliche Stil-Entropie quantifiziert.
+
+% Messergebnisse.
+Die empirischen Messungen identifizierten spezifische Hardware-Bottlenecks für jede der untersuchten
+Rendering-Pipelines.
+Die Single-Pass-Forward-Pipeline wies vor allem bei ansteigender Lichtkomplexität, durch \ac{ALU}-Last bedingt,
+Schwächen auf.
+Die Single-Pass-Deferred-Over-Pipeline zeigte bei hoher räumlicher Stil-Entropie
+signifikante Leistungseinbrüche auf, die durch Warp-Divergenz und Registerdruck bedingt waren.
+Die Deferred-Volume-Pipeline wies bei extrem überlappenden Lichtquellen eine fundamentale Bandbreitenlimitierung
+durch erhöhte \ac{RMW}-Zyklen auf.
+
+% Architekturergebnisse.
+Auf architektonischer Ebene zeigte die Single-Pass-Forward-Pipeline zudem die signifikante Einschränkung,
+Bildraumeffekte nicht selektiv darstellen zu können.
+Die Single-Pass-Deferred-Uber-Pipeline wies zudem Schwächen in der Lichtberechnung auf, was zu Pre-Light Zwängen in
+der Verarbeitung bestimmter Kernel-basierter \ac{NPR}-Effekte geführt hat.
+Insgesamt erwiesen sich Single-Pass Architekturen als unzureichend, um extrem hohe Lichtmengen darzustellen.
+
+% Beantwortung der Forschungsfrage.
+Die Synthese dieser Ergebnisse lässt die zentrale Forschungsfrage dahingehend beantworten, dass im Kontext der
+selektiven Stilisierung keine universell überlegene Basis-Rendering-Architektur existiert.
+Die Leistungsfähigkeiten wurde dynamisch und ausschließlich anhand der dominierenden Szenenlast determiniert.
+Aus den gewonnenen Erkenntnissen resultierte in Kapitel~\ref{sec:0602_heuristic_model} ein heuristisches
+Entscheidungsmodell, welches Entwicklern ein konkretes Werkzeug zur objektiven, frühzeitigen Architekturbewertung anhand
+deterministischer Hard Limits und empirischer Soft Limits bereitstellt.
+Das entwickelte \ac{HyDra}-Framework stellt Entwicklern zudem eine empirische und gekapselte Testumgebung für die
+untersuchten Rendering-Architekturen, frei von proprietärem Engine-Overhead, zur Verfügung.
 
 
 \section{Ausblick und zukünftige Arbeiten}
 \label{sec:0702_future_work}
 
-Konkrete Vorschläge für die technologische Weiterentwicklung des ProgrammS.~Ideen für den Einbau neuerer Render-Verfahren, um die gefundenen Hardware-Grenzen aufzuheben. Vorschläge für zusätzliche Test-Szenarien mit komplexeren Lichttypen, prozeduralen Materialien sowie für die Untersuchung von Bildfehlern und modernen Methoden der Kantenglättung.
+% Einleitung.
+Abschließend werden mögliche Erweiterungen der entwickelten Software vorgestellt und auf Forschungsebene relevante
+Erweiterungsmetriken anhand der in Kapitel~\ref{sec:0603_reflektion_and_limits} dargestellten Limitationen der Software,
+der Methodik und Untersuchungsvektoren vorgestellt.
+
+% Profiler.
+Die in der Methodik identifizierten Schwächen der reinen Zeitmessung machten für Folgestudien eine technologische
+Weiterentwicklung der Telemetrie-Erfassung erforderlich.
+Wenn zwingend die genauen Auswirkungen von Hardware-Phänomenen wie beispielsweise Registerdruck, Cache-Misses oder
+exakter Speichersättigung evaluiert werden müssen, ist die Integration systemnaher Hardware-Profiler wie
+\textit{NVIDIA Nsight} oder der \textit{Radeon Developer Tool Suite (RDTS)} in künftigen Studien notwendig.
+
+% Pipeline-Erweiterung.
+Im Rahmen der architektonischen Weiterentwicklung des \ac{HyDra}-Frameworks sind Ergänzungen weiterer
+Rendering-Pipelines von zentralem Interesse.
+Neben einer simplen Multi-Pass-Forward-Pipeline sind hier etwa
+Forward+~\cite{haradaForwardBringingDeferred2012},
+Clustered-Forward/Deferred~\cite{olssonClusteredDeferredForward2012},
+Tiled~Forward/Deferred\cite{olssonTiledClusteredForward2012} oder Deferred-Pipelines mit
+Visibility-Buffern~\cite{burnsVisibilityBufferCacheFriendly2013} mögliche relevante weitere Pipelines.
+
+% Vektor-Erweiterung.
+In diesem Kontext sind insbesondere die Implementierung unterschiedlicher Lichtquellen (Richtungs- und Flächenlichter)
+und das damit einhergehende Shadow-Mapping sowie erweiterte Materialeigenschaften (Spiegelungen und Transluzenzen) von
+primärer Relevanz.
+
+% Effekt-Untersuchungen.
+Des Weiteren besteht die Möglichkeit, neben der stilistischen Entropie durch komplexere Materialeigenschaften auch
+zusätzliche Studien zu Anti-Aliasing aud den untersuchten Rendering-Paradigmen durchzuführen.
+Dies ist besonders im Hinblick auf die selektive Stilisierung durch dadurch verursachte harte Materialkanten von
+Interesse.
+Anti-Aliasing kann somit als weitere semantische Evaluationsgrundlage der Rendering-Pipelines herangezogen werden.
+
+% Hardware.
+Abschließend ist auch eine Portierung der Evaluationssoftware auf unterschiedliche Systeme und Hardwarebedingungen von
+Interesse, da der Kern der Evaluationen in Form von Hardwarekipppunkten unter anderen Hardwarearchitekturen grundlegend
+anders ausfallen kann.
+Dadurch wird es möglich, spezifische Hardware-Phänomene präziser zu isolieren und zu untersuchen.
+
