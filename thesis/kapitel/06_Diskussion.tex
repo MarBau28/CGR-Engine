@@ -85,8 +85,8 @@ Abbildung~\ref{fig:hydra_banding_comparison}) zu vermeiden.
 Es ist anzumerken, das viele der Benannten Bottlenecks und Drawbacks der einzelnen Paradigmen, wie in
 Kapitel~\ref{sec:0302_industry_state} und~\ref{sec:0301_academic_state} dargelegt, zumindest teilweise durch moderne
 Verfahren und hybride Ansätze kompensiert werden können.
-Verfahren wie \textit{Clustered Forward} oder
-\textit{Forward+}~\cites{olssonClusteredDeferredForward2012, haradaForwardBringingDeferred2012} erweitern die
+Verfahren wie beispielsweise \textit{Clustered Forward}~\cite{olssonClusteredDeferredForward2012} oder
+\textit{Forward+}~\cite{haradaForwardBringingDeferred2012} erweitern die
 Basisparadigmen hierfür Grundlegend.
 Moderne Entwicklungen aus der Spieleindustrie zeigen hingegen die Idee auf, hybride Verfahren mit einer Kombination aus
 Forward und Deferred Ansätzen für den Ausgleich der jeweiligen Schwächen einer Rendering-Architektur zu
@@ -288,6 +288,68 @@ zunehmender Szenenkomplexität unverhältnismäßig stark sinkt.
 \section{Kritische Reflexion und Limitationen}
 \label{sec:0603_reflektion_and_limits}
 
+% Einleitung.
+In der nachfolgenden Analyse werden die Grenzen des erstellten Evaluations-Frameworks \ac{HyDra}, die Lücken der
+empirischen Evaluationen sowie sonstige limitierende Faktoren und Entscheidungen der vorliegenden Arbeit reflektiert.
+
+% Fehlende Rendering-Paradigmen.
+Eine Einschränkung des erstellten Frameworks ist im grundlegenden Umfang der implementierten Rendering-Verfahren zu
+verzeichnen.
+Die Beschränkung der Umgebung auf die gewählten drei Rendering-Architekturen ist im Sinne einer Evaluation der
+Basisparadigmen zwar vertretbar, in der Praxis sind jedoch, wie in Kapitel ~\ref{sec:0302_industry_state} aufgezeigt,
+wesentlich fragmentiertere Umgebungen vorhanden und die entsprechenden Basisparadigmen kommen kaum in ihrer Reinform
+vor.
+Was in der Praxis als \textquote{Standard} oder \textquote{Basis} moderner Rendering-Architekturen gilt, ist
+entsprechend nur schwer einzugrenzen und zu evaluieren.
+Dies zeigen mittlerweile weit verbreitete Ansätze wie \textit{Forward+}~\cite{haradaForwardBringingDeferred2012},
+\textit{Clustered}-Ansätze~\cite{olssonClusteredDeferredForward2012},
+\textit{Tiled Shading}~\cite{olssonTiledClusteredForward2012} oder die nutzung von
+\textit{Visibility-Buffern} in Deferred-Architekturen~\cite{burnsVisibilityBufferCacheFriendly2013}
+als Erweiterungen der Basisparadigmen.
+Insbesondere im Hinblick auf die Forward-Rendering-Baseline besteht eine signifikante Lücke bezüglich der
+Multi-Pass-Variante des Renderingverfahrens.
+
+% Materiallimits.
+Bestimmte grundlegende Materialeigenschaften, wie etwa Transluzenzen oder Spiegelungen, stellen ebenfalls gängige und
+grundlegende Anforderungen an Echtzeiterendering-Systeme
+dar~\cites[Abschn.~\textit{Deferred G-buffer}]{muhammadPrettyFramesPRAGMATA2026}
+[Abschn.~\textit{G-Buffer : Our approach}]{valientDeferredRenderingKillzone}
+[S.~887]{akenine-mollerRealtimeRendering2019}.
+In der vorliegenden Untersuchung werden sie jedoch nicht berücksichtigt.
+Dies erschwert eine ganzheitliche Evaluation und Ableitung für diverse Praxisfälle.
+
+% Lichtevaluationen.
+In der Industriepraxis gehören darüber hinaus verschiedene Typen von Lichtquellen, wie Richtungs- (Directional) oder
+Flächenlichter (Area Lights), und die damit verbundenen Anforderungen, insbesondere das \textit{Shadow Mapping}, zum
+Standardrepertoire einer Szene in der
+Spieleentwicklung~\cites[Abschn.~2.4.1]{fonsecaDeferredShadingTutorial}
+[Kap.~11.1.3.3]{gregoryGameEngineArchitecture2018}.
+Das \ac{HyDra}-Framework weist hier ebenfalls Lücken durch die reine Verwendung von dynamisch generierten
+Punktlichtquellen auf.
+
+% Empirie.
+Innerhalb der angewandten Evaluationsmetriken und des grundlegenden Ansatzes der empirischen Untersuchung können
+ebenfalls signifikante Limitationen der implementierten Software sowie der daraus resultierenden Untersuchungen
+festgestellt werden.
+Im Rahmen der Analyse spezifischer, in hohem Maße hardwareinterner Phänomene und Flaschenhälse erweisen sich empirische
+Vorgehensweisen, die sich ausschließlich auf die Messung von Verarbeitungszeiten konzentrieren, häufig als unzureichend,
+um ein umfassendes Bild der Ursachen und Limitierungen der betreffenden Phänomene und Hardware-Kipppunkte zu gewinnen.
+Dies zeigen vor allem die Versuche ~\ref{subsec:050302_bandwidth_eval} und ~\ref{subsec:050501_entropy_eval}.
+Zwar ermöglichen rein empirische Messungen eine Untersuchung des grundlegenden Verhaltens einer Rendering-Pipeline, sie
+sind jedoch nicht dazu geeignet, entsprechende detaillierte Handlungsempfehlungen bezüglich Hardwareoptimierungen
+abzuleiten.
+Das detaillierte Auslesen von hardwarinternen Daten müsste durch die zusätzliche Integration von spezifischen
+Hardware-Profilern wie \textit{NVIDIA Nsight} oder der \textit{Radeon Developer Tool Suite (RDTS)}
+erfolgen~\cite[Kap.~18.1]{akenine-mollerRealtimeRendering2019}.
+
+% Hardwarespezifika.
+Über die strukturellen Lücken der vorliegenden Software hinaus ist anzumerken, dass die empirischen Evaluationen aus
+Kapitel~\ref{ch:05_evaluation} in ihrem Geltungsbereich an die zugrunde liegende Hardware
+(vgl.\ ~\ref{tab:hardware_specs}) gebunden sind.
+Um beispielsweise die Hardware-Kipppunkte auf mobilen Geräten genauer bestimmen zu können, müsste die zugrundeliegende
+Hardware ebenfalls als dynamischer Vektor dargestellt werden, um eine allgemeingültigere Evaluation zu ermöglichen.
+
 
 \section{Lessons Learned}
 \label{sec:0604_lessons_learned}
+
