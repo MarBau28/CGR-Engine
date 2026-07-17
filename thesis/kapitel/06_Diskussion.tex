@@ -166,8 +166,8 @@ zunehmender Szenenkomplexität unverhältnismäßig stark sinkt.
     Die durch Additives Blending der Lichteinflüsse erhöhten \ac{RMW}-Zyklen auf der \ac{GPU} können sich als
     signifikanter Performance-Engpass herausstellen (vgl.\ ~\ref{subsec:020202_memory_bandwidth}).
     In diesem Zusammenhang muss weiterhin beachtet werden, dass das Deferred Rendering grundlegend höhere
-    Speicherbelastungen aufweist und damit eine höhere Grundlast auf der \ac{GPU} verursacht, um Artefaktbildungen zu
-    vermeiden (vgl.\ ~\ref{subsec:040203_deferred_volume_pipeline}).
+    Speicherbelastungen aufweist, um Artefaktbildungen zu vermeiden und damit eine höhere Grundlast auf der \ac{GPU}
+    verursacht (vgl.\ ~\ref{subsec:040203_deferred_volume_pipeline}).
     Dies könnte bei kleinen und sehr speichertechnisch begrenzten Systemen einen signifikanten Faktor darstellen
     (vgl.\ ~\ref{subsec:050302_bandwidth_eval} u. ~\ref{sec:0506_macro_eval}).
 
@@ -331,9 +331,10 @@ Punktlichtquellen auf.
 Innerhalb der angewandten Evaluationsmetriken und des grundlegenden Ansatzes der empirischen Untersuchung können
 ebenfalls signifikante Limitationen der implementierten Software sowie der daraus resultierenden Untersuchungen
 festgestellt werden.
-Im Rahmen der Analyse spezifischer, in hohem Maße hardwareinterner Phänomene und Flaschenhälse erweisen sich empirische
-Vorgehensweisen, die sich ausschließlich auf die Messung von Verarbeitungszeiten konzentrieren, häufig als unzureichend,
-um ein umfassendes Bild der Ursachen und Limitierungen der betreffenden Phänomene und Hardware-Kipppunkte zu gewinnen.
+Im Rahmen der Analyse spezifischer, hardwareinterner Phänomene und Flaschenhälse erweisen sich empirische
+Vorgehensweisen, die sich ausschließlich auf die Messung von Verarbeitungszeiten konzentrieren, häufig als unzureichend.
+Ein umfassendes Bild über die Ursachen und Limitierungen der betreffenden Phänomene und Hardware-Kipppunkte ist so nur
+schwer zu gewinnen.
 Dies zeigen vor allem die Versuche ~\ref{subsec:050302_bandwidth_eval} und ~\ref{subsec:050501_entropy_eval}.
 Zwar ermöglichen rein empirische Messungen eine Untersuchung des grundlegenden Verhaltens einer Rendering-Pipeline, sie
 sind jedoch nicht dazu geeignet, entsprechende detaillierte Handlungsempfehlungen bezüglich Hardwareoptimierungen
@@ -353,3 +354,63 @@ Hardware ebenfalls als dynamischer Vektor dargestellt werden, um eine allgemeing
 \section{Lessons Learned}
 \label{sec:0604_lessons_learned}
 
+% Architekturentscheidungen.
+Im Entwicklungsverlauf ist insbesondere die Verwendung von \textit{OpenGL}~\cite{KhronosOpenGLRegistry} sowie vor allem
+der Bibliothek \textit{raylib}~\cites{Raylib, RaylibExamples} zur Abstraktion der OpenGL-\ac{API} als positiv zu
+bewerten.
+Ein signifikanter Anteil des rudimentären OpenGL-Overheads konnte durch die Verwendung von raylib vermieden werden.
+Für die granulare Manipulation diverser Teile des Frameworks, wie etwa der direkten Manipulation der \ac{G-Buffer},
+musste allerdings auch innerhalb von raylib auf Low-Level-Boilerplate-Code zurückgegriffen werden
+(\texttt{rlgl}~\cite{raysan5RaylibSrcRlglh}).
+Die Granularität der Software stellte sich in der Analyse als signifikante Herausforderung heraus, da die reine Menge an
+Boilerplate-Code zur Ausführung der Rendering-Pipelines einen wesentlichen Beitrag zur Komplexität und damit zur
+Fehleranfälligkeit der Software leistet.
+Zukünftige Erweiterungen und Anpassungen der Software sollten daher streng modular ablaufen, um monolithische
+Codestrukturen, vor allem hinsichtlich der Grafik-\ac{API}-Instruktionen und damit assoziierten C++-Code, zu vermeiden.
+
+% Szenenaufbau & Tooling.
+Im Rahmen diverser Implementationsschritte war, durch diesen granularen Ansatz und die daraus resultierende
+Code-Komplexität, teilweise eine vollständige Neuentwicklung großer Teile des Codes erforderlich.
+Der Wechsel von einer statischen, hardcodierten Umgebung der Rendering-Pipelines zu einem für die Hardware-Benchmarks
+notwendigen Input-getriebenen Design stellte einen extremen Paradigmenwechsel dar.
+Für alle potenziellen zukünftigen Untersuchungsvektoren muss demnach im Voraus eine Mindestflexibilität des Frameworks
+eingehalten werden.
+
+% Irrwege der Versuchsvektoren.
+Für die Erzeugung belastbarer Ergebnisse der durchgeführten Evaluationen stellte die genaue Definition der
+Untersuchungsvektoren und des daraus resultierenden Szeneaufbaus eine Herausforderung dar.
+Auch in ihren grundlegendsten Formen existieren für die untersuchten Rendering-Architekturen eine extrem schwer
+eingrenzbare Anzahl an Eigenschaften.
+Die wichtigsten Eigenschaften innerhalb des extrem weit gefassten Themas des Echtzeit-Rendering zu isolieren, ohne sich
+in irrelevante Methodiken oder unnötige Optimierungen zu verlieren, erforderte eine iterative und zeitintensive
+Abwägung.
+Auf Implementationsebene manifestierte sich dies insbesondere in der Erzeugung einer belastbaren Szene.
+Es ist essenziell, dass die Szene selbst nicht zu synthetisch aufgebaut ist, da dies die Übertragbarkeit auf
+reale Szenarien in der Industriepraxis einschränkt.
+Gleichzeitig ist darauf zu achten, dass die Komplexität der Szene nicht zu hoch ist, um eine Kontrolle über die
+untersuchten Variablen zu gewährleisten.
+Es ist festzustellen, dass sich Metriken generell nur schwer isolieren lassen.
+Eine Änderung der Beleuchtung beeinflusst etwa unweigerlich die Speicherbandbreite.
+Die strikte Isolation und eindimensionale Gestaltung von Testvektoren innerhalb kompletter
+Rendering-Architekturen kann daher weitestgehend als methodischer Trugschluss betrachtet werden.
+
+% Telemetrie und Benchmark-Overhead.
+Die entwickelten Benchmark- und Telemetrie-Module sind besonders bezüglich ihres resultierenden Aufwands hervorzuheben.
+Der Entwicklungsaufwand eines deterministischen und belastbaren Messsystems
+(vgl.\ ~\ref{sec:0404_telemetry_and_benchmark_orchestrator}) mit sauberen Hardwareschleifen (Ring-Buffer-Verfahren) hat
+sich, neben der Implementation der Rendering- und Shading-Verfahren, als eine der größten Herausforderungen
+herausgestellt.
+In Zukunft ist von einer Entwicklung der Messgrundlagen im Nachgang der Kernentwicklungen abzusehen.
+Telemetrie und Benchmark-Module sollten als integraler Bestandteil der Basisarchitektur konzipiert werden, nicht als
+nachgelagerte Evaluationsebene.
+
+% Benchmark Evaluation.
+In Anlehnung an die schwierige Abgrenzung auf Implementationsebene wurde auch bei der Definition der genauen
+Testszenarien in Kapitel ~\ref{ch:05_evaluation} die Frage sinnvoller Rahmenbedingungen aufgeworfen.
+Aufgrund des Umfangs der untersuchten Thematik erweist sich die Entwicklung eines Designs für belastbare Ergebnisse von
+Testszenarien und -variablen als anspruchsvoll.
+Die darauffolgende Interpretation der Ergebnisse auf rein empirischer Basis erforderte zudem eine weitreichende und
+zeitintensive Deduktion anhand der vorliegenden Literatur.
+Ohne tiefgreifende Profiler (bspw.\ \textit{NVIDIA Nsight}) bleibt die Interpretation von Frame-Times und Bandbreiten
+stark deduktiv und spekulativ.
+Dies sollte in zukünftigen Erweiterungen der Software durch die Integration jener Profiler vermieden werden.
