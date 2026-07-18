@@ -1,21 +1,22 @@
 \chapter{Einführung}
 \label{ch:01_introduction}
 
-Die stilisierte Darstellung komplexer 3D-Szenen und einzelner Objekte mittels \ac{NPR} ist in der modernen Computergrafik sowohl für technische als auch für unterhaltende Anwendungen von großer
+Die stilisierte Darstellung komplexer 3D-Szenen und einzelner Objekte darin mittels \ac{NPR} ist in der modernen Computergrafik sowohl für technische als auch für unterhaltende Anwendungen von großer
 Bedeutung.
 Eine gezielte Stilisierung erhöht die visuelle Lesbarkeit, lenkt den Fokus des Betrachters und ermöglicht künstlerische
 Abstraktionen (siehe~\ref{fig:borderlands_npr_example}).
-Insbesondere die industrielle Praxis und aufwendige Spieleproduktionen sehen sich jedoch mit der Notwendigkeit
+Insbesondere die individuelle Praxis großer Spieleproduktionen sieht sich mit der Notwendigkeit
 konfrontiert, stetig wachsende Datenmengen und Szenenkomplexitäten in Echtzeit bewältigen zu müssen.
 Die effiziente Bewältigung der resultierenden Performance-Engpässe erfordert hochskalierbare Rendering-Architekturen.
-Die Gewährleistung dieser Skalierbarkeit erweist sich im Kontext der für \ac{NPR} zwingend erforderlichen Stil-Heterogenität
+Die Gewährleistung dieser Skalierbarkeit erweist sich im Kontext der für \ac{NPR} oft erforderlichen Stil-Heterogenität
 jedoch als komplexe Problemstellung und offenbart einen fundamentalen Konflikt innerhalb etablierter
 Rendering-Paradigmen. \cite[Abschn.~1]{magdicsPostprocessingNPREffects2013}
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\textwidth]{abbildungen/Borderlands-4-Screenshot}
-    \caption{Anwendungsbeispiel für künstlerisches NPR mittels Cel-Shading am Beispiel von \textit{Borderlands 4}
+    \caption[Anwendungsbeispiel für Cel-Shading in \textit{Borderlands 4}]{Anwendungsbeispiel für künstlerisches NPR
+    mittels Cel-Shading am Beispiel von \textit{Borderlands 4}
     (2025)~\cite{Borderlands4Screenshotsa}.}
     \label{fig:borderlands_npr_example}
 \end{figure}
@@ -28,13 +29,14 @@ Rendering-Paradigmen. \cite[Abschn.~1]{magdicsPostprocessingNPREffects2013}
 \ac{NPR}-Effekte werden primär mit künstlerischen Umsetzungen und stilisierten Darstellungen in der
 Unterhaltungsindustrie, wie etwa in Videospielen oder Filmproduktionen, in Verbindung gebracht.
 Die gezielte Stilisierung ganzer Szenen oder einzelner Objekte zur Schaffung eines bestimmten künstlerischen Kontextes
-bildet hierbei einen der Hauptanwendungszwecke von modernem \ac{NPR}.
+bildet hierbei einen der Hauptanwendungszwecke von modernem
+\ac{NPR}~\cite[S.651--652]{akenine-mollerRealtimeRendering2019}.
 Darüber hinaus finden diese Techniken jedoch auch im Bereich von technischen Illustrationen, \ac{CAD}-Anwendungen oder
 medizinischen Visualisierungen weitreichende Anwendung.
 In diesen Fachbereichen erfüllt die Stilisierung oftmals den funktionalen Zweck, durch eine simplere oder abstraktere
 Darstellung die allgemeine Lesbarkeit der Szene zu erhöhen oder den Fokus gezielt auf kritische Daten und spezifische
-Elemente zu lenken.
-Eine derartige funktionale Hervorhebung durch Simplifizierung ist mit gängigem \textit{\ac{PBR}} in dieser Form oft
+Elemente zu lenken~\cite[Abschn.~2]{goochNonphotorealisticLightingModel1998}.
+Eine derartige funktionale Hervorhebung durch Simplifizierung ist mit gängigem \ac{PBR} in dieser Form oft
 nicht möglich, da rein fotorealistische Ansätze visuell häufig zu detailreich sind und den Blick auf das Wesentliche
 verstellen~\cite[Abschn.~1]{magdicsPostprocessingNPREffects2013}.
 
@@ -50,37 +52,38 @@ Infolge dieser technischen Restriktionen wurden Deferred-Paradigmen historisch p
 fotorealistischer Oberflächen (\ac{PBR}) konzipiert und
 optimiert~\cite[Abschn.~1]{haradaForwardBringingDeferred2012}.
 
-% Verlust der Semantik vS.~Granularität.
+% Verlust der Semantik vs.~Granularität.
 Deferred Rendering projiziert die dreidimensionale Szenengeometrie in einen zweidimensionalen \ac{G-Buffer}.
 Bei dieser Überführung in den \textit{Screen-Space} geht die geometrische Identität der Objekte, also semantische
 Informationen wie etwa die Zugehörigkeit zu einem spezifischen 3D-Modell, weitestgehend verloren.
 Stattdessen werden in klassischen Pipelines lediglich physikalische Oberflächendaten für standardisierte
 Lichtberechnungen (\ac{PBR}), wie etwa Albedo, Normalen oder Rauheit, gespeichert.
 Viele \ac{NPR}-Effekte erfordern für eine fehlerfreie Ausführung jedoch zwingend einen gewissen Grad an semantischen
-Informationen.
+Informationen~\cite[Abschn.~2.1 u.~3.3.2]{fonsecaDeferredShadingTutorial}.
 Die Zuweisung verschiedener Zeichenstile wie \textit{Toon-Shading} oder die exakte Trennung überlappender
 Objekte durch Umrisslinien benötigen beispielsweise spezifische Material-Identifikatoren (\textit{Shading-Model-IDs}),
-oder Objekt-IDs.
+oder Objekt-IDs~\cites[Kap.~15.2.3]{akenine-mollerRealtimeRendering2019}
+[Folie~\textit{Our GBuffer Layout}]{gameworksToonRenderingHiFi}.
 Diese Metadaten fehlen in einem klassischen, auf \ac{PBR}-optimierten \ac{G-Buffer}.
 Dieser Umstand führt dazu, dass \ac{NPR} in Deferred-Architekturen häufig zu einem rein globalen Post-Processing-Filter über
 das gesamte Bild verkommt~\cite[Abschn.~1]{magdicsPostprocessingNPREffects2013}.
-Eine granulare, selektive Stilisierung (z.B.\ Bauteil A als Skizze, Bauteil B massiv schattiert) wird dadurch extrem
+Eine granulare, selektive Stilisierung (z.~B.\ Bauteil A als Skizze, Bauteil B massiv schattiert) wird dadurch extrem
 erschwert.
 Bei hoher stilistischer Vielfalt und sehr selektiven Anwendungsfällen wird daher oft auf klassisches
 \textit{Forward-Rendering} zurückgegriffen.
-Dieses erweist sich jedoch wiederum als stark ineffizient bei hoher
+Dieses erweist sich wiederum als stark ineffizient bei hoher
 Beleuchtungskomplexität~\cite[Abschn.~1]{haradaForwardBringingDeferred2012}.
 
 % überleitung und Hardware-Restriktionen.
 Die Kombination aus massenhafter Geometrie, Beleuchtungskomplexität und stilistischer Vielfalt zwingt in der Praxis
 gängige Rendering-Paradigmen an ihre individuellen hardwaretechnischen Leistungsgrenzen.
-Dabei offenbart sich ein grundlegender architektonischer Konflikt: Pipelines leiden bei der Stilisierung vieler Objekte
-entweder unter massiven redundanten Zeichenoperationen bei überlappender
+Dabei offenbart sich ein grundlegender architektonischer Konflikt: Architekturen leiden bei der Stilisierung vieler
+Objekte entweder unter massiven redundanten Zeichenoperationen bei überlappender
 Geometrie~\cite[Abschn.~1]{fatahalianReducingShadingGPUs2010}, oder die Auswertung der diversen Stildaten
 überlastet die Speicher- und Rechenkapazitäten der
 Grafikhardware~\cite[Abschn.~6]{schiedDeferredAttributeInterpolation2015}.
 Trotz der Relevanz dieses Problems mangelt es an systematischen, empirischen Erkenntnissen darüber, unter welchen
-genauen Bedingungen und Skalierungen diese spezifischen Leistungseinbrüche im Kontext des \ac{NPR}auftreten.
+genauen Bedingungen und Skalierungen diese spezifischen Leistungseinbrüche im Kontext des \ac{NPR} auftreten.
 Aus dieser Notwendigkeit leitet sich die direkte Zielsetzung der vorliegenden Arbeit ab.
 
 
@@ -89,13 +92,13 @@ Aus dieser Notwendigkeit leitet sich die direkte Zielsetzung der vorliegenden Ar
 
 % Das primäre Ziel (WHAT & WHY).
 Das primäre Ziel dieser Arbeit ist die Durchführung einer holistischen, quantitativen Systemanalyse verschiedener
-Rendering-Architekturen im Kontext der selektiven Stilisierung bzw. \ac{NPR}, mit einem speziellen Fokus auf das in diesem
-Bereich oft vernachlässigte Deferred Rendering.
+Rendering-Architekturen im Kontext der selektiven Stilisierung mittels \ac{NPR}, mit einem speziellen Fokus auf das in diesem
+Bereich oft vernachlässigte Deferred-Rendering.
 Das angestrebte wissenschaftliche Resultat dieser Untersuchung ist die Erstellung eines empirisch hergeleiteten,
 heuristischen Entscheidungsmodells zur Evaluation elementarer Rendering-Paradigmen.
-Die untersuchten Basis-Pipelines umfassen dabei ein naives Forward Rendering als Referenz, ein simples Deferred
-Rendering mit einer monolithischen Shader-Struktur sowie einen mehrstufigen Deferred-Ansatz zur volumetrischen
-Lichtauswertung.
+Die untersuchten Basis-Pipelines umfassen dabei ein Single-Pass-Forward-Rendering als Referenz, ein
+Single-Pass-Deferred-Rendering mit einer monolithischen Shader-Struktur sowie einen Multi-Pass-Deferred-Ansatz mit
+volumetrischer Lichtauswertung (\textit{Light Volumes}).
 Das resultierende Modell sowie das zugrunde liegende Evaluations-Framework adressieren einen primären
 ingenieurstechnischen Nutzen:
 Sie bieten Entwicklern eine objektive Grundlage, um anhand der Variablen Szenenkomplexität und Stil-Entropie die
@@ -124,12 +127,9 @@ Dieser methodische Aufbau ermöglicht die Generierung deterministischer Messreih
 Variablen der Geometrie, Beleuchtung und Stil-Entropie, ohne den Overhead proprietärer Engine-Architekturen.
 
 % Thematische Eingrenzung.
-Die Implementierung und Evaluation komplexer Sondereffekte, wie etwa die Verarbeitung semitransparenter Geometrie oder
-hardwarebasiertes Anti-Aliasing (\ac{MSAA}), sind nicht Teil dieser Untersuchung, da sie den Rahmen der grundlegenden
-Architekturanalyse sprengen würden.
-Ebenso werden moderne, auf räumlicher Unterteilung basierende Lichtauswertungen, wie \textit{Clustered}- oder
-\textit{Forward+}-Rendering, bewusst exkludiert, um sich vollständig und isoliert auf das Basisverhalten der
-Architekturen unter dem Einfluss hoher Stil-Entropie zu fokussieren.
+Die Implementierung und Evaluation komplexer Sondereffekte, wie etwa die Verarbeitung semitransparenter Geometrie
+(Transluzenzen) oder \textit{Anti-Aliasing}, sind nicht Teil dieser Untersuchung, da sie den
+Rahmen der grundlegenden Analyse der Basis-Rendering-Architekturen sprengen würden.
 
 
 \section{Nutzung Generativer KI}
@@ -151,15 +151,16 @@ dokumentiert.
 % Aufbau.
 Die vorliegende Arbeit gliedert sich wie folgt, um eine systematische Beantwortung der Forschungsfragen zu
 gewährleisten:
-\textbf{Kapitel 2} vermittelt zunächst die architektonischen und hardwaretechnischen Grundlagen sowie relevante
+Kapitel~\ref{ch:02_grundlagen} vermittelt zunächst die architektonischen und hardwaretechnischen Grundlagen sowie relevante
 technische Begrifflichkeiten, die für das Verständnis der weiteren Untersuchungen erforderlich sind.
-\textbf{Kapitel 3} analysiert im Anschluss den aktuellen Stand der Forschung sowie der Industriepraxis und grenzt darauf
+Kapitel~\ref{ch:03_acedemic_and_industry_state} analysiert im Anschluss den aktuellen Stand der Forschung sowie der Industriepraxis und grenzt darauf
 aufbauend die bestehende Forschungslücke ab.
-\textbf{Kapitel 4} dokumentiert die Konzeption und softwaretechnische Realisierung des entwickelten
-Evaluations-Frameworks \textit{HyDra} sowie etwaige praktische und architektonische Grenzen der verschiedenen
+Kapitel~\ref{ch:04_konzeption_realisierung} dokumentiert die Konzeption und softwaretechnische Realisierung des
+entwickelten
+Evaluations-Frameworks sowie etwaige praktische und architektonische Grenzen der verschiedenen
 Rendering-Architekturen.
-\textbf{Kapitel 5} präsentiert die Methodik der durchgeführten Versuchsreihen und wertet die
-empirischen Messdaten unter den Rendering-Paradigmen aus.
-\textbf{Kapitel 6} und \textbf{Kapitel 7} führen die gewonnenen Erkenntnisse abschließend in einem heuristischen
-Entscheidungsmodell zusammen, diskutieren die Limitationen der Arbeit und schließen diese mit einem Ausblick auf
-künftige Forschungsmöglichkeiten und Erweiterungen der Evaluationssoftware ab.
+Kapitel~\ref{ch:05_evaluation} präsentiert die Methodik der durchgeführten Versuchsreihen und wertet die
+empirischen Messdaten der untersuchten Rendering-Pipelines aus.
+Kapitel~\ref{ch:06_diskussion} und Kapitel~\ref{ch:07_zusammenfassung_ausblick} führen die gewonnenen Erkenntnisse
+abschließend in einem heuristischen Entscheidungsmodell zusammen, diskutieren die Limitationen der Arbeit und
+schließen diese mit einem Ausblick auf künftige Forschungsmöglichkeiten und Erweiterungen der Evaluationssoftware ab.

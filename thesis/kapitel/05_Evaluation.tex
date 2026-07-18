@@ -6,7 +6,7 @@ Nach der Definition der softwaretechnischen Realisierung und dem Aufzeigen erste
 untersuchten Rendering-Paradigmen in Kapitel 4 werden die implementierten Architekturen isolierten Stresstests
 unterzogen.
 Das primäre Ziel dieses Kapitels liegt in der objektiven Quantifizierung der zuvor theoretisch beschriebenen
-Performance-Engpässe unter einer systematischen Skalierung von Szenenkomplexität und Stil-Entropie.
+Performance-Engpässe unter systematischen Skalierung von Szenenkomplexität und Stil-Entropie.
 Der erste Abschnitt definiert die methodischen Rahmenbedingungen sowie die technischen Spezifikationen des
 Versuchsaufbaus, um eine belastbare Beantwortung der Forschungsfragen zu gewährleisten.
 Darauf aufbauend erfolgt die schrittweise Datenauswertung anhand spezifischer Kontrollgruppen und der gezielten
@@ -18,18 +18,18 @@ ganzheitlich evaluiert.
 \label{sec:0501_evaluation_methodology}
 
 % 5.1 Einleitung.
-Das in Kapitel 4 konzipierte Test-Framework fungiert im Folgenden als Messwerkzeug für die empirische Analyse der darin
+Das in Kapitel~\ref{ch:04_konzeption_realisierung} konzipierte Test-Framework fungiert im Folgenden als Messwerkzeug für die empirische Analyse der darin
 implementierten Rendering-Pipelines.
 Für die objektive und isolierte Betrachtung der verschiedenen postulierten Performance-Engpässe definiert der
 vorliegende Abschnitt die methodischen Grundlagen.
-Dies umfasst die Formulierung der Hypothesen selbst, die exakte Spezifikation des Test-Systems und des
+Dies umfasst die Formulierung von Hypothesen, die exakte Spezifikation des Test-Systems und des
 Variablen-Mappings sowie die Orchestrierung des Versuchsablaufs.
 
 \subsection{{Zielsetzung und Hypothesen der Untersuchung}}
 \label{subsec:050101_evaluation_tagets_and_hypothesis}
 
 % Evaluationsziel
-Wie in Kapitel 3 dargelegt, weisen die theoretischen Architekturparadigmen des naiven Forward-, Deferred-Uber- und
+Wie in Kapitel~\ref{sec:0201_rendering_paradigms} dargelegt, weisen die theoretischen Architekturparadigmen des Forward-, Deferred-Uber- und
 Deferred-Volume-Renderings spezifische Leistungsmerkmale auf.
 Das primäre Ziel der nachfolgenden Testreihen besteht in der isolierten Quantifizierung dieser technologischen
 Trade-offs.
@@ -37,44 +37,40 @@ Es sollen die individuellen Kipppunkte auf Hardware-Ebene lokalisiert und evalui
 Dadurch soll vermieden werden, eine Pipeline den anderen gegenüber als inhärent überlegen zu präsentieren.
 
 % Technische Hypothesen.
-Auf Basis der in Kapitel 3 dargelegten theoretischen Faktenlage werden für die implementierten Rendering-Pipelines
+Auf Basis der in Kapitel~\ref{ch:02_grundlagen} dargelegten theoretischen Faktenlage werden für die implementierten Rendering-Pipelines
 spezifische Leistungshypothesen formuliert.
 Diese Annahmen gilt es im Folgenden durch gezielte Evaluationen objektiv zu verifizieren oder zu falsifizieren.
 Die empirische Untersuchung beleuchtet dabei gleichzeitig die hardwaretechnischen Grenzen und strukturellen Schwächen
-des verwendeten Evaluations-Frameworks \textit{HyDra}.
+des verwendeten Evaluations-Frameworks \ac{HyDra}.
 
 % Hypothese Forward.
-Für die als Referenz gewählte, naive Forward-Rendering-Pipeline werden zwei primäre Leistungsengpässe postuliert.
+Für die als Referenz gewählte Single-Pass-Forward-Rendering-Pipeline werden zwei primäre Leistungsengpässe postuliert.
 Auf \ac{GPU}-Ebene wird bei steigender Szenen- und Beleuchtungskomplexität erwartet, dass die Kombination aus
 geometrischem Fragment-Overdraw und der multiplikativen algorithmischen Komplexität der direkten
-Beleuchtungsberechnung von $\mathcal{O}(\text{Fragmente} \cdot \text{Lichter})$ zu signifikanten Leistungseinbußen führt
-(\hypertarget{hyp:H1.1}{\textbf{Hypothese H1.1}}).
+Beleuchtungsberechnung von $\mathcal{O}(\text{Fragmente} \cdot \text{Lichter})$ (vgl.~\ref{eq:forward_shading_complexity}) zu signifikanten Leistungseinbußen führt
+(\hypertarget{hyp:H1.1}{Hypothese H1.1}).
 Hinsichtlich der \ac{CPU}-Auslastung wird angenommen, dass das \ac{CPU}-seitige Filtern und Zuordnen von Lichtquellen
 pro Objekt sowie das hochfrequente Binden objektspezifischer Licht-Uniforms einen signifikanten \ac{API}-Overhead
 provoziert, der die \ac{CPU}-Zuweisungszeit bei anwachsender Instanzenanzahl nicht-linear skalieren lässt
-(\hypertarget{hyp:H1.2}{\textbf{Hypothese H1.2}}).
+(\hypertarget{hyp:H1.2}{Hypothese H1.2})~\cite[Abschn.~1]{haradaForwardBringingDeferred2012}.
 
 % Hypothese Deferred_Uber.
-Für die klassische Deferred-Pipeline mit einfachem Beleuchtungs-Pass monolithischem Uber-Shader wird postuliert, dass
+Für die Deferred-Pipeline mit einfachem Beleuchtungs-Pass (Single-Pass) und monolithischem Uber-Shader wird anhand
+von Kapitel~\ref{subsec:020102_deferred_rendering} und~\ref{subsec:020203_warp_divergence_and_register_pressure} postuliert, dass
 der signifikanteste Leistungsengpass bei einer hohen räumlichen Stil-Entropie auftritt
-(\hypertarget{hyp:H2}{\textbf{Hypothese H2}}).
-Wie in den vorangegangenen Kapiteln theoretisch hergeleitet, erzwingen feingranular gestreute \ac{NPR}-Effekte divergente
-Code-Zweige.
-Dies führt auf \ac{GPU}-Ebene unweigerlich zu ineffizienter \textit{Warp-Divergence} (siehe
-\ref{sec:0302_industry_state}).
-Begleitet wird dieses Phänomen von einem anwachsenden Registerdruck (\textit{Register Pressure}) bei erhöhter
-Stil-Vielfalt.
+(\hypertarget{hyp:H2}{Hypothese H2}).
+Wie in Kapitel~\ref{subsec:020203_warp_divergence_and_register_pressure} theoretisch hergeleitet, erzwingen feingranular gestreute \ac{NPR}-Effekte divergente
+Code-Zweige (Warp-Divergence \& Registerdruck).
 Diese kombinierten Hardware-Flaschenhälse zwingen die Architektur zu einer sequenziellen Abarbeitung der Pixel und
 lassen eine messbare Degradation der Shading-Performance bei stark vermischten Effekten erwarten.
 
 % Hypothese Deferred_Volumes.
-Für die Deferred-Pipeline auf Basis von Light-Volumes postuliert \hypertarget{hyp:H3}{\textbf{Hypothese H3}}, dass diese
+Für die Deferred-Pipeline auf Basis von Light-Volumes (Deferred-Volume) postuliert \hypertarget{hyp:H3}{Hypothese H3},
+anhand von Kapitel~\ref{subsec:020102_deferred_rendering} und~\ref{subsec:020202_memory_bandwidth}, dass diese
 Architektur eine hohe Resilienz gegenüber räumlicher Stil-Entropie aufweist und die Branching-Problematik des
 Uber-Shaders umgeht.
-Der primäre Leistungsengpass dieser Methode wird stattdessen in der Sättigung der Speicherbandbreite vermutet.
-Das additive \ac{HDR}-Blending bei einer hohen Anzahl überlappender Light-Volumes provoziert überproportional viele
-\ac{RMW}-Zyklen im Framebuffer (\ac{VRAM}).
-Der Uber-Shader umgeht diesen spezifische Speicher-Bottleneck konstruktionsbedingt.
+Der primäre Leistungsengpass dieser Methode wird stattdessen in der Sättigung der Speicherbandbreite vermutet
+(vgl.\ Kap.~\ref{subsec:020202_memory_bandwidth}).
 
 % Abgrenzung sonstiger Limits.
 Im vorliegenden Kapitel werden die untersuchten Limitierungen ausschließlich auf Hardware-Leistungs-Ebene betrachtet.
@@ -82,7 +78,7 @@ Spezifische harte Implementierungsgrenzen der Pipelines (wie etwa die Uniform-Bu
 Deferred-Uber-Architekturen) sowie etwaige künstlerische Qualitätsengpässe fließen nicht in die Messreihen ein.
 Diese Aspekte wurden bereits in Kapitel~\ref{sec:0402_pipelines_and_restrictions} verortet und evaluiert.
 Da weiterhin im Rahmen dieser Makro-Evaluation keine herstellerspezifischen Hardware-Profiler wie \textit{NVIDIA Nsight}
-eingesetzt wird, um Mikrometriken wie exakte Cache-Hit-Raten oder Thread-Maskierungen auf Siliziumebene auszulesen,
+eingesetzt werden, um Mikrometriken wie exakte Cache-Hit-Raten oder Thread-Maskierungen auf Siliziumebene auszulesen,
 werden die architektonischen Engpässe deduktiv aus den gemessenen Rendering-Laufzeiten abgeleitet.
 Die benannten Ursachen sind daher stark korrelierende, theoretische Erklärungsmodelle für das beobachtete
 Performance-Verhalten.
@@ -92,7 +88,7 @@ Performance-Verhalten.
 
 % Einleitung
 Im Folgenden werden die Referenzdaten der Testumgebung und des verwendeten Software-Stacks beschrieben.
-Weiterhin werden die für die Testreihen angewendeten unabhängigen Variablen, abhängigen Variablen (Metriken) sowie die
+Es werden die für die Testreihen angewendeten unabhängigen Variablen, abhängigen Variablen (Metriken) sowie die
 entsprechenden Kontrollvariablen dargelegt und definiert.
 Die referenzierten detaillierten tabellen sind hierzu sind im Anhang
 unter~\ref{ch:AA_configuration_and_variable_mapping} zu finden.
@@ -108,7 +104,7 @@ Nach der Definition der Hardware- und Software-Spezifikationen erfordert das Eva
 der unabhängigen Variablen.
 Diese Parameter manipuliert das Framework während der Testreihen systematisch.
 Es sollen Leistungsgrenzen der Hardware isoliert provoziert werden.
-Tabelle~\ref{tab:independent_vars} fasst das Variablen-Mapping zusammen.
+Tabelle~\ref{tab:independent_vars} fasst das entsprechende Variablen-Mapping zusammen.
 
 % Einleitung abhängigen Variablen.
 Im direkten Gegenzug zu den manipulierten Parametern erfasst das Telemetrie-Modul des Frameworks eine Reihe
@@ -126,8 +122,6 @@ Diese Parameter definieren die statische Baseline des Frameworks.
 Diese Werte bleiben konstant, um reproduzierbare Bedingungen für alle Messreihen zu gewährleisten, es sei denn, die
 jeweilige Test-Suite überschreibt sie explizit als unabhängige Variable.
 Tabelle~\ref{tab:controlled_vars} fasst die Standardkonfiguration der Kontrollvariablen zusammen.
-Besonders kritisch für die Validität der Messungen ist die definierte Warm-up-Phase in Echtzeit von \texttt{10}
-Sekunden.
 
 \subsection{{Versuchsablauf}}
 \label{subsec:050103_evaluateion_procedure}
@@ -141,12 +135,12 @@ Hierdurch werden inkonsistente Frametimes, die durch asynchrone Ladevorgänge, s
 aufgeschobene Statusänderungen des Grafiktreibers in den ersten Frames
 entstehen~\cite[Kap.~18.4.2, Abschn.~\textit{State Changes}]{akenine-mollerRealtimeRendering2019},
 für die Messung exkludiert.
-Beim Wechseln von Rendering-Pipelines oder beim Voranschreiten abhängiger Schritt-Variablen wird ebenfalls eine
+Während der Wechsel zwischen Rendering-Pipelines oder beim Voranschreiten abhängiger Schritt-Variablen wird ebenfalls eine
 Warm-up-Pause von zehn Sekunden erzwungen.
 
 
 % Sampling.
-Nach der Warm-up-Phase startet die Sampling-Phase mit einer festgelegten Dauer von 1000 Frames.
+Nach der Warm-up-Phase startet die Sampling-Phase mit einer festgelegten Dauer von \texttt{1000} Frames.
 Die Kamera wird eingefroren (Ausnahme: Evaluation 5.6).
 Das Telemetrie-Modul fragt nun jede der definierten abhängigen Variablen pro Frame ab und akkumuliert die Rohdaten in
 dedizierten Arrays zur späteren Exportierung.
@@ -175,15 +169,15 @@ Skalierungsverhalten der Rendering-Pipelines abbilden.
 
 Im Rahmen des nachfolgenden Kapitels werden Benchmarks und Erkenntnisse präsentiert, die dazu dienen, geometriebedingte
 Performance-Bottlenecks innerhalb der untersuchten Rendering-Pipelines zu evaluieren.
-Der Fokus liegt primär auf der Isolation der Hardware-Rasterizer und der \ac{CPU}-Draw-Call-Aufwände.
+Der Fokus liegt primär auf der Isolation der \textit{Hardware-Rasterize} und der \ac{CPU}-Draw-Call-Aufwände.
 
 \subsection{{Level of Detail (Mikro-Geometrie)}}
 \label{subsec:050201_lod_eval}
 
 % Einleitung.
 Das Ziel dieser Testreihe besteht in der Isolation des Hardware-Rasterizers zur Evaluierung der geometrischen Basis-Last.
-Konkret soll das absolute Limit der Vertex-Verarbeitung (Triangle Throughput) identifiziert und der Einfluss des
-G-Buffer-Speicherdurchsatzes isoliert bewertet werden.
+Konkret soll das absolute Limit der Vertex-Verarbeitung (\textit{Triangle Throughput}) identifiziert und der Einfluss des
+\ac{G-Buffer}-Speicherdurchsatzes isoliert bewertet werden.
 Zu diesem Zweck wird die Pipeline einem reinen Geometrie-Stresstest ohne Beleuchtungseinflüsse ($N_{\text{Light}} = 0$)
 ausgesetzt, um zu prüfen, ob die massiven Speicherschreibvorgänge der Deferred-Pipelines bei hoher Dreiecks-Dichte im
 Vergleich zur Forward-Pipeline einen signifikanten Bandbreiten-Engpass
@@ -219,19 +213,19 @@ weitestgehend konstant ($\mathcal{O}(1)$) bleibt.
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.7\linewidth]{abbildungen/5-2-1_bottleneck_divergence}
-    \caption[Geometrische Skalierung bei variierendem Detailgrad]{Messung der GPU- und CPU-Laufzeiten bei einer
+    \caption[Messung der GPU- und CPU-Laufzeiten bei LOD-Skalierung]{Messung der GPU- und CPU-Laufzeiten bei einer
         $\text{LOD}$-Skalierung von 24.000 bis 16,38 Mio. Dreiecken und einer konstanten Objektanzahl von 2.000.}
     \label{fig:5_2_1_bottleneck_divergence}
 \end{figure}
 
 % Deduktion.
-Die ermittelte Laufzeit-Parität zwischen den Pipelines widerlegt zudem die Hypothese der hohen Speicher- und
+Die ermittelte Laufzeit-Parität zwischen den Pipelines widerlegt die Hypothese der hohen Speicher- und
 Bandbreitenkosten für reine Geometrieszenarien~\cite[S.~905]{akenine-mollerRealtimeRendering2019}.
 Das Füllen der breiteren Deferred-Buffer erzeugt gegenüber dem Forward-Buffer keinen limitierenden Bandbreiten-Overhead
 auf dem \ac{VRAM}-Bus.
 
 % Limitation.
-Es sei jedoch methodisch kritisch angemerkt, dass eine rein geometrische Skalierung auf konstantem Raum nur bedingt
+Es sei jedoch methodisch angemerkt, dass eine rein geometrische Skalierung auf konstantem Raum nur bedingt
 geeignet ist, um die \ac{VRAM}-Speicherbandbreite zu sättigen.
 Die extrem hohe Dreiecksdichte bei $LOD = 4$ ($16{,}38\text{ Mio.}$ Dreiecke auf $2.000$ Instanzen bei 1080p) führt
 dazu, dass die Größe der verarbeiteten Dreiecke den Subpixel-Bereich erreicht oder sogar
@@ -281,7 +275,7 @@ korrelieren, wobei die jeweiligen Steigungsraten signifikant divergieren.
 Der Anstieg von $t_{\text{Dispatch}}$ verläuft zwar linear, verbleibt jedoch selbst bei einer Volllast von $50.000$
 Instanzen mit ca. \qty{7,8}{\milli\second} über alle Rendering-Pipelines hinweg stabil und effizient.
 Im Gegensatz dazu weist $t_{\text{Logic}}$ ein deutlich steileres Anstiegsverhalten auf, wobei sich die Forward-Pipeline
-bei zunehmender Last zunehmend von den Deferred-Pipelines entkoppelt: In der Traversierung des logischen Szenen-Passes
+bei steigender Last zunehmend von den Deferred-Pipelines entkoppelt: In der Traversierung des logischen Szenen-Passes
 (State-Changes/Culling) generiert die Forward-Architektur eine messbar höhere \ac{CPU}-Last als die
 Deferred-Äquivalente.
 
@@ -289,7 +283,7 @@ Deferred-Äquivalente.
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\linewidth]{abbildungen/5_2_2_cpu_scaling_logic_vs_render}
-    \caption[Objektanzahl-Limitierung im CPU-Dispatch]{Messung von Logik-Laufzeit ($t_{\text{Logic}}$) und
+    \caption[Messung von Logik- und Dispatch-Laufzeiten bei Instanzenskalierung]{Messung von Logik-Laufzeit ($t_{\text{Logic}}$) und
     Dispatch-Laufzeit ($t_{\text{Dispatch}}$) bei
     einer Skalierung von 1.000 bis 50.000 Instanzen.}
     \label{fig:5_2_2_cpu_scaling_logic_vs_render}
@@ -299,7 +293,7 @@ Deferred-Äquivalente.
 Die Analyse ergibt, dass die reine \ac{API}-Befehlsübermittlung an die Grafikkarte bei keinem der untersuchten
 Rendering-Paradigmen einen primären Engpass darstellt.
 Darüber hinaus kann beobachtet werden, dass die umfangreichen mathematischen Operationen (Frustum Culling,
-\ac{MVP}-Matrix-Updates) die Datenverarbeitung der weitaus mehr größer belasten \ac{CPU}.
+\ac{MVP}-Matrix-Updates) die Datenverarbeitung auf der \ac{CPU} hier weitaus größer belasten.
 Das Forward Rendering weist in diesem Kontext eine geringere Skalierbarkeit auf, da es pro Objekt auf der \ac{CPU} eine
 Lichtliste evaluieren und binden muss~\cite[S.~891]{akenine-mollerRealtimeRendering2019}.
 Wie~\textcite[S.~1]{Thaler2011DeferredRendering} beschreibt, müssen bei Single-Pass-Forward-Architekturen für jedes
@@ -311,8 +305,8 @@ verifiziert somit \hyperlink{hyp:H1.2}{Hypothese H1.2}.
 
 % Limitationen.
 Dies stellt gleichzeitig eine architektonische Limitation des genutzten Frameworks dar, da eine alternative
-Implementierung des Forward Renderings in multiplen Pässen (ein Render-Pass pro Lichtquelle) diese spezifische
-Suchlogik umgangen hätte.
+Implementierung des Forward Renderings in mehreren Pässen (ein Render-Pass pro Lichtquelle) diese spezifische
+Suchlogik umgangen hätte (Multi-Pass-Forward)~\cite[S.~1]{Thaler2011DeferredRendering}.
 
 \subsection{{Overdraw-Dichte}}
 \label{subsec:050203_overdraw_eval}
@@ -354,18 +348,19 @@ Des Weiteren ist festzustellen, dass alle Rendering-Pipelines nahezu linear skal
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\linewidth]{abbildungen/5_2_3_overdraw_fillrate_scaling}
-    \caption[Overdraw-Skalierung bei steigender Tiefenkomplexität]{Messung der GPU-Ausführungszeit in Abhängigkeit vom
+    \caption[Messung der GPU-Ausführungszeit bei Overdraw-Skalierung]{Messung der GPU-Ausführungszeit in Abhängigkeit vom
     theoretischen Overdraw-Faktor (1,1 bis 18,1 Schichten pro Pixel) bei einer Skalierung von 2.000 bis 32.000
     Instanzen.}
     \label{fig:5_2_3_overdraw_fillrate_scaling}
 \end{figure}
 
 % Deduktion
-Die nahezu deckungsgleichen Kurven demonstrieren, dass die umfangreichen G-Buffer-Schreibvorgänge selbst bei einem
+Die nahezu deckungsgleichen Kurven demonstrieren, dass die umfangreichen \ac{G-Buffer}-Schreibvorgänge selbst bei einem
 äußerst hohen Overdraw keine \ac{VRAM}-Blockade induzieren.
 Da opake Geometrie gerendert wird, testet die \ac{GPU}-Hardware die Tiefe bereits vor dem eigentlichen Fragment-Shader.
-Es ist zu konstatieren, dass verdeckte Pixel-Fragmente auf Silizium-Ebene verworfen werden, bevor kostspielige
-Schreiboperationen in den Framebuffer oder G-Buffer stattfinden. \cite[S. 801]{akenine-mollerRealtimeRendering2019}
+Es ist zu konstatieren, dass verdeckte Pixel-Fragmente mittels \textit{Early-Z} (vgl.\ Kapitel~\ref{subsec:020201_overdraw})
+auf Siliziumebene verworfen werden, bevor kostspielige
+Schreiboperationen in den Framebuffer oder \ac{G-Buffer} stattfinden. \cite[S. 801]{akenine-mollerRealtimeRendering2019}
 
 
 \section{{Bandbreite und Auflösung}}
@@ -374,14 +369,14 @@ Schreiboperationen in den Framebuffer oder G-Buffer stattfinden. \cite[S. 801]{a
 In dem nachfolgenden Kapitel werden Benchmarks und Erkenntnisse präsentiert, die dazu dienen, die
 bandbreitenspezifischen Limitierungen auszuloten.
 Im Rahmen der Analyse werden die \ac{API} und die Speicherkosten des \ac{G-Buffer}s sowie der zunehmende \ac{ALU}-Aufwand des
-Forward-Rendering evaluiert.
+Forward-Renderings betrachtet.
 
 \subsection{{Auflösung}}
 \label{subsec:050301_resolution_eval}
 
 % Einleitung.
 Der folgende Versuch zielt darauf ab, den Einfluss der Framebuffer-Auflösung (und der damit verbundenen Pixel-Anzahl)
-auf die \ac{VRAM}-Füllrate und den Shading-Aufwand zu evaluieren.
+auf die \ac{VRAM}-Füllrate und den Shading-Aufwand zu untersuchen.
 Sowohl die Geometrie als auch die Lichtverhältnisse bleiben auf einen Standard von $N_{\text{Light}} = 200$ Lichtern und
 $N_{\text{Inst}} = 5.000$ Objekt-Instanzen festgelegt.
 Im Rahmen der Evaluierung werden ausschließlich die Auflösung und damit gerenderten Pixel analysiert.
@@ -410,23 +405,23 @@ Pixelanzahl gekoppelt sind~\cite[Abschn.~9.2]{Chapter9Deferred}.
 Bei niedrigen Auflösungen (480p bis 720p) weisen die Architekturen eine relativ geringe Variabilität auf
 ($t_{\text{GPU}} < \qty{4}{\milli\second}$).
 Die Forward-Pipeline weist jedoch eine zunehmende Abnahme der Skalierbarkeit auf.
-Bei 4K werden Forward-Renderzeiten von nahezu \qty{17}{\milli\second} erreicht, während die Deferred-Pipelines mit etwa
+Unter 4K-Auflösung werden Forward-Renderzeiten von nahezu \qty{17}{\milli\second} erreicht, während die Deferred-Pipelines mit etwa
 $12$ bis \qty{13}{\milli\second} deutlich effizienter sind (siehe Abbildung~\ref{fig:5_3_1_resolution_scaling_crossover}).
 
 % Ergebnis Graph
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\linewidth]{abbildungen/5_3_1_resolution_scaling_crossover}
-    \caption[Auflösungsskalierung unter konstanter Beleuchtungslast]{Messung der GPU-Ausführungszeit in Abhängigkeit von
+    \caption[Messung der GPU-Ausführungszeit bei Auflösungsskalierung]{Messung der GPU-Ausführungszeit in Abhängigkeit von
     der Framebuffer-Auflösung (480p bis 4K) unter einer statischen Last von 200 Lichtquellen.}
     \label{fig:5_3_1_resolution_scaling_crossover}
 \end{figure}
 
 % Deduktion.
-Die starken Einbußen von Forward gegenüber den Deferred-Pipelines wird im Zusammenhang mit Shading Overdraw vermutet.
+Die starken Einbußen von Forward gegenüber den Deferred-Pipelines wird im Zusammenhang mit \textit{Shading-Overdraw} vermutet.
 Da in diesem Setup $N_{\text{Light}} = 200$ Lichter berechnet werden, führt die Forward-Pipeline komplexe
 Beleuchtungsmathematik auf Fragmenten aus, die später von anderen Objekten verdeckt
-werden~\cite[S.~55]{burnsVisibilityBufferCacheFriendly2013}.
+werden (vgl.\ Kap.~\ref{subsec:020201_overdraw}).
 Bei einer Anzahl von $8{,}3\text{ Millionen}$ Pixeln (4K) multipliziert sich diese redundante Rechenlast wesentlich
 stärker als bei den entkoppelten Deferred-Pipelines (ein \ac{ALU}-Limit wird schneller erreicht)
 ~\cite[Abschn.~1]{mallettDeferredAdaptiveCompute2018}.
@@ -437,11 +432,12 @@ Diese Vervielfachung der redundanten Rechenlast bei steigender Pixelanzahl stüt
 \label{subsec:050302_bandwidth_eval}
 
 % Einleitung.
-Ziel der folgenden Evaluation ist die Isolierung der absoluten Speicherbandbreite (Fillrate) und des Basis-Overheads.
+Ziel der folgenden Evaluation ist die Isolierung der absoluten Speicherbandbreite (Fillrate) und des Basis-Overheads der
+Rendering-Pipelines.
 Der Versuchsaufbau gründet auf einem simplen binären Test.
 Die Szene ist in diesem Fall vollständig leer ($N_{\text{Inst}} = 0$, $N_{\text{Light}} = 0$).
 Es erfolgt lediglich eine Aktivierung bzw.\ Deaktivierung eines vollflächigen Boden-Quads (in 1080p und 4K Auflösung).
-Im Rahmen dessen werden die Bandbreiten-Nachteile (Memory Tax) beim Schreiben und Lesen der Framebuffer
+Im Rahmen dessen werden die Bandbreiten-Nachteile während des Schreibens und Lesens der Framebuffer
 ausgelotet.
 
 % Aufbau.
@@ -473,13 +469,13 @@ Bei der Initialisierung des bildschirmfüllenden Boden-Quads zeigen sowohl die F
 Deferred-Pipelines eine annähernd identische Skalierung, wobei sich die $t_{\text{GPU}}$-Zeit in allen Fällen um etwa
 \qty{64}{\percent} erhöht.
 Abbildung~\ref{fig:5_3_2_2_base_bandwidth_tax_means} zeigt jedoch, dass die Deferred-Volume-Pipeline bei einer
-Auflösung von 4K im Vergleich zu anderen Single-Pass-Architekturen signifikant schlechter skaliert.
+Auflösung von 4K im Vergleich zu den anderen Single-Pass-Pipelines signifikant schlechter skaliert.
 
 % Ergebnis Graph 1
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\linewidth]{abbildungen/5-3-2-1_BaseBandwidthTax_Means}
-    \caption[Basis-Bandbreitenkosten der Rendering-Architekturen]{Vergleich der GPU-Ausführungszeit zwischen keiner
+    \caption[Vergleich der Basis-Bandbreitenkosten bei 1080p]{Vergleich der GPU-Ausführungszeit zwischen keiner
     Geometrielast (Basis-Overhead) und vollflächiger Screen-Space-Abdeckung bei 1080p Auflösung ohne Beleuchtung.}
     \label{fig:5_3_2_1_base_bandwidth_tax_means}
 \end{figure}
@@ -488,7 +484,7 @@ Auflösung von 4K im Vergleich zu anderen Single-Pass-Architekturen signifikant 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\linewidth]{abbildungen/5-3-2-2_BaseBandwidthTax_Means}
-    \caption[Basis-Bandbreitenkosten der Rendering-Architekturen]{Vergleich der GPU-Ausführungszeit zwischen keiner
+    \caption[Vergleich der Basis-Bandbreitenkosten bei 4K]{Vergleich der GPU-Ausführungszeit zwischen keiner
     Geometrielast (Basis-Overhead) und vollflächiger Screen-Space-Abdeckung bei 4K Auflösung ohne Beleuchtung.}
     \label{fig:5_3_2_2_base_bandwidth_tax_means}
 \end{figure}
@@ -503,7 +499,7 @@ Wäre die Ursache ein reines Rechenproblem der Shader (\ac{ALU}-Limit), müssten
 gleichmäßig skalieren.
 Die signifikant stärkere Einbuße der Deferred-Volume-Pipeline bei der 4K-Auflösung (\qty{240}{\percent}) im Vergleich
 zu den Forward- und Uber-Shader-Ansätzen (\qty{135}{\percent}) lässt sich primär auf den hardwarenahen Overhead des
-additiven Blendings (\textit{Read-Modify-Write}) zurückführen und liefert ein starkes Indiz für die
+additiven Blendings (vgl.\ Kap.~\ref{subsec:020202_memory_bandwidth}) zurückführen und liefert ein starkes Indiz für die
 \hyperlink{hyp:H3}{Hypothese H3}.
 Deferred-Uber und Forward rechnen das finale Beleuchtungsergebnis in einem einzigen Durchlauf aus
 (Single-Pass-Architektur) und überschreiben den Zielpuffer direkt (nur eine Replace-Operation).
@@ -511,7 +507,7 @@ Die Multi-Pass-Architektur der Volume-Pipeline hingegen erfordert zwingend den k
 Blending zur Akkumulation der Lichtbeiträge~\cite[S.~9]{lauritzenDeferredRenderingCurrent}.
 \textcite[S.~803]{akenine-mollerRealtimeRendering2019} weisen darauf hin, dass derartige Blending-Operationen auf dem
 \ac{VRAM}-Bus im Vergleich zu einfachen Schreibvorgängen mit signifikant höheren Kosten verbunden sind.
-In Kombination mit dem simultanen Auslesen der breiten \ac{G-Buffer} (\ac{MRT}) resultiert dieser zusätzliche
+In Kombination mit dem simultanen Auslesen der breiten \ac{G-Buffer} resultiert dieser zusätzliche
 Lese-Schreib-Zyklus bei $8{,}3\,\text{Millionen}$ Pixeln (4K) selbst bei simplen Ambient-Auswertungen
 ($N_{\text{Light}} = 0$) in einer Sättigung der Speicherbandbreite.
 
@@ -530,7 +526,7 @@ vorliegenden Testarchitektur.
 \section{{Beleuchtung}}
 \label{sec:0504_lighting_eval}
 
-Im nachfolgenden Kapitel werden Benchmarks und Erkenntnisse präsentiert, die dazu dienen, die beleuchtungsspezifischen
+Im nachfolgenden Abschnitt werden Benchmarks und Erkenntnisse präsentiert, die dazu dienen, die beleuchtungsspezifischen
 Limitierungen zu ermitteln.
 Da Deferred Rendering im Bereich der Beleuchtungsberechnung signifikante Vorteile verspricht, sollen im Folgenden die
 genauen architektonischen Crossover-Points ermittelt werden, ab denen die Deferred-Pipelines die Forward-Pipelines
@@ -545,13 +541,14 @@ Benchmarks evaluiert.
 Ziel dieser Evaluation ist die Untersuchung der Skalierbarkeit von Punktlichtern.
 Dazu wird der klassische Ansatz der \ac{UBO}-Iteration (Forward und Deferred-Uber) mit der Rasterisierung von
 Proxy-Geometrie (Deferred-Volume) verglichen.
-Die Anzahl der Lichtquellen ($N_{\text{Light}}$) wird dabei logarithmisch von $10$ auf bis zu $5.000$ skaliert.
+Die Anzahl der Lichtquellen $N_{\text{Light}}$ wird dabei logarithmisch von $10$ auf bis zu $5.000$ skaliert.
 Wie in Unterkapitel Kapitel~\ref{subsec:040201_forward_pipeline} beschrieben, sind sowohl die Forward-Pipeline
 als auch die Deferred-Uber-Pipeline hinsichtlich der maximal nutzbaren Lichtquellen durch die
-\ac{UBO}-Kapazität auf insgesamt 500 Punktlichter limitiert.
+\ac{UBO}-Limits auf insgesamt 500 Punktlichter limitiert.
 Im Rahmen der Untersuchung der allgemeinen Skalierung erfolgt zudem eine Evaluation der Deferred-Volume-Pipeline mit bis
 zu $5.000$ Lichtquellen.
-Darüber hinaus zeichnet sich das szenische Setup durch eine minimale Überlappung der Lichtquellen und deren Radien aus.
+Darüber hinaus zeichnet sich das szenische Setup durch eine minimale Überlappung der Lichtquellen und deren Radien
+aus um Blending-Operationen möglichst gering zu halten.
 
 % Aufbau.
 \begin{center}
@@ -565,7 +562,7 @@ Darüber hinaus zeichnet sich das szenische Setup durch eine minimale Überlappu
             Kontrollvariablen: & Umgebungslicht deaktiviert ($I_{\text{Ambient}} = 0{,}0$), Licht-Radius
             reduziert ($r_{\text{Light}} = 1{,}0$) \\
             Architektonische Limits:   & Forward und Deferred-Uber limitiert auf max.\ 500 Lichter
-            (\ac{UBO}-Kapazität) \\
+            (\ac{UBO}-Limit) \\
             Zielgröße:               & \ac{GPU}-Gesamtlaufzeit ($t_{\text{GPU}}$)
         \end{tabularx}
         \vspace{2mm}
@@ -582,7 +579,7 @@ Obwohl die Deferred-Uber-Pipeline eine signifikant geringere Skalierbarkeit aufw
 Deferred-Volume-Pipeline, übertrifft diese ab dem 100-Lichter-Kipppunkt die Forward-Pipeline zunehmend,
 wenn auch nur marginal.
 Bei einer Anzahl von 250 Lichtquellen zeigt sich ein signifikanter Einbruch der Leistung von Forward, während
-Deferred-Volume eine bemerkenswerte Effizienz und flache Skalierung aufweist.
+Deferred-Volume eine extreme Effizienz und flache Skalierung aufweist.
 Erst bei einer Last von $5.000$ Lichtquellen überschreitet die Deferred-Volume-Pipeline die Rechenzeit von
 Forward bei einer zehnmal geringeren Last von 500 Lichtern.
 
@@ -590,14 +587,15 @@ Forward bei einer zehnmal geringeren Last von 500 Lichtern.
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\linewidth]{abbildungen/5-4-1_LightCount_Means}
-    \caption[Skalierung der Lichtanzahl bei dynamischen Punktlichtern]{Messung der GPU-Ausführungszeit in Abhängigkeit
+    \caption[Messung der GPU-Ausführungszeit bei Lichtanzahlskalierung]
+    {Messung der GPU-Ausführungszeit in Abhängigkeit
     von der Anzahl aktiver Lichtquellen (10 bis 5.000).}
     \label{fig:5_4_1_light_count_means}
 \end{figure}
 
 % Deduktion
 Aus den Beobachtungen kann abgeleitet werden, dass die Deferred-Pipelines bei steigender Lichtanzahl grundlegend besser
-skalieren als naive Forward-Ansätze.
+skalieren als einfache Forward-Ansätze.
 Diese Erkenntnis validiert die in der Literatur beschriebene Überlegenheit von Deferred-Rendering im Bereich massiver
 Lichtevaluationen und bestätigt den primären Existenzgrund dieses Paradigmas im
 Allgemeinen~\cite[S.~1]{Thaler2011DeferredRendering}.
@@ -616,7 +614,7 @@ Deferred-Volume-Pipeline primär durch die \ac{VRAM}-Bandbreite der \ac{ROP}s au
 \textit{Read-Modify-Write}-Zyklus des additiven Blendings erreicht wird
 (siehe Kapitel~\ref{subsec:050302_bandwidth_eval}).
 Diese Beobachtung verifiziert den algorithmischen Kern von \hyperlink{hyp:H1.1}{Hypothese H1.1}: Die multiplikative
-Komplexität der direkten Beleuchtungsberechnung zwingt die Forward-Architektur bei steigender Lichtdichte unweigerlich
+Komplexität der direkten Beleuchtungsberechnung zwingt die Forward-Architektur bei steigender Lichtkomplexität unweigerlich
 in ein massives Performance-Defizit.
 
 \subsection{{Lichtintensität \& Overlap}}
@@ -629,7 +627,7 @@ Es werden zwei komplementäre Szenarien evaluiert: Test A skaliert den physikali
 Bildschirmabdeckung künstlich in die Höhe zu treiben, während Test B bis zu $1.000$ Lichtquellen auf exakt dieselbe
 3D-Koordinate (Singularität) zwingt, um eine maximale Überlagerung pro Pixel zu garantieren.
 Dieses Versuchsdesign verspricht die gezielte Provokation und Isolierung des
-\textit{Read-Modify-Write}-Bandbreitenlimits der Rasterisierungseinheiten.
+\textit{Read-Modify-Write}-Bandbreitenlimits der Rasterisierungseinheiten (\acp{ROP}).
 Es soll aufgezeigt werden, an welchem Punkt die kontinuierliche Speicher-Akkumulation bei überlappenden Lichtvolumina
 die reine \ac{ALU}-Rechenlast der Shader-Schleifen als primärer Performance-Flaschenhals ablöst.
 
@@ -661,7 +659,7 @@ die reine \ac{ALU}-Rechenlast der Shader-Schleifen als primärer Performance-Fla
 Die Analyse der Abbildung~\ref{fig:5_4_2_1_light_intensity_means} zeigt, dass die Deferred-Volume-Pipeline bei
 einem kleinen Radius von $0{,}5$ und dem damit verbundenen minimalen Volume-Overlap den signifikant schnellsten Ansatz
 darstellt.
-Erhöht man den Radius-Multiplikator auf $20{,}0$ und steigert damit die Screen-Space-Abdeckung drastisch, so führt dies
+Wird der Radius-Multiplikator auf $20{,}0$ erhört und damit die Screen-Space-Abdeckung drastisch gesteigert, führt dies
 zu einer massiven Zunahme der Laufzeit der Deferred-Volume-Pipeline auf über \qty{8}{\milli\second}, während die Werte
 für Forward und Deferred-Uber nahezu konstant bleiben.
 In Abbildung~\ref{fig:5_4_2_2_light_singularity_means} wird ein identisches Bild in forcierter Form dargestellt.
@@ -673,7 +671,7 @@ Lichtquellen eine signifikant höhere Effizienz und verbleiben stabil unterhalb 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\linewidth]{abbildungen/5-4-2-1_LightIntensity_Means}
-    \caption[Skalierung der Lichtintensität bei konstanter Lichtanzahl]{Messung der GPU-Ausführungszeit in Abhängigkeit
+    \caption[Messung der GPU-Ausführungszeit bei Lichtintensitätsskalierung]{Messung der GPU-Ausführungszeit in Abhängigkeit
     von der Lichtintensität respektive dem Radius-Multiplikator (0,5 bis 20,0) bei einer konstanten Anzahl von 250
     Lichtquellen.}
     \label{fig:5_4_2_1_light_intensity_means}
@@ -682,7 +680,7 @@ Lichtquellen eine signifikant höhere Effizienz und verbleiben stabil unterhalb 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\linewidth]{abbildungen/5-4-2-2_LightSingularity_Means}
-    \caption[Skalierung der Lichtanzahl in einer Singularität]{Messung der GPU-Ausführungszeit in Abhängigkeit von der
+    \caption[Messung der GPU-Ausführungszeit bei Lichtquellen-Singularität]{Messung der GPU-Ausführungszeit in Abhängigkeit von der
     Anzahl der Lichtquellen (10 bis 1000) bei einer Positionierung aller Lichtquellen in einer räumlichen Singularität.}
     \label{fig:5_4_2_2_light_singularity_means}
 \end{figure}
@@ -695,7 +693,8 @@ Sie verorten die größte architektonische Limitierung des Deferred-Volume-Ansat
 überlappenden Einflussbereichen verschiedener Lichtquellen.
 Wenn hunderte Licht-Volumina dieselbe Pixelfläche abdecken, zwingt die Deferred-Volume-Pipeline die \ac{GPU},
 für diese einzelnen Pixel hunderte Male den \ac{RMW}-Zyklus für das additive Blending (\ac{ROP}s) auf dem Speicherbus
-auszuführen~\cites[Folie~9]{lauritzenDeferredRenderingCurrent}[S.~676]{gregoryGameEngineArchitecture2018}.
+auszuführen~\cites[Folie~9]{lauritzenDeferredRenderingCurrent}[S.~676]{gregoryGameEngineArchitecture2018}
+(vgl.\ Kap.~\ref{subsec:020202_memory_bandwidth}).
 Der \ac{VRAM}-Speicherbus kollabiert in der Folge unter der schieren Frequenz dieser redundanten Lese- und
 Schreibzugriffe.
 
@@ -704,17 +703,19 @@ Schreibzugriffe.
 
 % Einleitung.
 Wie in Unterkapitel~\ref{subsec:050203_overdraw_eval} bereits für die reine Geometrie evaluiert, wird im Folgenden
-erneut der Einfluss des Fragment-Overdraws untersucht.
+erneut der Einfluss des Overdraws untersucht.
 In diesem Versuchsaufbau wird die Tiefenkomplexität allerdings unter Zuhilfenahme einer konstanten Beleuchtungslast
 überprüft.
-Der Aufbau ist hierbei nahezu identisch zu Unterkapitel~\ref{subsec:050203_overdraw_eval}, mit der Ausnahme von $100$
+Der Aufbau ist hierbei nahezu identisch zu~\ref{subsec:050203_overdraw_eval}, mit der Ausnahme von $100$
 zusätzlich aktiven Lichtquellen.
 Die Anzahl der Lichtquellen ist dabei so gewählt, dass sie den in
 Kapitel~\ref{subsec:050402_light_intensity_and_overlap_eval} aufgezeigten \textit{Light-Volume-Overlap} innerhalb der
 Deferred-Volume-Pipeline möglichst geringfügig provoziert.
 Für die Messergebnisse wird erwartet, dass der Forward-Ansatz durch klassischen Shading-Overdraw an Effizienz verliert,
-da die aufwendige Beleuchtungsberechnung hier untrennbar mit der Geometrieauswertung verknüpft ist.
-Somit sollte sich der Berechnungsaufwand theoretisch mit jedem überzeichneten Fragment vervielfachen.
+da die aufwendige Beleuchtungsberechnung hier untrennbar mit der Geometrieauswertung verknüpft ist
+(vgl.\ Kap.~\ref{subsec:020101_forward_rendering}).
+Somit sollte sich der Berechnungsaufwand theoretisch mit jedem überzeichneten Fragment vervielfachen
+(vgl.\ Kap.~\ref{subsec:020201_overdraw}).
 
 % Aufbau
 \begin{center}
@@ -738,8 +739,8 @@ Somit sollte sich der Berechnungsaufwand theoretisch mit jedem überzeichneten F
 Abbildung~\ref{fig:5_4_3_decoupling_proof} zeigt, dass der vorgelagerte \ac{G-Buffer}-Pass der Deferred-Pipelines in
 diesem Kontext den primären weitestgehend linearen Skalierungsfaktor bei einer ansteigenden Instanzdichte für die beiden
 Deferred-Pipelines darstellt.
-Bei der Betrachtung der Forward-Pipeline-Renderzeit ist ein Anstieg der kombinierten Zeit zu verzeichnen
-(von \qty{1,11}{\milli\second} auf \qty{5,98}{\milli\second}), der jedoch nicht so katastrophal ausfällt, wie es die
+In der Betrachtung der Forward-Pipeline-Renderzeit ist ein Anstieg der kombinierten Zeit zu verzeichnen
+(von \qty{1,11}{\milli\second} auf \qty{5,98}{\milli\second}), der jedoch nicht so stark ausfällt, wie es die
 ursprüngliche Annahme vermuten ließe.
 Der Engine Overhead weist zudem bei sämtlichen Pipelines eine hohe Konstanz auf.
 
@@ -747,30 +748,30 @@ Der Engine Overhead weist zudem bei sämtlichen Pipelines eine hohe Konstanz auf
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\linewidth]{abbildungen/5_4_3_decoupling_proof}
-    \caption[Entkopplungsnachweis bei steigendem geometrischen Overdraw]{Aufschlüsselung der GPU-Ausführungszeit nach
+    \caption[Entkopplungsnachweis in steigendem geometrischen Overdraw]{Aufschlüsselung der GPU-Ausführungszeit nach
     einzelnen Pipeline-Komponenten in Abhängigkeit vom theoretischen Overdraw-Faktor bei einer konstanten Last von 100
     Lichtquellen.}
     \label{fig:5_4_3_decoupling_proof}
 \end{figure}
 
 % Deduktion
-Die Ergebnisse dieser Evaluation widerlegen die weit verbreitete Annahme, dass der Fragment Overdraw, insbesondere in
-Kombination mit Beleuchtung, in naiven Forward-Pipelines einen der größten Engpässe
+Die Ergebnisse dieser Evaluation widerlegen die weit verbreitete Annahme, dass der Overdraw, insbesondere in
+Kombination mit Beleuchtung, in einfachen Forward-Pipelines einen der größten Engpässe
 darstellt~\cites[Abschn.~1]{Thaler2011DeferredRendering}.
 Die Ergebnisse dieser Evaluation erzwingen somit eine Relativierung der \hyperlink{hyp:H1.1}{Hypothese H1.1}:
-Durch hardwarebasierte Optimierungen wie \textit{Early Z} wird auf modernen Grafikkarten auch ohne dedizierten,
+Durch hardwarebasierte Optimierungen wie \textit{Early-Z} wird auf modernen Grafikkarten auch ohne dedizierten,
 softwarebasierten \textit{Z-Prepass} ein signifikanter Teil der redundanten Rechenlast der Beleuchtungsberechnung
-verdeckter Fragmente vermieden~\cite[S.~801~u.~803]{akenine-mollerRealtimeRendering2019}.
+verdeckter Fragmente vermieden~\cite[S.~801~u.~803]{akenine-mollerRealtimeRendering2019} (vgl.\ Kap.~\ref{subsec:020201_overdraw}).
 
 
 \section{{Hybride Stilisierung \& Entropie}}
 \label{sec:0505_npr_eval}
 
-In den vorangegangenen Kapiteln 5.2 bis 5.4 wurde das grundlegende Verhalten der evaluierten Rendering-Architekturen
-aufgezeigt und somit zugleich die Fähigkeiten und Grenzen des HyDra-Frameworks demonstriert.
+In den vorangegangenen Untersuchungskapiteln wurde das grundlegende Verhalten der evaluierten Rendering-Architekturen
+aufgezeigt und somit zugleich die Fähigkeiten und Grenzen des \ac{HyDra}-Frameworks demonstriert.
 Die nachfolgenden Tests widmen sich dem Kern der Forschung und evaluieren die Wechselwirkungen von Stil-Entropie und
 den allgemeinen Einfluss selektiver \ac{NPR}-Techniken auf die verschiedenen Pipelines.
-Der Fokus liegt hierbei, insbesondere auf der Evaluation von Warp Divergence und Register Pressure.
+Der Fokus liegt hierbei, im Speziellen auf der Evaluation von Warp Divergence und Registerdruck.
 
 \subsection{{Stil-Entropie}}
 \label{subsec:050501_entropy_eval}
@@ -778,8 +779,9 @@ Der Fokus liegt hierbei, insbesondere auf der Evaluation von Warp Divergence und
 % Einleitung.
 In den nachfolgenden, zusammengefassten Versuchen werden die Einflüsse von stilistischer Komplexität mittels der
 Anwendung diverser \ac{NPR}-Stile analysiert.
-Neben dem bisher standardmäßig verwendeten Blinn-Phong-Shading finden auch Toon-Shading und Gooch-Shading Anwendung.
-In der vorliegenden Untersuchung \textit{A} wird eine geklusterte (niedrige Entropie) mit einer gestreuten (hohe
+Neben dem bisher standardmäßig verwendeten Blinn-Phong-Shading finden auch Toon-Shading und Gooch-Shading
+Anwendung (vgl\ Kap.~\ref{sec:0403_npr_payloads}).
+In der vorliegenden Untersuchung \textit{A} wird eine sortierte (niedrige Entropie) mit einer gestreuten (hohe
 Entropie) Objektverteilung verglichen, wobei die Anzahl der Stile konstant bei drei bleibt.
 In der weiteren Untersuchung \textit{B} wird die Anzahl der simultan aktiven Shading-Stile von 1 bis 3 (Blinn, Gooch,
 Toon) skaliert.
@@ -787,7 +789,7 @@ In diesem verteilten Szenario (Versuch \textit{B}) führt die schrittweise Zunah
 algorithmischen Einflusses der \ac{NPR}-Effekte.
 Die vorliegende Untersuchung zielt darauf ab, die Hypothesen der Warp-Divergenz und des Registerdrucks zu analysieren
 und zu verifizieren.
-Diese Analyse erfolgt insbesondere mit Blick auf die Performance der Deferred-Uber-Pipeline.
+Diese Analyse erfolgt vornehmlich mit Blick auf die Performance der Deferred-Uber-Pipeline.
 
 % Aufbau.
 \begin{center}
@@ -797,13 +799,13 @@ Diese Analyse erfolgt insbesondere mit Blick auf die Performance der Deferred-Ub
         \vspace{2mm}
         {\sffamily\bfseries Versuchs-Setup} \\[1.5ex]
         \begin{tabularx}{0.9\textwidth}{>{\sffamily}l X}
-            \multicolumn{2}{l}{\textbf{Test A: Räumliche Entropie}} \\
-            Unabhängige Variable:    & Räumliche Verteilung ($E_{\text{Spatial}} \in \{\text{Geklustert},
+            \multicolumn{2}{l}{\textbf{Versuch A: Räumliche Entropie}} \\
+            Unabhängige Variable:    & Räumliche Verteilung ($E_{\text{Spatial}} \in \{\text{Sortiert},
             \text{Gestreut}\}$) \\
             Kontrollvariablen:& $N_{\text{Inst}} = 15.000$, $N_{\text{Light}} = 250$,
             $r_{\text{Spawn}} = 175{,}0$, Drei aktive Stile ($S_{\text{Count}} = 3$) \\[1.5ex]
 
-            \multicolumn{2}{l}{\textbf{Test B: Kombinatorische Degradation}} \\
+            \multicolumn{2}{l}{\textbf{Versuch B: Kombinatorische Degradation}} \\
             Unabhängige Variable:    & Anzahl aktiver Rendering-Stile ($S_{\text{Count}} \in \{1, 2, 3\}$) \\
             Kontrollvariablen:       & Gleicher Aufbau wie Test A, Räumliche Entropie geklustert
             ($E_{\text{Spatial}} = \text{Geklustert}$) \\[1.5ex]
@@ -821,15 +823,15 @@ bei gestreuter Verteilung der Stile (hohe Entropie) im Vergleich zu sortierten V
 Auch der erhöhte algorithmische Aufwand in der Lichtberechnung, der durch die komplexeren Aufwände der Toon- und
 Gooch-Shader entsteht, zeigt nur minimalen Einfluss auf Forward- und Deferred-Volume.
 Die Deferred-Uber-Pipeline weist in beiden Szenarien allerdings einen signifikanten Einbruch auf und
-verdoppelt nahezu (Anstieg der Beleuchtungsberechnungs-Zeiten um $\approx$\,\qty{85}{\percent}) ihren Aufwand bei
-einer gestreuten Stilverteilung (hohe Entropie).
+verdoppelt nahezu ihren Aufwand (Anstieg der Beleuchtungsberechnungs-Zeiten um $\approx$\,\qty{85}{\percent}) bei
+einer gestreuten Stil-Verteilung (hohe Entropie).
 Abbildung~\ref{fig:5_5_1_entropy_divergence_means_live_hydra} zeigt den Versuchsaufbau innerhalb des \textit{HyDra}
 Frameworks.
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\linewidth]{abbildungen/5_5_1_entropy_divergence_means}
-    \caption[Einfluss der räumlichen Entropie auf die GPU-Shading-Zeit]{Messung der GPU-Shading-Zeit in Abhängigkeit von
+    \caption[Messung der GPU-Shading-Zeit bei variierender Stilverteilung]{Messung der GPU-Shading-Zeit in Abhängigkeit von
     der räumlichen Verteilung (sortiert vs.~gestreut) der Rendering-Stile.}
     \label{fig:5_5_1_entropy_divergence_means}
 \end{figure}
@@ -852,21 +854,21 @@ Frameworks.
         \caption{Gestreute Verteilung}
         \label{fig:hydra_random}
     \end{subfigure}
-    \caption{Vergleich der Stil-Entropie Verteilungen in HyDra-Framework während der 5.5.1 Test-Suite in Test A
-        (Räumliche Entropie).}
+    \caption[Vergleich der Stil-Entropie-Verteilungen in HyDra-Framework]{Vergleich der Stil-Entropie Verteilungen in HyDra-Framework während der 5.5.1 Test-Suite in Test A
+        (räumliche Entropie).}
     \label{fig:5_5_1_entropy_divergence_means_live_hydra}
 \end{figure}
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\linewidth]{abbildungen/5_5_2_style_combinatorics_gpu}
-    \caption[Einfluss stilistischer Kombinatorik auf die GPU-Shading-Zeit]{Messung der GPU-Shading-Zeit in Abhängigkeit
+    \caption[Messung der GPU-Shading-Zeit bei stilistischer Kombinatorik]{Messung der GPU-Shading-Zeit in Abhängigkeit
     von der Anzahl simultan aktiver Rendering-Stile (1 bis 3 Stile).}
     \label{fig:5_5_2_style_combinatorics_gpu}
 \end{figure}
 
 % Deduktion.
-In den theoretischen Grundlagen (vgl.\\ Kapitel~\ref{subsec:020203_warp_divergence_and_register_pressure}) wurde
+In den theoretischen Grundlagen in Kapitel~\ref{subsec:020203_warp_divergence_and_register_pressure} wurde
 dargelegt, dass die \ac{GPU} Instruktionen im \ac{SIMT}-Verfahren in sogenannten \textit{Warps} verarbeitet.
 Der signifikante Leistungseinbruch der Deferred-Uber-Pipeline im gestreuten Szenario stellt die praktische
 Manifestation der \textit{Warp Divergence} dar und verifiziert \hyperlink{hyp:H2}{Hypothese H2} vollumfänglich.
@@ -880,23 +882,22 @@ Warps~\cite[S.~886]{akenine-mollerRealtimeRendering2019}.
 
 % Register Pressure und Limits.
 In Bezug auf die lineare Degradation des Deferred-Shaders bei der Kombination mehrerer Stile lässt sich die
-zusätzliche Hypothese eines erhöhten Register-Drucks aufstellen.
+zusätzliche Hypothese eines erhöhten Registerdrucks aufstellen.
 Die Implementierung eines zusätzlichen Rendering-Stils im monolithischen Code-Pfad bedingt potenziell die Allokation
-weiterer \ac{VGPR} pro Thread.
-Es kann deduziert werden, dass sich dadurch die globale Auslastung (Occupancy) der Recheneinheiten verringert
-(vgl.\~Kapitel~\ref{subsec:020203_warp_divergence_and_register_pressure}).
+weiterer Register pro Thread.
+
+% Einschränkungen.
 An dieser Stelle ist jedoch eine methodische Limitierung der vorliegenden Testarchitektur zu berücksichtigen.
 Aufgrund der Tatsache, dass die Messung der isolierten Beleuchtungs-Laufzeit ($t_{\text{Light}}$) keine
 Low-Level-Telemetriedaten liefert, kann diese spezifische Ursache nicht abschließend empirisch verifiziert werden.
-Ohne den Einsatz dedizierter Hardware-Profiler lässt sich nicht zweifelsfrei differenzieren, inwiefern ein erhöhter
+Ohne den Einsatz dedizierter Hardware-Profiler lässt sich nicht zweifelsfrei differenzieren, inwieweit ein erhöhter
 Registerdruck zum Leistungsabfall der Deferred-Uber-Pipeline beiträgt.
 
 \subsection{{Kernel Bandbreiten Limits}}
 \label{subsec:050502_kernel_eval}
 
 % Einleitung.
-Der folgende Versuch fokussiert sich ausschließlich auf die Deferred-Pipelines (Deferred-Uber und \
-textit{Deferred\_Volume}).
+Der folgende Versuch fokussiert sich ausschließlich auf die Deferred-Pipelines (Deferred-Uber und Deferred-Volume).
 Die vorliegende Untersuchung widmet sich der Analyse der Einflüsse kernelbasierter \ac{NPR}-Effekte.
 Durch die Tatsache, dass solche kernelbasierten Effekte in der Forward-Pipeline auf Objektebene nicht realistisch
 anwendbar sind (vgl.\\ Kapitel~\ref{subsec:040201_forward_pipeline}) und nur auf gesamter Screen-Space-Ebene anwendbar
@@ -943,7 +944,7 @@ Es ergibt sich beim Sprung von $R=2$ ($27$ Samples) auf $R=16$ ($1.175$ Samples)
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\linewidth]{abbildungen/5_5_3_kernel_bandwidth_scalability}
-    \caption[Skalierung des Kuwahara-Filterradius]{Messung der GPU-Shading-Zeit in Abhängigkeit vom
+    \caption[Messung der GPU-Shading-Zeit bei Kuwahara-Radius-Skalierung]{Messung der GPU-Shading-Zeit in Abhängigkeit vom
     Kuwahara-Kernel-Radius (2 bis 16).}
     \label{fig:5_5_3_kernel_bandwidth_scalability}
 \end{figure}
@@ -953,7 +954,7 @@ Die Tatsache, dass die Deferred-Volume-Pipeline im Vergleich zur Deferred-Uber-P
 geringere Effizienz aufweist, lässt sich auf eine algorithmische Asymmetrie in der Filter-Implementierung zurückführen.
 Wie bereits in Kapitel~\ref{subsec:040202_deferred_uber_pipeline} dargelegt, erfordern die beiden Architekturen
 unterschiedliche Ansätze bei der Evaluierung des Kuwahara-Filters.
-Die Deferred-Uber-Pipeline operiert als \textit{Pre-Lit}-Filter, um einen algorithmischen Ineffizienz-Kollaps durch
+Die Deferred-Uber-Pipeline operiert mittels \textit{Pre-Lit}-Kuwahara-Filter, um einen algorithmischen Ineffizienz-Kollaps durch
 redundante Beleuchtungsberechnungen pro Nachbarpixel zu verhindern.
 Sie liest innerhalb der $\mathcal{O}(R^2)$-Schleife ausschließlich Basis-Materialdaten (Albedo und Style-IDs) aus und
 berechnet die aufwendige Beleuchtung erst nach Abschluss des Filters für das finale, gemittelte Fragment.
@@ -963,16 +964,16 @@ Dies ermöglicht zwar eine \textquote{echtere} Darstellung des Kuwahara-Effektes
 Kuwahara-Schleife zusätzliche Texturlesezugriffe auf den \textit{Light Accumulation Buffer}
 (vergleiche Kapitel~\ref{subsec:040203_deferred_volume_pipeline}).
 
-Über die Auswirkungen der asymmetrischen Implementationen des Kernel-Filters (Kuwahara) hinaus kann kein signifikanter
+Über die Auswirkungen der asymmetrischen Implementationen des Filters hinaus kann kein signifikanter
 Unterschied in der Handhabung von Kernel-Effekten zwischen den untersuchten Deferred-Pipelines festgestellt werden.
 
 
-\section{{MaKro-Benchmark-Synthese}}
+\section{{Makro-Benchmark-Synthese}}
 \label{sec:0506_macro_eval}
 
 % Kapiteleinleitung.
 In der finalen Testreihe erfolgt die Integration aller übergeordneter Einflüsse aus den vorangegangenen Benchmarks in
-ein umfassendes Real-World-Szenario, um die Interaktion der bislang untersuchten Effekte in ihrer Gesamtheit zu
+ein umfassendes praxisnahes Szenario, um die Interaktion der bislang untersuchten Effekte in ihrer Gesamtheit zu
 analysieren.
 Die nachfolgenden Evaluationen werden in einem Schritt zusammengefasst, bestehen allerdings aus drei verschiedenen
 Einzelpässen, in welchen die verschiedenen Einflüsse von Geometrie, Beleuchtung und selektiver Silisierung gemeinsam
@@ -980,7 +981,8 @@ betrachtet werden.
 
 % Versuchseinleitung.
 Die Makro-Benchmark-Synthese nutzt einen deterministischen Kamera-Flythrough, um die Leistungsfähigkeit der
-Architekturen in einem praxisnahen Produktionsszenario zu evaluieren.
+Architekturen in einem praxisnahen Produktionsszenario zu evaluieren
+(vgl.\ Kap~\ref{sec:0404_telemetry_and_benchmark_orchestrator}).
 Das zugrunde liegende Szenario generiert eine dichte, prozedurale Umgebung mit 15.000 verteilten Instanzen bei einem
 konstanten Detailgrad ($\ac{LOD} = 1$) und vollflächiger Bodenabdeckung.
 Dabei ist die räumliche Entropie der Rendering-Stile bewusst auf eine gestreute Verteilung konfiguriert.
@@ -991,10 +993,11 @@ Die Evaluation erfolgt in drei isolierten, aufeinander aufbauenden Pässen zur e
 Die Ergebnisse werden kombiniert dargestellt.
 In Pass 1 (\textit{Geometry Baseline}) wird vollständig auf Beleuchtung und Stilisierung verzichtet, um die reine
 Grundlast der Geometrieverarbeitung und \ac{G-Buffer}-Initialisierung zu erfassen.
-In Pass 2 (\textit{Shading Tax}) werden 250 dynamische Punktlichter mit aktivierter Umgebungsbeleuchtung hinzugefügt, um
+In Pass 2 (\textit{Shading Tax}) werden 250 dynamische Punktlichter als Umgebungsbeleuchtung hinzugefügt, um
 die Effizienz der additiven Lichtakkumulation zu messen.
 In Pass 3 (\textit{\ac{NPR}-Parity}) werden zusätzlich die hybriden Stilisierungen (Toon-Shading, Gooch-Shading und
-Outlines) aktiviert, um die kombinierte Auswirkung von Beleuchtungs- und Entropielast zu evaluieren.
+Outlines; vgl.\ Kap.~\ref{sec:0403_npr_payloads}) aktiviert, um die kombinierte Auswirkung von Beleuchtungs- und
+Entropie-Last zu evaluieren.
 Als zentrale Metrik wird in allen Messungen die akkumulierte \ac{GPU}-Gesamtlaufzeit ($t_{\text{GPU}}$) herangezogen.
 
 % Aufbau.
@@ -1029,7 +1032,7 @@ Als zentrale Metrik wird in allen Messungen die akkumulierte \ac{GPU}-Gesamtlauf
 Die Betrachtung der akkumulierten Einzelpässe in Abbildung~\ref{fig:5_6_cumulative_rendering_cost_combined} schlüsselt
 die architektonischen Kostenstrukturen der Rendering-Pipelines detailliert auf.
 Im ersten Pass (Geometry Baseline) erweist sich die Forward-Architektur mit einer initialen Ausführungszeit von
-\qty{0,51}{\milli\second} als minimal effizienter als die Deferred-Architekturen
+\qty{0,51}{\milli\second} als minimal effizienter als die Deferred-Architekturen.
 Die Deferred-Pipelines weisen mit \qty{0,68}{\milli\second} (Deferred-Uber) respektive \qty{0,77}{\milli\second}
 (Deferred-Volume) die erwartete architektonische Grundlast auf, die durch die initialen Schreibvorgänge in
 den \ac{G-Buffer} bedingt ist (vgl.\ Basislast in~\ref{subsec:050302_bandwidth_eval}).
@@ -1042,13 +1045,13 @@ deutlich effizienter ab (vgl.\ Ergebnisse aus~\ref{subsec:050401_light_count_eva
 Die Aktivierung der gestreuten \ac{NPR}-Stile im dritten Pass (\ac{NPR}-Parity) offenbart schließlich die
 architektonischen Schwächen des Deferred-Uber-Shaders, der durch \textit{Warp Divergence} und Registerdruck
 eine Zusatzlast von \qty{0,10}{\milli\second} erfährt (vgl.~\ref{subsec:050501_entropy_eval}).
-Das Deferred-Volume-Rendering erweist sich mit einer minimalen Erhöhung von lediglich $+\qty{0,03}{\milli\second}$ als
+Das Deferred-Volume-Rendering erweist sich mit einer minimalen Steigerung von lediglich $+\qty{0,03}{\milli\second}$ als
 nahezu immun gegen diese stilistische Entropie, während die Forward-Pipeline um weitere $+\qty{0,17}{\milli\second}$
 degradiert.
 Der zeitliche Verlauf des Kamera-Flythroughs in Abbildung~\ref{fig:5_6_flythrough_variance} bestätigt diese
 Beobachtungen über einen Zeitraum von $3.000$ Frames.
 Es lässt sich deutlich erkennen, dass die Leistungskurven mit zunehmender Komplexität des Sichtfelds ansteigen.
-Sobald die Kamera in das Objekt- und Licht-Cluster eintaucht, können die jeweiligen Spitzen beobachtet werden.
+Sobald die Kamera in die Objekt- und Licht-Wolke eintaucht, können die jeweiligen Spitzen beobachtet werden.
 
 % Ergebnis Graph 1.
 \begin{figure}[htbp]
@@ -1063,7 +1066,7 @@ Sobald die Kamera in das Objekt- und Licht-Cluster eintaucht, können die jeweil
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\linewidth]{abbildungen/5_6_flythrough_variance_npr}
-    \caption[Frame-Zeit-Verlauf des Kamera-Flythroughs]{Verlauf der Frame-Zeit über die Dauer von 3000 Frames des
+    \caption[Frame-Zeit-Verlauf des Kamera-Flythroughs in Makro-Benchmark]{Verlauf der Frame-Zeit über die Dauer von 3000 Frames des
     Kamera-Flythroughs unter kombinierter Geometrie-, Beleuchtungs- und Stil-Last.}
     \label{fig:5_6_flythrough_variance}
 \end{figure}
@@ -1080,11 +1083,12 @@ Die naive Forward-Pipeline zeigt eine hohe Effizienz bei der reinen Geometriever
 Aufgrund der untrennbaren Verknüpfung von Geometrieauswertung und Beleuchtungsberechnung kollabiert sie jedoch unter der
 multiplikativen Instruktionslast, sobald lichtstarke Produktionsszenarien mit hunderten Lichtquellen gefordert werden
 (vgl.\ Ergebnisse aus~\ref{subsec:050401_light_count_eval}).
-Die einfache Deferred-Uber-Architektur löst dieses Beleuchtungsproblem hocheffizient im Screen-Space,
+Die einfache Deferred-Uber-Architektur löst dieses Beleuchtungsproblem effizient im Screen-Space,
 scheitert jedoch architektonisch an der \textit{Warp Divergence}, sobald eine hohe stilistische Entropie durch
 divergierende \ac{NPR}-Code-Zweige erzwungen wird (vgl.\ Ergebnisse aus~\ref{subsec:050501_entropy_eval}).
 Die Deferred-Volume-Architektur umgeht diese Branching-Problematik zwar durch die strikte architektonische
-Isolierung der Code-Pfade in Proxy-Geometrien, weist jedoch fundamentale Schwächen in der Speicherbandbreite auf.
+Isolierung der Code-Pfade und Verwendung von Proxy-Geometrien für die Punktlichtquellen, weist jedoch fundamentale
+Schwächen in der Speicherbandbreite auf.
 Ihr primärer architektonischer Engpass manifestiert sich auf dem \ac{VRAM}-Speicherbus, der durch zahlreiche
 additive \ac{RMW}-Zyklen bei extremer räumlicher Überlappung der Lichtquellen gesättigt wird
 (vgl.\ Ergebnisse aus~\ref{subsec:050402_light_intensity_and_overlap_eval}).
