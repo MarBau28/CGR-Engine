@@ -38,26 +38,23 @@
 \usepackage{tabularx}
 \usepackage{placeins}
 \usepackage{etoolbox}
-
 \usepackage{tikz}
 \usetikzlibrary{
-    shapes.geometric, % Für die Rauten (Entscheidungen)
-    arrows.meta,      % Für moderne Pfeilspitzen
-    positioning,      % Für relative Platzierung (besser als absolute Koordinaten)
-    calc,             % Für Berechnungen von Abständen
-    chains            % Optional, falls Sie den Flow automatisch verketten wollen
+    shapes.geometric,
+    arrows.meta,
+    positioning,
+    calc,
+    chains
 }
-
 \pretocmd{\section}{\FloatBarrier}{}{}
 \pretocmd{\subsection}{\FloatBarrier}{}{}
-
-\renewcommand{\topfraction}{0.9}        % Max. Anteil der Seite oben für Grafiken (Standard: 0.7)
-\renewcommand{\bottomfraction}{0.8}     % Max. Anteil der Seite unten für Grafiken (Standard: 0.3)
-\renewcommand{\textfraction}{0.07}      % Min. Anteil der Seite für Text (Standard: 0.2)
-\renewcommand{\floatpagefraction}{0.75} % Min. Füllgrad einer reinen Float-Seite (Standard: 0.5)
-\setcounter{topnumber}{4}               % Max. Anzahl Grafiken oben pro Seite
-\setcounter{bottomnumber}{4}            % Max. Anzahl Grafiken unten pro Seite
-\setcounter{totalnumber}{6}             % Max. Anzahl Grafiken pro Seite insgesamt
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.75}
+\setcounter{topnumber}{4}
+\setcounter{bottomnumber}{4}
+\setcounter{totalnumber}{6}
 
 % --- Externe PDFs einbinden ---
 \usepackage{pdfpages}
@@ -87,7 +84,7 @@
     boxrule=0.5pt,
     colframe=academicBorder,
     colback=academicBg,
-    arc=2mm,                % Aktiviert abgerundete Ecken (Moderne Ästhetik)
+    arc=2mm,
     top=3mm,
     bottom=3mm,
     left=8mm,
@@ -106,7 +103,6 @@
     isbn=true,
     url=true
 ]{biblatex}
-
 \AtEveryBibitem{
     \iffieldundef{doi}
     {}
@@ -115,12 +111,10 @@
         \clearfield{isbn}
     }
 }
-
 \DefineBibliographyStrings{ngerman}{
     presentedat = {präsentiert auf der\addspace},
     andothers   = {et\addabbrvspace al\adddot}
 }
-
 \DeclareSourcemap{
     \maps[datatype=bibtex]{
         \map{
@@ -133,7 +127,6 @@
         }
     }
 }
-
 \AtEveryBibitem{
     \iffieldundef{url}{
         \clearfield{urlyear}
@@ -141,10 +134,9 @@
         \clearfield{urlday}
     }{}
 }
-
 \addbibresource{verzeichnisse/literatur.bib}
 
-% --- Hyperlinks (Immer zuletzt laden) ---
+% --- Hyperlinks ---
 \usepackage[hidelinks]{hyperref}
 
 
@@ -199,13 +191,13 @@
     % 15-20 Seiten (Final 18)
     \input{kapitel/04_Konzeption_Realisierung}
 
-    % 12-15 Seiten (Final 25)
+    % 12-15 Seiten (Final 24)
     \input{kapitel/05_Evaluation}
 
     % 6-9 Seiten (Final 8)
     \input{kapitel/06_Diskussion}
 
-    % 2-3 Seiten
+    % 2-3 Seiten (Final 3)
     \input{kapitel/07_Fazit_Ausblick}
 
     \clearpage
