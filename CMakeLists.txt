@@ -90,6 +90,11 @@ target_link_libraries(CGR-Engine PRIVATE
         glm::glm
 )
 
+# Fix for Linux (GNU ld) throwing multiple definition errors for gladLoadGL because Raylib embeds glad
+if (UNIX AND NOT APPLE)
+    target_link_options(CGR-Engine PRIVATE -Wl,--allow-multiple-definition)
+endif()
+
 # Inject required sanitizer runtimes for Debug builds to satisfy the vcpkg binary.
 # GCC/Clang only: MSVC has no UBSan and uses different ASan plumbing.
 if (NOT MSVC AND (CMAKE_BUILD_TYPE MATCHES "Debug" OR CMAKE_BUILD_TYPE STREQUAL ""))
