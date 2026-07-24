@@ -351,9 +351,7 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuLogicPro
 
     if (state.requestScreenshot) {
         rlDrawRenderBatchActive();
-        namespace fs = std::filesystem;
-        // Convention: the process runs one level below the project/package root
-        // (see Config::Paths "../assets/"), so outputs live next to assets
+        namespace fs       = std::filesystem;
         fs::path outputDir = fs::current_path().parent_path() / "outputs" / "screenshots";
 
         if (!fs::exists(outputDir)) {
