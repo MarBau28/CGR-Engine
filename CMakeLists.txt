@@ -1,4 +1,14 @@
 cmake_minimum_required(VERSION 3.15)
+
+# Vcpkg integration — must be set before project(), which loads the toolchain
+if (DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+            CACHE STRING "Vcpkg toolchain file")
+endif ()
+
+# Copy dependent vcpkg DLLs into bin/ during install so CPack ZIPs are self-contained
+set(X_VCPKG_APPLOCAL_DEPS_INSTALL ON)
+
 project(CGR-Engine CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -6,12 +16,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Enable folders
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-
-# Vcpkg integration
-if (DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-    set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
-            CACHE STRING "Vcpkg toolchain file")
-endif ()
 
 # Gather source files
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
@@ -56,26 +60,43 @@ find_package(glm CONFIG REQUIRED)
 find_package(glad CONFIG REQUIRED)
 find_package(raylib CONFIG REQUIRED)
 
-# Force CMake to find the absolute path for raylib because vcpkg config is defective
-find_library(RAYLIB_ABSOLUTE_PATH NAMES raylib REQUIRED)
+# Force CMake to find the absolute path for raylib because vcpkg config is defective.
+# Resolve per-configuration: a bare find_library returns the debug lib on
+# multi-config generators, which mixes CRTs on MSVC.
+find_library(RAYLIB_LIB_RELEASE NAMES raylib
+        PATHS "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/lib" NO_DEFAULT_PATH)
+find_library(RAYLIB_LIB_DEBUG NAMES raylib
+        PATHS "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/lib" NO_DEFAULT_PATH)
+if (NOT RAYLIB_LIB_RELEASE AND NOT RAYLIB_LIB_DEBUG)
+    message(FATAL_ERROR "raylib library not found in vcpkg installed tree")
+endif ()
+if (NOT RAYLIB_LIB_DEBUG)
+    set(RAYLIB_LIB_DEBUG "${RAYLIB_LIB_RELEASE}")
+endif ()
+if (NOT RAYLIB_LIB_RELEASE)
+    set(RAYLIB_LIB_RELEASE "${RAYLIB_LIB_DEBUG}")
+endif ()
 target_include_directories(CGR-Engine PRIVATE ${raylib_INCLUDE_DIRS})
 
 # link packages
+# glad must precede raylib: raylib's DLL re-exports glad symbols, and the linker
+# has to resolve ours from the static glad or the two definitions collide (LNK2005)
 target_link_libraries(CGR-Engine PRIVATE
-        ${RAYLIB_ABSOLUTE_PATH}
-        glfw
         glad::glad
+        optimized "${RAYLIB_LIB_RELEASE}"
+        debug "${RAYLIB_LIB_DEBUG}"
+        glfw
         OpenGL::GL
         glm::glm
 )
 
-# Inject required sanitizer runtimes for Debug builds to satisfy the vcpkg binary
-if (CMAKE_BUILD_TYPE MATCHES "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
+# Inject required sanitizer runtimes for Debug builds to satisfy the vcpkg binary.
+# GCC/Clang only: MSVC has no UBSan and uses different ASan plumbing.
+if (NOT MSVC AND (CMAKE_BUILD_TYPE MATCHES "Debug" OR CMAKE_BUILD_TYPE STREQUAL ""))
     target_compile_options(CGR-Engine PRIVATE -fsanitize=address -fsanitize=undefined)
     target_link_options(CGR-Engine PRIVATE -fsanitize=address -fsanitize=undefined)
 endif ()
 
-# --------------------------------------------------------------------------------------------------
 # DEPLOYMENT & PACKAGING (CPack)
 # --------------------------------------------------------------------------------------------------
 

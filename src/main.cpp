@@ -11,6 +11,7 @@
 #include "../include/TelemetryDashboard.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <filesystem>
 #include <raylib.h>
 #include <raymath.h>
@@ -45,6 +46,13 @@ int main() {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_MAXIMIZED);
     ClearWindowState(FLAG_VSYNC_HINT);
     InitWindow(Config::EngineSettings::ScreenWidth, Config::EngineSettings::ScreenHeight, "HyDra");
+
+    // Load glad function pointers from the context raylib just created
+    if (!gladLoadGL()) {
+        TraceLog(LOG_FATAL, "GLAD: Failed to load OpenGL function pointers");
+        return EXIT_FAILURE;
+    }
+
     SetTargetFPS(0);
     rlSetClipPlanes(Config::EngineSettings::CameraNearPlane,
                     Config::EngineSettings::CameraFarPlane);

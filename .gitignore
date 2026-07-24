@@ -378,6 +378,11 @@ FodyWeavers.xsd
 # Outputs & Runtime Data
 /outputs/
 
+# CMake build directories (VS Code / presets / CLion)
+/build/
+/cmake-build-*/
+/vcpkg_installed/
+
 # LaTeX Build Artifacts
 /thesis/build/
 /thesis/out/

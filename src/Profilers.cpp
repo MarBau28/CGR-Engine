@@ -1,20 +1,49 @@
 #include "../include/Profilers.h"
-#include <ctime>
 #include <glad/glad.h>
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#else
+#include <ctime>
+#endif
+
+namespace {
+#ifdef _WIN32
+long long ThreadCpuTimeNs() {
+    static const long long nominalHz = [] {
+        DWORD mhz  = 0;
+        DWORD size = sizeof(mhz);
+        if (RegGetValueA(HKEY_LOCAL_MACHINE, "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+                         "~MHz", RRF_RT_REG_DWORD, nullptr, &mhz, &size) != ERROR_SUCCESS ||
+            mhz == 0) {
+            mhz = 3000;
+        }
+        return static_cast<long long>(mhz) * 1000000LL;
+    }();
+
+    ULONG64 cycles = 0;
+    QueryThreadCycleTime(GetCurrentThread(), &cycles);
+    return static_cast<long long>(static_cast<double>(cycles) * 1e9 /
+                                  static_cast<double>(nominalHz));
+}
+#else
+long long ThreadCpuTimeNs() {
+    struct timespec ts{};
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
+    return ts.tv_sec * 1000000000LL + ts.tv_nsec;
+}
+#endif
+} // namespace
 
 // CPU Profiler
 void CpuProfiler::Begin() {
-    struct timespec ts{};
-    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
-    startTimeNs = ts.tv_sec * 1000000000LL + ts.tv_nsec;
+    startTimeNs = ThreadCpuTimeNs();
 }
 
 void CpuProfiler::End() {
-    struct timespec ts{};
-    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
-    const long long endTimeNs = ts.tv_sec * 1000000000LL + ts.tv_nsec;
-
-    elapsedMs = static_cast<double>(endTimeNs - startTimeNs) / 1000000.0;
+    elapsedMs = static_cast<double>(ThreadCpuTimeNs() - startTimeNs) / 1000000.0;
 }
 
 // GPU Profiler
