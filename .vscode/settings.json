@@ -1,0 +1,7 @@
+{
+  // App resolves assets via "../assets/" (see include/Config.h), debug
+  // directory must sit one level below the repo root
+  "cmake.debugConfig": {
+    "cwd": "${workspaceFolder}/build"
+  }
+}

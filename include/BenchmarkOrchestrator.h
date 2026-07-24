@@ -58,6 +58,11 @@ class BenchmarkOrchestrator {
     void EndBenchmark();
     void InjectPerFrameState() const;
 
+    // Runtime suite selection (cycled via hotkey, started with the selected suite)
+    void CycleSelectedSuite(int direction);
+    [[nodiscard]] BenchmarkSuite GetSelectedSuite() const;
+    [[nodiscard]] std::string GetSelectedSuiteName() const;
+
     [[nodiscard]] bool IsActive() const;
     [[nodiscard]] bool DidStateChangeThisFrame() const;
     [[nodiscard]] const EngineState &GetCurrentState() const;
@@ -75,6 +80,7 @@ class BenchmarkOrchestrator {
     CameraController &cameraController;
 
     BenchmarkSuite currentSuite;
+    BenchmarkSuite selectedSuite = BenchmarkSuite::Suite_5_2_1_LodMicroGeom;
     BenchPhase currentPhase;
     EngineState currentState;
 

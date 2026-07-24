@@ -645,6 +645,21 @@ void BenchmarkOrchestrator::EndBenchmark() {
     std::cout << "[ORCHESTRATOR] Suite execution completed. Telemetry flushed.\n";
 }
 
+void BenchmarkOrchestrator::CycleSelectedSuite(const int direction) {
+    constexpr int first = static_cast<int>(BenchmarkSuite::Suite_5_2_1_LodMicroGeom);
+    constexpr int last  = static_cast<int>(BenchmarkSuite::Suite_5_6_Pass4_DeferredMaxFidelity);
+    constexpr int count = last - first + 1;
+
+    const int index = static_cast<int>(selectedSuite) - first;
+    selectedSuite   = static_cast<BenchmarkSuite>(first + (index + direction + count) % count);
+}
+
+BenchmarkSuite BenchmarkOrchestrator::GetSelectedSuite() const { return selectedSuite; }
+
+std::string BenchmarkOrchestrator::GetSelectedSuiteName() const {
+    return GetSuiteName(selectedSuite);
+}
+
 bool BenchmarkOrchestrator::IsActive() const {
     return currentSuite != BenchmarkSuite::Inactive && currentSuite != BenchmarkSuite::Complete;
 }

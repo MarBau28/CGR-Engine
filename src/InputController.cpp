@@ -21,7 +21,7 @@ InputEventFlags InputController::ProcessInputs(EngineState &state, CameraControl
     camCtrl.Update();
     Camera3D &camera = camCtrl.GetCamera();
 
-    if (IsKeyPressed(KEY_F11) && !isBenchmarking) {
+    if (IsKeyPressed(KEY_B) && !isBenchmarking) {
         flags.triggerBenchmarkStart = true;
     }
 
@@ -49,6 +49,11 @@ InputEventFlags InputController::ProcessInputs(EngineState &state, CameraControl
         }
 
         flags.triggerSceneRebuild = true;
+    }
+
+    if (IsKeyPressed(KEY_N)) {
+        const bool shiftHeld      = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
+        flags.cycleBenchmarkSuite = shiftHeld ? -1 : 1;
     }
 
     if (IsKeyPressed(KEY_O) && !state.useNprRoom) {
@@ -105,7 +110,12 @@ InputEventFlags InputController::ProcessInputs(EngineState &state, CameraControl
         state.currentLodIndex = std::max(0, (state.currentLodIndex - 1));
     }
 
-    if (IsKeyPressed(KEY_PAGE_UP)) {
+    const bool resolutionUp = IsKeyPressed(KEY_KP_ADD) || IsKeyPressed(KEY_EQUAL) ||
+                              IsKeyPressed(KEY_RIGHT_BRACKET);
+    const bool resolutionDown =
+        IsKeyPressed(KEY_KP_SUBTRACT) || IsKeyPressed(KEY_MINUS) || IsKeyPressed(KEY_SLASH);
+
+    if (resolutionUp) {
         if (state.renderWidth == 854) {
             state.renderWidth  = 1280;
             state.renderHeight = 720;
@@ -121,7 +131,7 @@ InputEventFlags InputController::ProcessInputs(EngineState &state, CameraControl
         }
         flags.triggerResolutionRebuild = true;
     }
-    if (IsKeyPressed(KEY_PAGE_DOWN)) {
+    if (resolutionDown) {
         if (state.renderWidth == 3840) {
             state.renderWidth  = 2560;
             state.renderHeight = 1440;

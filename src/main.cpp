@@ -11,6 +11,7 @@
 #include "../include/TelemetryDashboard.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <filesystem>
 #include <raylib.h>
 #include <raymath.h>
@@ -45,6 +46,13 @@ int main() {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_MAXIMIZED);
     ClearWindowState(FLAG_VSYNC_HINT);
     InitWindow(Config::EngineSettings::ScreenWidth, Config::EngineSettings::ScreenHeight, "HyDra");
+
+    // Load glad function pointers from the context raylib just created
+    if (!gladLoadGL()) {
+        TraceLog(LOG_FATAL, "GLAD: Failed to load OpenGL function pointers");
+        return EXIT_FAILURE;
+    }
+
     SetTargetFPS(0);
     rlSetClipPlanes(Config::EngineSettings::CameraNearPlane,
                     Config::EngineSettings::CameraFarPlane);
@@ -96,17 +104,21 @@ int main() {
 
         // Pass input authority to the controller and receive structural event flags
         auto [triggerBenchmarkStart, triggerSceneRebuild, triggerHdrFboRebuild,
-              triggerResolutionRebuild] =
+              triggerResolutionRebuild, cycleBenchmarkSuite] =
             inputController.ProcessInputs(engineState, cameraController, benchController.IsActive(),
                                           sceneManager.GetActualGeneratedLights(),
                                           static_cast<int>(ctx.lodMeshes.size()));
+
+        if (cycleBenchmarkSuite != 0) {
+            benchController.CycleSelectedSuite(cycleBenchmarkSuite);
+        }
 
         Camera3D &camera = cameraController.GetCamera();
 
         // Benchmark Boot Sequence
         if (triggerBenchmarkStart) {
             if (telemetryWriter.Initialize("hydra-benchmark-results.csv")) {
-                benchController.Start(BenchmarkSuite::Suite_5_5_1_1_SpatialEntropy);
+                benchController.Start(benchController.GetSelectedSuite());
             }
         }
 
@@ -646,7 +658,8 @@ int main() {
             TelemetryDashboard::Draw(
                 engineState, cpuLogicProfiler, cpuRenderProfiler, trueFrameDeltaMs, geomProfiler,
                 lightProfiler, masterGpuProfiler, cameraController, sceneManager,
-                currentMesh.triangleCount, static_cast<float>(currentOverdraw));
+                currentMesh.triangleCount, static_cast<float>(currentOverdraw),
+                benchController.GetSelectedSuiteName());
         }
         EndDrawing();
 
