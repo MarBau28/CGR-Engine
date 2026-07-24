@@ -4,6 +4,7 @@
 #include "EngineState.h"
 #include "Profilers.h"
 #include "SceneManager.h"
+#include <string>
 
 class TelemetryDashboard {
   public:
@@ -12,5 +13,5 @@ class TelemetryDashboard {
                      const GpuProfiler &geomProf, const GpuProfiler &lightProf,
                      const GpuProfiler &masterGpuProfiler, const CameraController &camCtrl,
                      const SceneManager &sceneManager, int currentMeshTriangleCount,
-                     float currentOverdraw);
+                     float currentOverdraw, const std::string &selectedSuiteName);
 };

@@ -104,17 +104,21 @@ int main() {
 
         // Pass input authority to the controller and receive structural event flags
         auto [triggerBenchmarkStart, triggerSceneRebuild, triggerHdrFboRebuild,
-              triggerResolutionRebuild] =
+              triggerResolutionRebuild, cycleBenchmarkSuite] =
             inputController.ProcessInputs(engineState, cameraController, benchController.IsActive(),
                                           sceneManager.GetActualGeneratedLights(),
                                           static_cast<int>(ctx.lodMeshes.size()));
+
+        if (cycleBenchmarkSuite != 0) {
+            benchController.CycleSelectedSuite(cycleBenchmarkSuite);
+        }
 
         Camera3D &camera = cameraController.GetCamera();
 
         // Benchmark Boot Sequence
         if (triggerBenchmarkStart) {
             if (telemetryWriter.Initialize("hydra-benchmark-results.csv")) {
-                benchController.Start(BenchmarkSuite::Suite_5_5_1_1_SpatialEntropy);
+                benchController.Start(benchController.GetSelectedSuite());
             }
         }
 
@@ -654,7 +658,8 @@ int main() {
             TelemetryDashboard::Draw(
                 engineState, cpuLogicProfiler, cpuRenderProfiler, trueFrameDeltaMs, geomProfiler,
                 lightProfiler, masterGpuProfiler, cameraController, sceneManager,
-                currentMesh.triangleCount, static_cast<float>(currentOverdraw));
+                currentMesh.triangleCount, static_cast<float>(currentOverdraw),
+                benchController.GetSelectedSuiteName());
         }
         EndDrawing();
 

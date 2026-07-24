@@ -9,6 +9,7 @@ struct InputEventFlags {
     bool triggerSceneRebuild      = false;
     bool triggerHdrFboRebuild     = false;
     bool triggerResolutionRebuild = false;
+    int cycleBenchmarkSuite       = 0; // -1 = previous suite, +1 = next suite
 };
 
 class InputController {

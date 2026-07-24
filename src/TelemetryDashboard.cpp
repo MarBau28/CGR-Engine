@@ -12,7 +12,7 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuLogicPro
                               const GpuProfiler &geomProf, const GpuProfiler &lightProf,
                               const GpuProfiler &masterGpuProfiler, const CameraController &camCtrl,
                               const SceneManager &sceneManager, int currentMeshTriangleCount,
-                              float currentOverdraw) {
+                              float currentOverdraw, const std::string &selectedSuiteName) {
     // UI SMOOTHING BUFFER
     // ---------------------------------------------------------------------------------------------
 
@@ -290,11 +290,16 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuLogicPro
     DrawText("CONTROLS", textX, textY, fontSm, colMuted);
     textY += static_cast<int>(18 * uiScale);
 
+    DrawText("Benchmark Start / Suite", textX, textY, fontMd, colText);
+    DrawText("[B] [N]", valueX, textY, fontMd, colAction);
+    textY += spacing;
+    DrawText(TextFormat("> %s", selectedSuiteName.c_str()), textX, textY, fontSm, colWarning);
+    textY += static_cast<int>(18 * uiScale);
     DrawText("Toggle Pipeline", textX, textY, fontMd, colText);
     DrawText("[TAB]", valueX, textY, fontMd, colAction);
     textY += spacing;
     DrawText("Scale Resolution", textX, textY, fontMd, colText);
-    DrawText("[PgDn / PgUp]", valueX, textY, fontMd, colAction);
+    DrawText("[- / +]", valueX, textY, fontMd, colAction);
     textY += spacing;
     DrawText("Toggle HDR/LDR", textX, textY, fontMd, colText);
     DrawText("[H]", valueX, textY, fontMd, colAction);
@@ -346,11 +351,10 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuLogicPro
 
     if (state.requestScreenshot) {
         rlDrawRenderBatchActive();
-        namespace fs         = std::filesystem;
-        fs::path currentPath = fs::current_path();
-        if (currentPath.filename().string().find("cmake-build") != std::string::npos)
-            currentPath = currentPath.parent_path();
-        fs::path outputDir = currentPath / "outputs" / "screenshots";
+        namespace fs = std::filesystem;
+        // Convention: the process runs one level below the project/package root
+        // (see Config::Paths "../assets/"), so outputs live next to assets
+        fs::path outputDir = fs::current_path().parent_path() / "outputs" / "screenshots";
 
         if (!fs::exists(outputDir)) {
             std::error_code ec;

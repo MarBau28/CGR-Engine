@@ -32,15 +32,8 @@ void CsvTelemetryWriter::Close(const std::string &currentSuiteName) const {
         return;
     }
 
-    namespace fs         = std::filesystem;
-    fs::path currentPath = fs::current_path();
-
-    // Escape CMake build directories
-    if (currentPath.filename().string().find("cmake-build") != std::string::npos) {
-        currentPath = currentPath.parent_path();
-    }
-
-    fs::path outputDir = currentPath / "outputs" / "benchmarks";
+    namespace fs = std::filesystem;
+    fs::path outputDir = fs::current_path().parent_path() / "outputs" / "benchmarks";
 
     if (!fs::exists(outputDir)) {
         std::error_code ec;
