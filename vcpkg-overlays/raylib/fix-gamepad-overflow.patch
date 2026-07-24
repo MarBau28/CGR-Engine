@@ -1,0 +1,25 @@
+--- a/src/platforms/rcore_desktop_glfw.c
++++ b/src/platforms/rcore_desktop_glfw.c
+@@ -1655,7 +1655,11 @@
+     // Retrieve gamepad names
+     for (int i = 0; i < MAX_GAMEPADS; i++)
+     {
+-        if (glfwJoystickPresent(i)) strcpy(CORE.Input.Gamepad.name[i], glfwGetJoystickName(i));
++        if (glfwJoystickPresent(i))
++        {
++            strncpy(CORE.Input.Gamepad.name[i], glfwGetJoystickName(i), 63);
++            CORE.Input.Gamepad.name[i][63] = '\0';
++        }
+     }
+     //----------------------------------------------------------------------------
+ 
+@@ -1918,7 +1922,8 @@
+ {
+     if (event == GLFW_CONNECTED)
+     {
+-        strcpy(CORE.Input.Gamepad.name[jid], glfwGetJoystickName(jid));
++        strncpy(CORE.Input.Gamepad.name[jid], glfwGetJoystickName(jid), 63);
++        CORE.Input.Gamepad.name[jid][63] = '\0';
+     }
+     else if (event == GLFW_DISCONNECTED)
+     {

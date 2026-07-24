@@ -469,16 +469,45 @@ void RenderContext::ResizeTargets(const int newWidth, const int newHeight, const
 // -------------------------------------------------------------------------------------------------
 
 void RenderContext::Destroy() const {
-    // Unload Materials
-    UnloadMaterial(instancedMaterial);
-    UnloadMaterial(instancedLightMaterial);
-    UnloadMaterial(lightVolumeMaterial);
-    UnloadMaterial(fwdBlinnMaterial);
-    UnloadMaterial(fwdGoochMaterial);
-    UnloadMaterial(fwdToonMaterial);
-    UnloadMaterial(fwdOutlineMaterial);
-    UnloadMaterial(fwdFloorMaterial);
-    UnloadMaterial(fwdLightProxyMaterial);
+    // Helper for instanced Material unloading
+    auto safeUnloadMaterial = [](const Material &mat) {
+        Material copy = mat;
+        copy.shader.id = 0;
+        copy.shader.locs = nullptr;
+        if (copy.maps) {
+            for (int i = 0; i < 12; i++) {
+                copy.maps[i].texture.id = 0;
+            }
+        }
+        UnloadMaterial(copy);
+    };
+    // Helper for instanced Model unloading
+    auto safeUnloadModel = [](const Model &mdl) {
+        const Model copy = mdl;
+        if (copy.materials) {
+            for (int i = 0; i < copy.materialCount; i++) {
+                copy.materials[i].shader.id = 0;
+                copy.materials[i].shader.locs = nullptr;
+                if (copy.materials[i].maps) {
+                    for (int j = 0; j < 12; j++) {
+                        copy.materials[i].maps[j].texture.id = 0;
+                    }
+                }
+            }
+        }
+        UnloadModel(copy);
+    };
+
+    // Unload Materials safely without double-freeing shared shaders/textures
+    safeUnloadMaterial(instancedMaterial);
+    safeUnloadMaterial(instancedLightMaterial);
+    safeUnloadMaterial(lightVolumeMaterial);
+    safeUnloadMaterial(fwdBlinnMaterial);
+    safeUnloadMaterial(fwdGoochMaterial);
+    safeUnloadMaterial(fwdToonMaterial);
+    safeUnloadMaterial(fwdOutlineMaterial);
+    safeUnloadMaterial(fwdFloorMaterial);
+    safeUnloadMaterial(fwdLightProxyMaterial);
 
     // Unload Custom VBOs
     rlUnloadVertexBuffer(styleIdVboId);
@@ -510,6 +539,6 @@ void RenderContext::Destroy() const {
         UnloadMesh(mesh);
     UnloadTexture(obstacleTexture);
     UnloadTexture(floorTexture);
-    UnloadModel(lightningSourceModel);
-    UnloadModel(floorModel);
+    safeUnloadModel(lightningSourceModel);
+    safeUnloadModel(floorModel);
 }

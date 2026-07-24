@@ -41,6 +41,9 @@ add_executable(CGR-Engine ${SOURCES}
         src/RenderContext.cpp
         include/RenderContext.h)
 
+# set output name to HyDra
+set_target_properties(CGR-Engine PROPERTIES OUTPUT_NAME "HyDra")
+
 # Include directories
 target_include_directories(CGR-Engine PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -71,3 +74,26 @@ if (CMAKE_BUILD_TYPE MATCHES "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
     target_compile_options(CGR-Engine PRIVATE -fsanitize=address -fsanitize=undefined)
     target_link_options(CGR-Engine PRIVATE -fsanitize=address -fsanitize=undefined)
 endif ()
+
+# --------------------------------------------------------------------------------------------------
+# DEPLOYMENT & PACKAGING (CPack)
+# --------------------------------------------------------------------------------------------------
+
+# Install executable and assets into a portable folder structure
+install(TARGETS CGR-Engine DESTINATION bin)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/assets DESTINATION .)
+
+# CPack Configuration for System-Agnostic Packaging
+set(CPACK_PACKAGE_NAME "HyDra")
+set(CPACK_PACKAGE_VENDOR "CGR")
+set(CPACK_PACKAGE_VERSION "1.0.0")
+
+# Use ZIP on Windows, TGZ on Linux/macOS
+if(WIN32)
+    set(CPACK_GENERATOR "ZIP")
+else()
+    set(CPACK_GENERATOR "TGZ")
+endif()
+
+# Include CPack
+include(CPack)
