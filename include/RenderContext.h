@@ -1,8 +1,11 @@
 #pragma once
 
+#include "Config.h"
 #include "EngineState.h"
 #include "SceneManager.h"
 #include <raylib.h>
+#include <string>
+#include <string_view>
 #include <vector>
 
 struct RenderContext {
@@ -93,4 +96,14 @@ struct RenderContext {
     void RebuildHDRTargets(bool use16BitHDR, int renderWidth, int renderHeight);
     void ResizeTargets(int newWidth, int newHeight, bool use16BitHDR);
     void Destroy() const;
+    static std::string ResolveShaderPath(const std::string_view relativePath) {
+        if (relativePath.empty()) {
+            return {};
+        }
+        std::string fullPath;
+        fullPath.reserve(Config::Paths::Shaders.size() + relativePath.size());
+        fullPath.append(Config::Paths::Shaders);
+        fullPath.append(relativePath);
+        return fullPath;
+    }
 };

@@ -2,7 +2,8 @@
 #include "../include/Config.h"
 #include <raymath.h>
 
-CameraController::CameraController() : currentState(CameraState::Orbital), isLocked(false) {
+CameraController::CameraController()
+    : currentState(CameraState::Orbital), isLocked(false), cinematicStartTime(0) {
     camera.position   = Config::EngineSettings::CameraPosition;
     camera.target     = Config::EngineSettings::CameraViewDirection;
     camera.up         = Config::EngineSettings::CameraOrientation;
@@ -22,7 +23,6 @@ void CameraController::Update() {
         UpdateFreeFlight();
         break;
     case CameraState::Static:
-        // Intentional pass-through
         break;
     }
 }

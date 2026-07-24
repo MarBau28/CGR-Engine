@@ -43,7 +43,7 @@ class SceneManager {
         return visibleLightPositions;
     }
 
-    // forward Rendering Specific Bins (Pre-sorted during culling)
+    // forward Rendering Specific containers (pre-sorted during culling)
     [[nodiscard]] const std::vector<Matrix> &GetFwdTransformsBlinn() const {
         return fwdTransformsBlinn;
     }
@@ -59,12 +59,10 @@ class SceneManager {
 
     [[nodiscard]] int GetActualGeneratedLights() const { return actualGeneratedLights; }
 
-    // Access to master data strictly for initial VBO uploads
     [[nodiscard]] const std::vector<float> &GetMasterStyleIds() const {
         return masterObstacleStyleIds;
     }
 
-    // Calculates the volumetric overlap of instances
     [[nodiscard]] float CalculateTheoreticalOverdraw(const EngineState &state,
                                                      const Camera3D &camera) const;
 
@@ -86,7 +84,7 @@ class SceneManager {
     std::vector<Matrix> visibleLightVolumeTransforms;
     std::vector<Vector3> visibleLightPositions;
 
-    // forward Bins
+    // forward containers
     std::vector<Matrix> fwdTransformsBlinn;
     std::vector<Matrix> fwdTransformsGooch;
     std::vector<Matrix> fwdTransformsToon;
@@ -96,6 +94,6 @@ class SceneManager {
     void GenerateStandardScene(const EngineState &state);
     void GenerateNprRoomScene(int lightCount);
 
-    // Returns the true obstacle count depending on the active environment
+    // Helper for Telemetry
     [[nodiscard]] int GetTotalObstacleCount(const EngineState &state) const;
 };

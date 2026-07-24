@@ -7,7 +7,6 @@
 
 class TelemetryDashboard {
   public:
-    // Takes state as a non-const reference solely so it can reset the screenshot flag
     static void Draw(EngineState &state, const CpuProfiler &cpuLogicProf,
                      const CpuProfiler &cpuRenderProf, double trueFrameDeltaMs,
                      const GpuProfiler &geomProf, const GpuProfiler &lightProf,

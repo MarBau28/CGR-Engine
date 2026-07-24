@@ -14,8 +14,7 @@ struct InputEventFlags {
 class InputController {
   public:
     InputController();
-
-    // Processes all input and returns structural event flags back to the main loop
+    
     InputEventFlags ProcessInputs(EngineState &state, CameraController &camCtrl,
                                   bool isBenchmarking, int actualGeneratedLights, int maxLodMeshes);
 

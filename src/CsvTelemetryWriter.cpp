@@ -8,7 +8,7 @@ namespace fs = std::filesystem;
 
 bool CsvTelemetryWriter::Initialize(const std::string &defaultFilename) {
     metrics.clear();
-    // Pre-Allocating reasonable bounds minimizes runtime allocation overhead during capture phases
+    // Pre-Allocating bounds minimizes runtime allocation overhead during capture phases
     metrics.reserve(50000);
     baseFilename = defaultFilename;
     return true;

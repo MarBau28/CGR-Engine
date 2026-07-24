@@ -6,7 +6,7 @@ layout (location = 0) in vec3 vertexPosition;
 // In: Hardware Instanced Attributes
 in mat4 instanceTransform;
 
-// Raylib automatic MVP (Projection * View)
+// raylib automatic MVP (Projection * View)
 uniform mat4 mvp;
 
 // Out to fragment shader

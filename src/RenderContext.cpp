@@ -1,48 +1,45 @@
 #include "../include/RenderContext.h"
-
 #include <array>
 #include <rlgl.h>
 #include <string>
 
 void RenderContext::Initialize(const EngineState &engineState, const SceneManager &sceneManager,
                                const int renderWidth, const int renderHeight) {
-    const auto sPath = std::string(Config::Paths::Shaders);
-
     // SHADER LOADING
     // ---------------------------------------------------------------------------------------------
 
-    // Deferred Pipeline Shaders
-    geometryPassShader = LoadShader((sPath + std::string(Config::Shaders::GBufferVert)).c_str(),
-                                    (sPath + std::string(Config::Shaders::GBufferFrag)).c_str());
-    instancedShader =
-        LoadShader((sPath + std::string(Config::Shaders::GBufferInstancedVert)).c_str(),
-                   (sPath + std::string(Config::Shaders::GBufferInstancedFrag)).c_str());
-    lightingPassShader =
-        LoadShader(nullptr, (sPath + std::string(Config::Shaders::DeferredUberFrag)).c_str());
-    postShader =
-        LoadShader(nullptr, (sPath + std::string(Config::Shaders::PostProcessFrag)).c_str());
-    lightVolumeShader =
-        LoadShader((sPath + std::string(Config::Shaders::DeferredVolumeVert)).c_str(),
-                   (sPath + std::string(Config::Shaders::DeferredVolumeFrag)).c_str());
-    nprResolveShader =
-        LoadShader(nullptr, (sPath + std::string(Config::Shaders::DeferredResolveFrag)).c_str());
+    // Helper lambda for string concatenation
+    auto load = [](const std::string_view vert, const std::string_view frag) {
+        const std::string vPath =
+            vert.empty() ? "" : std::string(Config::Paths::Shaders) + std::string(vert);
+        const std::string fPath =
+            frag.empty() ? "" : std::string(Config::Paths::Shaders) + std::string(frag);
 
-    // forward Pipeline Shaders (Baseline comparison)
+        return LoadShader(vPath.empty() ? nullptr : vPath.c_str(),
+                          fPath.empty() ? nullptr : fPath.c_str());
+    };
+
+    // Deferred Pipeline
+    geometryPassShader = load(Config::Shaders::GBufferVert, Config::Shaders::GBufferFrag);
+    instancedShader =
+        load(Config::Shaders::GBufferInstancedVert, Config::Shaders::GBufferInstancedFrag);
+    lightingPassShader = load({}, Config::Shaders::DeferredUberFrag);
+    postShader         = load({}, Config::Shaders::PostProcessFrag);
+    lightVolumeShader =
+        load(Config::Shaders::DeferredVolumeVert, Config::Shaders::DeferredVolumeFrag);
+    nprResolveShader = load({}, Config::Shaders::DeferredResolveFrag);
+
+    // Forward Pipeline
     forwardBlinnShader =
-        LoadShader((sPath + std::string(Config::Shaders::ForwardInstancedVert)).c_str(),
-                   (sPath + std::string(Config::Shaders::ForwardBlinnFrag)).c_str());
+        load(Config::Shaders::ForwardInstancedVert, Config::Shaders::ForwardBlinnFrag);
     forwardGoochShader =
-        LoadShader((sPath + std::string(Config::Shaders::ForwardInstancedVert)).c_str(),
-                   (sPath + std::string(Config::Shaders::ForwardGoochFrag)).c_str());
+        load(Config::Shaders::ForwardInstancedVert, Config::Shaders::ForwardGoochFrag);
     forwardToonShader =
-        LoadShader((sPath + std::string(Config::Shaders::ForwardInstancedVert)).c_str(),
-                   (sPath + std::string(Config::Shaders::ForwardToonFrag)).c_str());
+        load(Config::Shaders::ForwardInstancedVert, Config::Shaders::ForwardToonFrag);
     forwardOutlineShader =
-        LoadShader((sPath + std::string(Config::Shaders::ForwardOutlineVert)).c_str(),
-                   (sPath + std::string(Config::Shaders::ForwardOutlineFrag)).c_str());
+        load(Config::Shaders::ForwardOutlineVert, Config::Shaders::ForwardOutlineFrag);
     forwardUnlitShader =
-        LoadShader((sPath + std::string(Config::Shaders::ForwardInstancedVert)).c_str(),
-                   (sPath + std::string(Config::Shaders::ForwardUnlitFrag)).c_str());
+        load(Config::Shaders::ForwardInstancedVert, Config::Shaders::ForwardUnlitFrag);
 
     // Bind instanceTransform attribute for all hardware-instanced vertex shaders
     forwardBlinnShader.locs[SHADER_LOC_MATRIX_MODEL] =
@@ -384,11 +381,10 @@ void RenderContext::Initialize(const EngineState &engineState, const SceneManage
     fwdLightProxyMaterial.shader = forwardUnlitShader;
 }
 
-// Dynamically rebuilds internal accumulation buffers to evaluate bandwidth costs
-// of 16-bit Float vs 8-bit Clamped rendering.
+// Dynamically rebuilds internal accumulation buffers of 16-bit float vs 8-bit clamped rendering.
 void RenderContext::RebuildHDRTargets(const bool use16BitHDR, const int renderWidth,
                                       const int renderHeight) {
-    // Fully destroy old FBOs (Color + Depth + Raylib Structs)
+    // Fully destroy old FBOs
     if (litSceneTarget.id != 0)
         UnloadRenderTexture(litSceneTarget);
     if (resolveTarget.id != 0)

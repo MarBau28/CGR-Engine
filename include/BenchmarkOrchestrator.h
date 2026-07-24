@@ -79,8 +79,7 @@ class BenchmarkOrchestrator {
     EngineState currentState;
 
     bool stateChangedThisFrame;
-
-    // Phase Tracking
+    
     double phaseStartTime;
     double warmupDuration;
     double captureDuration;

@@ -98,10 +98,10 @@ void main()
     vec3 rawNormal = normalData.rgb * 2.0 - 1.0;
     int styleID = int(round(normalData.a * 255.0));
 
-    // Reconstruct Worls Position from Depth
+    // Reconstruct Worls Position from depth
     float depth = texture(gDepthTex, fragTexCoord).r;
 
-    // Map UV and Depth to Normalized Device Coordinates [-1, 1]
+    // Map UV and depth to normalized coordinates [-1, 1]
     vec4 ndc = vec4(
     fragTexCoord.x * 2.0 - 1.0,
     fragTexCoord.y * 2.0 - 1.0,
@@ -109,7 +109,7 @@ void main()
     1.0
     );
 
-    // Unproject back to World Space
+    // Back to World Space
     vec4 worldPos = invViewProj * ndc;
     vec3 fragPosition = worldPos.xyz / worldPos.w;
 
@@ -307,7 +307,7 @@ void main()
                 variances[i] = vec3(0.0);
             }
 
-            //float radius = clamp(kuwaharaRadius / linearDepth, 0.0, maxRadius);
+            //float radius
             float radius = kuwaharaRadius;
 
             float samples = float((radius + 1) * (radius + 1));

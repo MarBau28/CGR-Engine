@@ -3,7 +3,7 @@
 // Input
 in vec2 fragTexCoord;
 
-// Out to screen (or final Post-Process FBO)
+// Out to screen
 out vec4 finalColor;
 
 // Uniforms

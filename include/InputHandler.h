@@ -27,13 +27,11 @@ template <typename T> class ContinuousInput {
     }
 
   public:
-    // Primary Signature: Handles exactly 2 keys per action.
     void Update(const int keyIncPrimary, const int keyIncSecondary, const int keyDecPrimary,
                 const int keyDecSecondary, T &target, T tapStep, const float holdRate, T minVal,
                 T maxVal) {
         const float dt = GetFrameTime();
 
-        // Evaluate state locally. If secondary is 0 (KEY_NULL), it safely evaluates to false.
         const bool incDown    = IsKeyDown(keyIncPrimary) || IsKeyDown(keyIncSecondary);
         const bool incPressed = IsKeyPressed(keyIncPrimary) || IsKeyPressed(keyIncSecondary);
 

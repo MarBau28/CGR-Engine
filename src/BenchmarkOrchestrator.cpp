@@ -109,7 +109,7 @@ void BenchmarkOrchestrator::Start(BenchmarkSuite suite) {
     case BenchmarkSuite::Suite_5_6_Pass3_ParityFlythrough: {
         targetPipelines = {RenderPath::Forward, RenderPath::DeferredUber,
                            RenderPath::DeferredVolume};
-        stepValues      = {0.0f}; // Single step, 1000 frames
+        stepValues      = {0.0f}; // Single step, 3000 frames
         break;
     }
     case BenchmarkSuite::Suite_5_6_Pass4_DeferredMaxFidelity: {
@@ -462,7 +462,7 @@ void BenchmarkOrchestrator::ApplySuiteState() {
         currentState.ambientLightStrength = 0.25f;
         currentState.lightIntensity       = 2.0f;
         useFrameLimit                     = true;
-        targetFrameCount                  = 1000;
+        targetFrameCount                  = 3000;
 
         if (currentSuite == BenchmarkSuite::Suite_5_6_Pass1_GeometryBaseline) {
             currentState.activeLightCount = 0;

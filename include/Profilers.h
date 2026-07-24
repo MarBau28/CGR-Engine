@@ -20,10 +20,10 @@ class GpuProfiler {
     void End();
     void Reset();
 
-    // Checks if the oldest pending query has finished
+    // Checks if oldest pending query has finished
     [[nodiscard]] bool IsOldestReady() const;
 
-    // Retrieves the data and advances the ring buffer
+    // Retrieves data and advances ring buffer
     bool TryGetOldestResult(double &outElapsedMs, bool forceWait);
 
     [[nodiscard]] double GetLastMeasuredMs() const { return lastMeasuredMs; }

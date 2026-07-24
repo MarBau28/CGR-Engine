@@ -9,7 +9,6 @@ out vec4 finalColor;
 uniform sampler2D texture0;
 uniform vec3 viewPos;
 
-// Shared Light Uniforms
 uniform float lightIntensity;
 uniform float ambientLightStrength;
 uniform int activeLights;

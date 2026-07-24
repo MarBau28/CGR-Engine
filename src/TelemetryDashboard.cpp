@@ -13,7 +13,7 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuLogicPro
                               const GpuProfiler &masterGpuProfiler, const CameraController &camCtrl,
                               const SceneManager &sceneManager, int currentMeshTriangleCount,
                               float currentOverdraw) {
-    // UI SMOOTHING BUFFER (250ms Update Window)
+    // UI SMOOTHING BUFFER
     // ---------------------------------------------------------------------------------------------
 
     // Persistent state across frames

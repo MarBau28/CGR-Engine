@@ -147,7 +147,7 @@ void SceneManager::GenerateStandardScene(const EngineState &state) {
             if (normAngle < 0.0f)
                 normAngle += 2.0f * PI;
 
-            // Divide the 2PI circle by the current number of active styles
+            // Divide the circle by the current number of active styles
             const float slice = (2.0f * PI) / numStyles;
             const int clusterIndex =
                 std::clamp(static_cast<int>(normAngle / slice), 0, static_cast<int>(numStyles - 1));
@@ -362,6 +362,8 @@ int SceneManager::GetTotalObstacleCount(const EngineState &state) const {
                             : state.activeObstacleCount;
 }
 
+// Overdraw Factor = (Total Area of all drawn objects) / (Actual Screen Area)
+// 1.0 = Screen is exactly covered once. 3.5 = Every pixel is shaded 3.5 times on average.
 float SceneManager::CalculateTheoreticalOverdraw(const EngineState &state,
                                                  const Camera3D &camera) const {
     if (state.objectSphereRadius <= 0.0f)
@@ -420,7 +422,5 @@ float SceneManager::CalculateTheoreticalOverdraw(const EngineState &state,
         }
     }
 
-    // Overdraw Factor = (Total Area of all drawn objects) / (Actual Screen Area)
-    // 1.0 = Screen is exactly covered once. 3.5 = Every pixel is shaded 3.5 times on average.
     return totalScreenSpaceArea / screenArea;
 }

@@ -17,7 +17,7 @@ InputEventFlags InputController::ProcessInputs(EngineState &state, CameraControl
     if (IsKeyPressed(KEY_C)) {
         camCtrl.CycleState();
     }
-    // The CameraController self-regulates its locked state during benchmarks
+    // CameraController self-regulates its locked state during benchmarks
     camCtrl.Update();
     Camera3D &camera = camCtrl.GetCamera();
 
@@ -25,7 +25,7 @@ InputEventFlags InputController::ProcessInputs(EngineState &state, CameraControl
         flags.triggerBenchmarkStart = true;
     }
 
-    // Intercept manual controls if a deterministic benchmark is running
+    // Intercept manual controls if benchmark is running
     if (isBenchmarking)
         return flags;
 

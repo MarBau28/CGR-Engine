@@ -22,7 +22,7 @@ void main()
     float baseThickness = 0.20;
     float adaptiveThickness = mix(baseThickness, baseThickness * 0.4, distanceFactor);
 
-    // Centroid Expansion: Scale outward from the local origin
+    // Scale outward from the local origin
     vec3 expandedPos = vertexPosition * (1.0 + adaptiveThickness);
 
     gl_Position = mvp * instanceTransform * vec4(expandedPos, 1.0);
