@@ -352,7 +352,7 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuLogicPro
     if (state.requestScreenshot) {
         rlDrawRenderBatchActive();
         namespace fs = std::filesystem;
-        fs::path outputDir = fs::current_path() / "outputs" / "screenshots";
+        fs::path outputDir = fs::current_path().parent_path() / "outputs" / "screenshots";
 
         if (!fs::exists(outputDir)) {
             std::error_code ec;
