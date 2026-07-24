@@ -23,16 +23,68 @@ Standard-Pipelines verloren gehen.
 
 ---
 
-### Bedienung & Dashboard
+### Tech Stack
 
-Die Engine verfügt über ein integriertes **Echtzeit-Dashboard**, um die Auswirkungen der Architektur-Wechsel unmittelbar
-zu visualisieren.
-
+- **Sprache:** C++23
+- **Graphics API:** OpenGL 3.3+ (Core Profile)
+- **Libraries:** GLFW (Windowing & Input), glad (Extension Loading), glm (Math), raylib, stb
+- **Build:** CMake ≥ 3.21 (Presets), vcpkg im Manifest-Modus
 
 ---
 
-#### Tech Stack
+### Build
 
-- **Sprache:** C++20
-- **Graphics API:** OpenGL 3.3+ (Core Profile)
-- **Libraries:** raylib (Windowing & Math), glad (Extension Loading)
+Alle Abhängigkeiten installiert vcpkg **automatisch beim ersten CMake-Configure** (Manifest-Modus, `vcpkg.json`).
+Es gibt keinen manuellen `vcpkg install`-Schritt.
+
+#### Einmalige Einrichtung
+
+| Plattform   | Schritte                                                                                                                                                                                                                                      |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Windows** | 1. Visual Studio 2022+ mit C++-Workload installieren.<br>2. Umgebungsvariable `VCPKG_ROOT` auf das VS-gebündelte vcpkg setzen, z. B. `C:\Program Files\Microsoft Visual Studio\18\Community\VC\vcpkg`.<br>3. Terminal/IDE danach neu starten. |
+| **Linux**   | 1. GCC/Clang (C++23), CMake ≥ 3.21 installieren.<br>2. [vcpkg](https://github.com/microsoft/vcpkg) klonen, bootstrappen und `VCPKG_ROOT` exportieren.                                                                                         |
+
+#### Kompilieren
+
+```bash
+# Windows
+cmake --preset windows
+cmake --build --preset windows-release
+```
+
+```bash
+# Linux
+cmake --preset linux-release
+cmake --build --preset linux-release
+```
+
+Der erste Durchlauf dauert einige Minuten (vcpkg kompiliert die Abhängigkeiten); danach greift der Cache.
+Die Binaries liegen unter `build/windows/Release/HyDra.exe` bzw. `build/linux-release/HyDra`.
+
+**IDE:** VS Code (CMake Tools) und CLion erkennen die Presets automatisch — Preset wählen, bauen (F7),
+starten/debuggen. Die Engine findet ihre Assets unabhängig vom Arbeitsverzeichnis selbst.
+
+---
+
+### Deployment (portables Paket)
+
+```bash
+# Windows → build/windows/HyDra-<version>-win64.zip
+cmake --build --preset windows-release --target package
+```
+
+```bash
+# Linux → build/linux-release/HyDra-<version>-Linux.tar.gz
+cmake --build --preset linux-release --target package
+```
+
+Das Paket enthält Binary, Laufzeit-DLLs (Windows) und den kompletten `assets`-Ordner — entpacken und
+`bin/HyDra(.exe)` starten. Windows-Zielsysteme benötigen die _Microsoft Visual C++ Redistributable_.
+
+---
+
+### Bedienung
+
+Die Engine zeigt ein **Echtzeit-Dashboard** mit allen Metriken und der vollständigen Tastenbelegung.
+
+(Screenshots landen in `outputs/screenshots/`, Benchmark-Telemetrie (CSV) in `outputs/benchmarks/`.)
