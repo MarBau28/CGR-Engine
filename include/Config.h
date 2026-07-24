@@ -4,9 +4,9 @@
 #include <string_view>
 
 namespace Config::Paths {
-    inline constexpr std::string_view Assets   = "../assets/";
-    inline constexpr std::string_view Textures = "../assets/textures/";
-    inline constexpr std::string_view Shaders  = "../assets/shaders/";
+    inline constexpr std::string_view Assets   = "assets/";
+    inline constexpr std::string_view Textures = "assets/textures/";
+    inline constexpr std::string_view Shaders  = "assets/shaders/";
 }
 
 namespace Config::Assets {

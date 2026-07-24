@@ -20,6 +20,21 @@
 #include <vector>
 
 int main() {
+    // WORKING DIRECTORY ANCHORING
+    // ---------------------------------------------------------------------------------------------
+
+    // Locate the application root
+    namespace fs = std::filesystem;
+    fs::path appRoot = fs::path(GetApplicationDirectory());
+    while (!fs::exists(appRoot / "assets") && appRoot != appRoot.parent_path()) {
+        appRoot = appRoot.parent_path();
+    }
+    if (!fs::exists(appRoot / "assets")) {
+        TraceLog(LOG_FATAL, "BOOT: No 'assets' directory found next to or above the executable");
+        return EXIT_FAILURE;
+    }
+    fs::current_path(appRoot);
+
     // SYSTEM INSTANTIATION
     // ---------------------------------------------------------------------------------------------
 

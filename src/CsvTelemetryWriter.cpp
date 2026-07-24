@@ -33,7 +33,7 @@ void CsvTelemetryWriter::Close(const std::string &currentSuiteName) const {
     }
 
     namespace fs = std::filesystem;
-    fs::path outputDir = fs::current_path().parent_path() / "outputs" / "benchmarks";
+    fs::path outputDir = fs::current_path() / "outputs" / "benchmarks";
 
     if (!fs::exists(outputDir)) {
         std::error_code ec;
