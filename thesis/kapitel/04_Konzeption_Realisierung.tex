@@ -326,7 +326,7 @@ Dadurch kann die \ac{GPU} im Shading dynamisch und selektiv den korrekten \ac{NP
 \label{sec:0402_pipelines_and_restrictions}
 
 % Einordnung
-In Kapitel~\ref{sec:0201_rendering_paradigms}, wurden die theoretischen Paradigmen der grundlegenden
+In Kapitel~\ref{sec:0202_rendering_paradigms}, wurden die theoretischen Paradigmen der grundlegenden
 Rendering-Pipelines etabliert.
 In diesem Abschnitt werden die tatsächlichen architektonischen Restriktionen der implementierten Renderpfade innerhalb
 des \ac{HyDra}-Frameworks analysiert.
@@ -341,7 +341,7 @@ quantitative Performance-Evaluation in Kapitel~\ref{ch:05_evaluation} zu legen.
 
 % Grundlagen der Verarbeitung.
 Die Umsetzung der Forward-Pipeline innerhalb des \ac{HyDra}-Frameworks folgt der klassischen
-Standardimplementierung, wie in Kapitel~\ref{subsec:020101_forward_rendering} dargelegt und stellt eine vergleichende
+Standardimplementierung, wie in Kapitel~\ref{subsec:020201_forward_rendering} dargelegt und stellt eine vergleichende
 \textquote{Baseline} dar.
 Die Forward-Pipeline wird entsprechend ohne zusätzliche Optimierungen wie einen Z-Prepass oder anderweitige Variationen
 implementiert.
@@ -425,7 +425,7 @@ Diese nur äußerst bedingte visuelle Parität muss für etwaige vergleichende E
 % Einleitung und Aufbau
 Im \ac{HyDra}-Framework wird zur Referenz eines einfachen Deferred-Ansatzes eine Deferred-Pipeline in einer
 Single-Pass-Architektur (bezogen auf den Lighting-Pass) mittels Uber-Shader-Struktur implementiert
-(vgl.\ Kap.~\ref{subsec:020102_deferred_rendering}).
+(vgl.\ Kap.~\ref{subsec:020202_deferred_rendering}).
 Dieser Ansatz wird gewählt, um Deferred Shading in seiner grundlegendsten Form, vergleichbar mit dem naiven
 Single-Pass-Forward-Ansatz, zu untersuchen und die Einflüsse etwaiger Optimierungsverfahren möglichst gering zu halten.
 Deferred-Architekturen mit einem einzigen Lighting-Pass finden in der Praxis, ähnlich
@@ -443,7 +443,7 @@ Auf Hardware-Ebene zwingen diese \texttt{if-else}-Zweige die \ac{GPU} bei unters
 eine ineffiziente, sequenzielle Abarbeitung.
 Weisen benachbarte Fragmente innerhalb desselben Warps unterschiedliche \texttt{Style-IDs} auf, müssen alle betroffenen
 Code-Pfade nacheinander durchlaufen werden~\cite[S.~32]{akenine-mollerRealtimeRendering2019}
-(vgl.\ Kap.~\ref{subsec:020203_warp_divergence_and_register_pressure}).
+(vgl.\ Kap.~\ref{subsec:020303_warp_divergence_and_register_pressure}).
 Die performancetechnischen Auswirkungen werden in der empirischen Evaluation in Kapitel~\ref{ch:05_evaluation}
 (insbesondere in Abschnitt~\ref{subsec:050501_entropy_eval}) quantitativ untersucht.
 
@@ -537,7 +537,7 @@ Dieses Paradigma reflektiert den in der Praxis wesentlich verbreiteteren Ansatz 
 Deferred-Pipelines~\cite[Folie~5]{lauritzenDeferredRenderingCurrent}, ohne dabei auf fortgeschrittene
 Optimierungsverfahren zurückzugreifen.
 Zu diesem Zweck wird die \textit{Deferred-Volume-Pipeline} implementiert.
-Deferred Rendering mit Light-Volumes zeichnet sich, wie in Kapitel~\ref{subsec:020102_deferred_rendering} dargelegt,
+Deferred Rendering mit Light-Volumes zeichnet sich, wie in Kapitel~\ref{subsec:020202_deferred_rendering} dargelegt,
 durch das Zeichnen von Proxy-Geometrien (hier in Form einer Kugel) um die entsprechenden Punktlichtquellen aus.
 Der vorliegende Ansatz teilt den in der Deferred-Uber-Pipeline verwendeten Uber-Shader in zwei ausgelagerte Pässe auf.
 Dies erfolgt, indem die Beleuchtungslogik in isolierte, iterative Draw-Calls verpackt wird.
@@ -558,7 +558,7 @@ lokalen \ac{GPU}-Registern mit nativer
 32-Bit-Fließkommapräzision~\cite[Kap.~11.2.5.1, Abschn.~\textit{Shader Registers}]{gregoryGameEngineArchitecture2018}.
 Im Gegensatz dazu entkoppelt die Deferred-Volume-Pipeline die Lichtberechnung in diskrete Pässe, deren
 Ergebnisse mittels additiven Hardware-Blending (\textit{Blending Stage}) im Framebuffer aufsummiert werden
-(vgl.\ Kap.~\ref{subsec:020102_deferred_rendering}).
+(vgl.\ Kap.~\ref{subsec:020202_deferred_rendering}).
 Wird hierbei ein 8-Bit-Buffer verwendet, unterliegt das Zwischenergebnis nach der Evaluierung jedes
 einzelnen Lichtvolumens einer fortlaufenden Quantisierung sowie einer harten Rundung auf den Wertebereich $[0, 1]$
 (\textit{Clamping})~\cite[Kap.~4.1.7]{OpenGL33Core2010}.

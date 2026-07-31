@@ -2,22 +2,10 @@
   title = {{{CryEngine}} 3: Reaching the Speed of Light},
   author = {Kaplanyan, Anton},
   date = {2010},
-  url = {https://advances.realtimerendering.com/s2010/Kaplanyan-CryEngine3%28SIGGRAPH%202010%20Advanced%20RealTime%20Rendering%20Course%29.pdf},
+  url = {https://advances.realtimerendering.com/s2010/index.html},
   urldate = {2026-06-06},
   eventtitle = {{{SIGGRAPH}} ({{Advanced Real-Time Rendering Course}})},
   file = {/home/marvin/Zotero/storage/EA2785HI/Advances in Real-Time Rendering.pdf}
-}
-
-@unpublished{agentsOfMayhemPhysicallyBasedStylization,
-  title = {"{{Agents}} of {{Mayhem}}": {{Physically Based Stylization}}},
-  author = {Taylor, James},
-  date = {2017},
-  url = {https://gdcvault.com/play/1024690/-Agents-of-Mayhem-Physically},
-  urldate = {2026-06-06},
-  eventtitle = {Game {{Developers Conference}}},
-  langid = {english},
-  venue = {San Francisco, CA},
-  file = {/home/marvin/Zotero/storage/A7XNPWR7/Taylor - 2017 - Agents of Mayhem Physically Based Stylization.pdf}
 }
 
 @book{akenine-mollerRealtimeRendering2019,
@@ -51,11 +39,13 @@
   title = {The {{Visibility Buffer}}: {{A Cache-Friendly Approach}} to {{Deferred Shading}}},
   author = {Burns, Christopher A and Hunt, Warren A},
   date = {2013},
-  journaltitle = {Journal of Computer Graphics Techniques},
-  shortjournal = {J. Comput. Graph. Tech.},
+  journaltitle = {Journal of Computer Graphics Techniques (JCGT)},
+  shortjournal = {J. Comput. Graph. Tech. JCGT},
   volume = {2},
   number = {2},
-  url = {https://www.jcgt.org/published/0002/02/04/paper.pdf},
+  pages = {55--69},
+  issn = {2331-7418},
+  url = {https://jcgt.org/published/0002/02/04/},
   urldate = {2026-05-31},
   abstract = {Forward rendering pipelines shade fragments in triangle-submission order. Consequently, non-visible fragments are often wastefully shaded before being subsequently occluded—a phenomenon known as over-shading. A popular way to avoid over-shading is to only compute surface attributes for each fragment during a forward pass and store them in a buffer. Lighting is performed in a subsequent pass, consuming the attributes buffer. This strategy is commonly known as deferred shading.},
   langid = {english},
@@ -74,24 +64,8 @@
   url = {https://developer.nvidia.com/gpugems/gpugems2/part-ii-shading-lighting-and-shadows/chapter-9-deferred-shading-stalker},
   urldate = {2026-06-26},
   isbn = {0-321-33559-7},
-  langid = {american},
-  file = {/home/marvin/Zotero/storage/FQUHRAYH/chapter-9-deferred-shading-stalker.html}
-}
-
-@inproceedings{deeringTriangleProcessorNormal1988,
-  title = {The Triangle Processor and Normal Vector Shader: A {{VLSI}} System for High Performance Graphics},
-  shorttitle = {The Triangle Processor and Normal Vector Shader},
-  booktitle = {Proceedings of the 15th Annual Conference on {{Computer}} Graphics and Interactive Techniques},
-  author = {Deering, Michael and Winner, Stephanie and Schediwy, Bic and Duffy, Chris and Hunt, Neil},
-  date = {1988-06-01},
-  series = {{{SIGGRAPH}} '88},
-  pages = {21--30},
-  publisher = {Association for Computing Machinery},
-  location = {New York, NY, USA},
-  doi = {10.1145/54852.378468},
-  abstract = {Current affordable architectures for high-speed display of shaded 3D objects operate orders of magnitude too slowly. Recent advances in floating point chip technology have outpaced polygon fill time, making the memory access bottleneck between the drawing processor and the frame buffer the most significant factor to be accelerated. Massively parallel VLSI system have the potential to bypass this bottleneck, but to date only at very high cost. We describe a new more affordable VLSI solution. A pipeline of triangle processors rasterizes the geometry, then a further pipeline of shading processors applies Phong shading with multiple light sources. The triangle processor pipeline performs 100 billion additions per second, and the shading pipeline performs two billion multiplies per second. This allows 3D graphics systems to be built capable of displaying more than one million triangles per second. We show the results of an anti-aliasing technique, and discuss extensions to texture mapping, shadows, and environment maps.},
-  isbn = {978-0-89791-275-4},
-  file = {/home/marvin/Zotero/storage/5QL7GTZR/Deering et al. - 1988 - The triangle processor and normal vector shader a VLSI system for high performance graphics.pdf}
+  langid = {english},
+  file = {/home/marvin/Zotero/storage/KF5KJSBQ/Shishkovtsov - 2005 - Deferred Shading in S.T.A.L.K.E.R..pdf;/home/marvin/Zotero/storage/FQUHRAYH/chapter-9-deferred-shading-stalker.html}
 }
 
 @unpublished{deferredLightinginUncharted4,
@@ -109,20 +83,11 @@
   title = {The {{Devil}} Is in the {{Details}}: {{idTech}} 6.66},
   author = {Sousa, Tiago and Geffroy, Jean},
   date = {2016},
-  url = {https://advances.realtimerendering.com/s2016/Siggraph2016_idTech6.pdf},
+  url = {https://advances.realtimerendering.com/s2016/},
   urldate = {2026-06-06},
   eventtitle = {{{SIGGRAPH}} ({{Advances}} in {{Real-Time Rendering}} in {{Games Course}})},
   venue = {Anaheim, CA},
   file = {/home/marvin/Zotero/storage/IGC5UNIP/DOOM The Devil is in the Details.pdf}
-}
-
-@online{DynamicRenderingLocal,
-  title = {Vulkan {{Samples}}: {{Dynamic Rendering Local Read}}},
-  author = {{Khronos Group}},
-  url = {https://docs.vulkan.org/samples/latest/samples/extensions/dynamic_rendering_local_read/README.html},
-  urldate = {2026-06-06},
-  organization = {Vulkan Documentation},
-  file = {/home/marvin/Zotero/storage/RY7H4TRI/README.html}
 }
 
 @inproceedings{fatahalianReducingShadingGPUs2010,
@@ -140,29 +105,25 @@
   file = {/home/marvin/Zotero/storage/R8659T6E/Fatahalian et al. - 2010 - Reducing shading on GPUs using quad-fragment merging.pdf}
 }
 
-@misc{fonsecaDeferredShadingTutorial,
+@report{fonsecaDeferredShadingTutorial,
+  type = {Technical Report},
   title = {Deferred {{Shading Tutorial}}},
   author = {Policarpo, Fabio and Fonseca, Francisco},
   date = {2005},
+  pages = {31},
+  institution = {Pontifical Catholic University of Rio de Janeiro},
+  location = {Rio de Janeiro, Brazil},
   url = {https://www.gamedevs.org/uploads/deferred-shading-tutorial.pdf},
   urldate = {2026-06-05},
   langid = {english},
   file = {/home/marvin/Zotero/storage/N5C2TJ6K/Policarpo and Fonseca - 2005 - Deferred Shading Tutorial.pdf}
 }
 
-@online{ForwardDeferredRendering,
-  title = {Forward and {{Deferred}} Rendering | {{High Definition RP}} | 14.0.12},
-  author = {{Unity Software Inc}},
-  url = {https://docs.unity3d.com/Packages/com.unity.render-pipelines.high-definition@14.0/manual/Forward-And-Deferred-Rendering.html},
-  urldate = {2026-06-06},
-  file = {/home/marvin/Zotero/storage/G6L4MFXE/Forward-And-Deferred-Rendering.html}
-}
-
 @unpublished{gameworksToonRenderingHiFi,
   title = {Toon {{Rendering}} in {{Hi-Fi RUSH}}},
   author = {Tanaka, Kosuke and Komada, Takashi},
   date = {2024},
-  url = {https://media.gdcvault.com/gdc2024/Slides/GDC+slide+presentations/Tanaka_Kosuke_3D_Toon_Rendering.pdf},
+  url = {https://gdcvault.com/play/1034330/3D-Toon-Rendering-in-Hi},
   urldate = {2026-06-06},
   eventtitle = {Game {{Developers Conference}}},
   langid = {english},
@@ -213,23 +174,11 @@
   file = {/home/marvin/Zotero/storage/3DFCZ5X7/Harada et al. - 2012 - Forward+ Bringing Deferred Lighting to the Next Level.pdf}
 }
 
-@unpublished{InnerWorkingsFortnites,
-  title = {The {{Inner Workings}} of {{Fortnite}}'s {{Shader Based Procedural Animations}}},
-  author = {Lindquist, Jonathan},
-  date = {2013},
-  url = {https://gdcvault.com/play/1018170/The-Inner-Workings-of-Fortnite},
-  urldate = {2026-06-06},
-  abstract = {Fortnite's stylization permeates its models, animation and even shaders. This talk will cover the vertex shaders that bring every inanimate object in the game to life and the development process that led to this specific art direction. In-depth...},
-  eventtitle = {Game {{Developers Conference}}},
-  venue = {San Francisco, CA},
-  file = {/home/marvin/Zotero/storage/WLW2RVMT/The Inner Workings of Fortnite's Shader Based Procedural Animations.pdf}
-}
-
 @unpublished{Karis_Nanite_SIGGRAPH_Advances_2021_final,
   title = {A {{Deep Dive}} into {{Nanite Virtualized Geometry}}},
   author = {Karis, Brian and Stubbe, Rune and Wihlidal, Graham},
   date = {2021},
-  url = {https://advances.realtimerendering.com/s2021/Karis_Nanite_SIGGRAPH_Advances_2021_final.pdf},
+  url = {https://advances.realtimerendering.com/s2021/},
   urldate = {2026-06-05},
   eventtitle = {{{ACM SIGGRAPH}} 2021 {{Courses}}},
   venue = {Virtual Event},
@@ -238,7 +187,7 @@
 
 @online{KhronosOpenGLRegistry,
   type = {Dokumentation},
-  title = {Khronos {{OpenGL}}® {{Registry}} - {{The Khronos Group Inc}}},
+  title = {Khronos {{OpenGL Registry}}},
   author = {{The Khronos Group}},
   date = {2026},
   publisher = {The Khronos Group},
@@ -292,38 +241,6 @@
   file = {/home/marvin/Zotero/storage/PF3HY67Y/Lauritzen - Deferred Rendering for Current and Future Rendering Pipelines.pdf}
 }
 
-@inproceedings{liktorDecoupledDeferredShading2012,
-  title = {Decoupled Deferred Shading for Hardware Rasterization},
-  booktitle = {Proceedings of the {{ACM SIGGRAPH Symposium}} on {{Interactive 3D Graphics}} and {{Games}}},
-  author = {Liktor, Gábor and Dachsbacher, Carsten},
-  date = {2012},
-  series = {{{I3D}} '12},
-  pages = {143--150},
-  publisher = {Association for Computing Machinery},
-  location = {New York, NY, USA},
-  doi = {10.1145/2159616.2159640},
-  abstract = {In this paper we present decoupled deferred shading: a rendering technique based on a new data structure called compact geometry buffer, which stores shading samples independently from the visibility. This enables caching and efficient reuse of shading computation, e.g. for stochastic rasterization techniques. In contrast to previous methods, our decoupled shading can be efficiently implemented on current graphics hardware. We describe two variants which differ in the way the shading samples are cached: the first maintains a single cache for the entire image in global memory, while the second pursues a tile-based approach leveraging local memory of the GPU's multiprocessors. We demonstrate the application of decoupled deferred shading to speed up the rendering in applications with stochastic supersampling, depth of field, and motion blur.},
-  isbn = {978-1-4503-1194-6},
-  file = {/home/marvin/Zotero/storage/GUZWLLG7/Liktor and Dachsbacher - 2012 - Decoupled deferred shading for hardware rasterization.pdf}
-}
-
-@inproceedings{lukasczykCinemaDarkroomDeferred2020,
-  title = {Cinema {{Darkroom}}: {{A Deferred Rendering Framework}} for {{Large-Scale Datasets}}},
-  shorttitle = {Cinema {{Darkroom}}},
-  booktitle = {2020 {{IEEE}} 10th {{Symposium}} on {{Large Data Analysis}} and {{Visualization}} ({{LDAV}})},
-  author = {Lukasczyk, Jonas and Garth, Christoph and Larsen, Matthew and Engelke, Wito and Hotz, Ingrid and Rogers, David and Ahrens, James and Maciejewski, Ross},
-  date = {2020},
-  pages = {37--41},
-  publisher = {IEEE},
-  location = {Salt Lake City, UT, USA},
-  doi = {10.1109/LDAV51489.2020.00011},
-  abstract = {This paper presents a framework that fully leverages the advantages of a deferred rendering approach for the interactive visualization of large-scale datasets. Geometry buffers (G-Buffers) are generated and stored in situ, and shading is performed post hoc in an interactive image-based rendering front end. This decoupled framework has two major advantages. First, the G-Buffers only need to be computed and stored once—which corresponds to the most expensive part of the rendering pipeline. Second, the stored G-Buffers can later be consumed in an image-based rendering front end that enables users to interactively adjust various visualization parameters—such as the applied color map or the strength of ambient occlusion—where suitable choices are often not known a priori. This paper demonstrates the use of Cinema Darkroom on several real-world datasets, highlighting CD’s ability to effectively decouple the complexity and size of the dataset from its visualization.},
-  eventtitle = {2020 {{IEEE}} 10th {{Symposium}} on {{Large Data Analysis}} and {{Visualization}} ({{LDAV}})},
-  isbn = {978-1-7281-8468-5},
-  langid = {english},
-  file = {/home/marvin/Zotero/storage/WKK3R9UP/Lukasczyk et al. - 2020 - Cinema Darkroom A Deferred Rendering Framework for Large-Scale Datasets.pdf}
-}
-
 @inproceedings{magdicsPostprocessingNPREffects2013,
   title = {Post-Processing {{NPR}} Effects for Video Games},
   booktitle = {Proceedings of the 12th {{ACM SIGGRAPH International Conference}} on {{Virtual-Reality Continuum}} and {{Its Applications}} in {{Industry}}},
@@ -361,15 +278,17 @@
   date = {2026},
   url = {https://mamoniem.com/behind-the-pretty-frames-pragmata/},
   urldate = {2026-06-06},
-  langid = {american}
+  langid = {american},
+  file = {/home/marvin/Zotero/storage/GC2Z3I7I/Muhammad - 2026 - Behind the Pretty Frames PRAGMATA.pdf}
 }
 
 @report{NVIDIATuringArchitectureWhitepaper,
+  type = {Whitepaper},
   title = {{{NVIDIA Turing GPU Architecture}}  {{Whitepaper}}},
   author = {{NVIDIA Corporation}},
   date = {2018},
   institution = {NVIDIA},
-  url = {https://images.nvidia.com/aem-dam/en-zz/Solutions/design-visualization/technologies/turing-architecture/NVIDIA-Turing-Architecture-Whitepaper.pdf},
+  url = {https://developer.nvidia.com/blog/nvidia-turing-architecture-in-depth/},
   urldate = {2026-06-21},
   langid = {english},
   file = {/home/marvin/Zotero/storage/SM35E9PB/NVIDIA-Turing-Architecture-Whitepaper.pdf}
@@ -447,7 +366,7 @@
   url = {https://pixeljetstream.blogspot.com/2015/02/life-of-triangle-nvidias-logical.html},
   urldate = {2026-06-21},
   organization = {Life of a triangle - NVIDIA's logical pipeline},
-  file = {/home/marvin/Zotero/storage/U3CN8CWE/life-of-triangle-nvidias-logical.html}
+  file = {/home/marvin/Zotero/storage/A9DQQUYG/Kubisch - 2015 - pixel jet stream Life of a triangle - NVIDIA's logical pipeline.pdf;/home/marvin/Zotero/storage/U3CN8CWE/life-of-triangle-nvidias-logical.html}
 }
 
 @online{Raylib,
@@ -468,7 +387,7 @@
   title = {Raylib - Examples},
   author = {Santamaría, Ramón},
   date = {2026},
-  url = {https://www.raylib.com},
+  url = {https://www.raylib.com/examples.html},
   urldate = {2026-07-17},
   abstract = {Check the full set of raylib examples... they are amazing!},
   langid = {english},
@@ -485,17 +404,6 @@
   abstract = {A simple and easy-to-use library to enjoy videogames programming - raysan5/raylib},
   version = {6.0},
   file = {/home/marvin/Zotero/storage/L5AP7P56/rlgl.html}
-}
-
-@unpublished{routhierHEADARTEA,
-  title = {Building {{A Unique Visual Identity}}},
-  author = {Routhier, Geneviève},
-  date = {2023},
-  url = {https://media.gdcvault.com/gdc2023/Slides/BuildingAUnique_Routhier_Genevieve.pdf},
-  urldate = {2026-06-06},
-  eventtitle = {Game {{Developers Conference}}},
-  langid = {english},
-  file = {/home/marvin/Zotero/storage/S6ZL69D6/Routhier - HEAD OF ART @ EA DICE.pdf}
 }
 
 @inproceedings{saitoComprehensibleRendering3D1990,
@@ -528,18 +436,6 @@
   file = {/home/marvin/Zotero/storage/NMJZ4AQ2/Schied and Dachsbacher - 2015 - Deferred attribute interpolation for memory-efficient deferred shading.pdf}
 }
 
-@unpublished{stylizationWithAPurposeTF2,
-  title = {Stylization with a {{Purpose}}: {{The Illustrative World}} of {{Team Fortress}} 2},
-  author = {Mitchell, Jason and Francke, Moby and Eng, Dhabih},
-  date = {2007},
-  url = {https://gdcvault.com/play/279/Stylization-with-a-Purpose-The},
-  urldate = {2026-06-06},
-  eventtitle = {Game {{Developers Conference}}},
-  langid = {english},
-  venue = {San Francisco, CA},
-  file = {/home/marvin/Zotero/storage/KCT3IU36/Mitchell et al. - 2007 - Stylization with a Purpose The Illustrative World of Team Fortress 2.pdf}
-}
-
 @unpublished{taaantialiasing,
   title = {High {{Quality Temporal Supersampling}}},
   author = {Karis, Brian},
@@ -549,29 +445,6 @@
   eventtitle = {Advances in {{Real-Time Rendering}} in {{3D Graphics}} and {{Games}}, {{ACM SIGGRAPH}} 2014 {{Courses}}},
   langid = {english},
   file = {/home/marvin/Zotero/storage/4YJSPTB4/TemporalAA.pptx}
-}
-
-@inproceedings{tatarchukAdvancedRealTimeRendering2007,
-  title = {Advanced {{Real-Time Rendering}} in {{3D Graphics}} and {{Games}}},
-  booktitle = {{{ACM SIGGRAPH}} 2007 {{Courses}}},
-  author = {Mitchell, Jason and Francke, Moby and Eng, Dhabih},
-  date = {2007},
-  publisher = {Association for Computing Machinery},
-  url = {https://advances.realtimerendering.com/s2007/Mitchell-IllustrativeRenderingInTF2(Siggraph07%20Course%20Notes).pdf},
-  urldate = {2026-06-06},
-  langid = {english},
-  file = {/home/marvin/Zotero/storage/4I89FD4Q/Tatarchuk - 2007 - Advanced Real-Time Rendering in 3D Graphics and Games.pdf}
-}
-
-@unpublished{technologyBehindtheUnrealEngine4ElementalDemo,
-  title = {The {{Technology Behind}} the {{Unreal Engine}} 4 {{Elemental Demo}}},
-  author = {Mittring, Martin},
-  date = {2012},
-  url = {https://advances.realtimerendering.com/s2012/},
-  urldate = {2026-06-06},
-  eventtitle = {{{SIGGRAPH}} ({{Advances}} in {{Real-Time Rendering}} in {{Games Course}})},
-  venue = {Los Angeles, CA},
-  file = {/home/marvin/Zotero/storage/BWMRWN9L/The Technology Behind the Elemental Demo 16x9.pptx}
 }
 
 @inproceedings{Thaler2011DeferredRendering,
@@ -590,22 +463,9 @@
   title = {Deferred {{Rendering}} in {{Killzone}} 2},
   author = {Valient, Michal},
   date = {2007},
-  url = {https://www.guerrilla-games.com/media/News/Files/Develop07_Valient_DeferredRenderingInKillzone2.pdf},
+  url = {https://www.guerrilla-games.com/read/deferred-rendering-in-killzone-2},
   urldate = {2026-06-06},
   eventtitle = {Guerrilla {{Develop Conference}}},
   langid = {english},
   file = {/home/marvin/Zotero/storage/9GV3IX9Q/Valient - Deferred Rendering in Killzone 2.pdf}
-}
-
-@online{WorkGraphsDirect3D2024,
-  title = {Work {{Graphs}} in {{Direct3D}} 12: {{A Case Study}} of {{Deferred Shading}}},
-  shorttitle = {Work {{Graphs}} in {{Direct3D}} 12},
-  author = {Bahnassi, Wessam},
-  date = {2024},
-  url = {https://developer.nvidia.com/blog/work-graphs-in-direct3d-12-a-case-study-of-deferred-shading/},
-  urldate = {2026-06-06},
-  abstract = {When it comes to game application performance, GPU-driven rendering enables better scalability for handling large virtual scenes. Direct3D 12 (D3D12) introduces work graphs as a programming paradigm…},
-  langid = {american},
-  organization = {NVIDIA Technical Blog},
-  file = {/home/marvin/Zotero/storage/IETTEM76/work-graphs-in-direct3d-12-a-case-study-of-deferred-shading.html}
 }

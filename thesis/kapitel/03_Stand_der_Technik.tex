@@ -30,7 +30,7 @@ architektonischer Engpässe.
 
 % Forward Rendering.
 Der primäre architektonische Nachteil klassischer Forward-Rendering-Ansätze liegt, wie in
-Abschnitt~\ref{subsec:020101_forward_rendering} dargelegt, im multiplikativen Aufwand von
+Abschnitt~\ref{subsec:020201_forward_rendering} dargelegt, im multiplikativen Aufwand von
 $\mathcal{O}(N_{\text{obj}} \cdot N_{\text{light}})$ bei hoher
 Geometrie- und Beleuchtungskomplexität.
 Zusätzlich zu dieser Komplexität ergibt sich eine kombinatorische Explosion der Shader-Permutationen, sobald diverse
@@ -152,7 +152,7 @@ führt dies in der Praxis unweigerlich zu monolithischen
 Shader-Strukturen (Uber-Shadern)~\cite[Folie~\enquote{Problems}]{deferredLightinginUncharted4}.
 Eine steigende Stil- und Materialvielfalt induziert innerhalb eines solchen Shaders einen massiven Registerdruck
 (\textit{Register Pressure}) und provoziert durch die notwendigen Fallunterscheidungen zeitgleich ineffiziente
-\textit{Warp Divergence} (vgl.\ Kap.~\ref{subsec:020203_warp_divergence_and_register_pressure}).
+\textit{Warp Divergence} (vgl.\ Kap.~\ref{subsec:020303_warp_divergence_and_register_pressure}).
 Diese architektonischen Flaschenhälse limitieren die
 Gesamteffizienz der Rendering-Pipeline bei hoher Szenen-Entropie auf der \ac{GPU}
 signifikant~\cite[Abschn.~6]{schiedDeferredAttributeInterpolation2015}.

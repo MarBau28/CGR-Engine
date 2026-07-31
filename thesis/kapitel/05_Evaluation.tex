@@ -29,7 +29,7 @@ Variablen-Mappings sowie die Orchestrierung des Versuchsablaufs.
 \label{subsec:050101_evaluation_tagets_and_hypothesis}
 
 % Evaluationsziel
-Wie in Kapitel~\ref{sec:0201_rendering_paradigms} dargelegt, weisen die theoretischen Architekturparadigmen des Forward-, Deferred-Uber- und
+Wie in Kapitel~\ref{sec:0202_rendering_paradigms} dargelegt, weisen die theoretischen Architekturparadigmen des Forward-, Deferred-Uber- und
 Deferred-Volume-Renderings spezifische Leistungsmerkmale auf.
 Das primäre Ziel der nachfolgenden Testreihen besteht in der isolierten Quantifizierung dieser technologischen
 Trade-offs.
@@ -56,21 +56,21 @@ provoziert, der die \ac{CPU}-Zuweisungszeit bei anwachsender Instanzenanzahl nic
 
 % Hypothese Deferred_Uber.
 Für die Deferred-Pipeline mit einfachem Beleuchtungs-Pass (Single-Pass) und monolithischem Uber-Shader wird anhand
-von Kapitel~\ref{subsec:020102_deferred_rendering} und~\ref{subsec:020203_warp_divergence_and_register_pressure} postuliert, dass
+von Kapitel~\ref{subsec:020202_deferred_rendering} und~\ref{subsec:020303_warp_divergence_and_register_pressure} postuliert, dass
 der signifikanteste Leistungsengpass bei einer hohen räumlichen Stil-Entropie auftritt
 (\hypertarget{hyp:H2}{Hypothese H2}).
-Wie in Kapitel~\ref{subsec:020203_warp_divergence_and_register_pressure} theoretisch hergeleitet, erzwingen feingranular gestreute \ac{NPR}-Effekte divergente
+Wie in Kapitel~\ref{subsec:020303_warp_divergence_and_register_pressure} theoretisch hergeleitet, erzwingen feingranular gestreute \ac{NPR}-Effekte divergente
 Code-Zweige (Warp-Divergence \& Registerdruck).
 Diese kombinierten Hardware-Flaschenhälse zwingen die Architektur zu einer sequenziellen Abarbeitung der Pixel und
 lassen eine messbare Degradation der Shading-Performance bei stark vermischten Effekten erwarten.
 
 % Hypothese Deferred_Volumes.
 Für die Deferred-Pipeline auf Basis von Light-Volumes (Deferred-Volume) postuliert \hypertarget{hyp:H3}{Hypothese H3},
-anhand von Kapitel~\ref{subsec:020102_deferred_rendering} und~\ref{subsec:020202_memory_bandwidth}, dass diese
+anhand von Kapitel~\ref{subsec:020202_deferred_rendering} und~\ref{subsec:020302_memory_bandwidth}, dass diese
 Architektur eine hohe Resilienz gegenüber räumlicher Stil-Entropie aufweist und die Branching-Problematik des
 Uber-Shaders umgeht.
 Der primäre Leistungsengpass dieser Methode wird stattdessen in der Sättigung der Speicherbandbreite vermutet
-(vgl.\ Kap.~\ref{subsec:020202_memory_bandwidth}).
+(vgl.\ Kap.~\ref{subsec:020302_memory_bandwidth}).
 
 % Abgrenzung sonstiger Limits.
 Im vorliegenden Kapitel werden die untersuchten Limitierungen ausschließlich auf Hardware-Leistungs-Ebene betrachtet.
@@ -358,7 +358,7 @@ Des Weiteren ist festzustellen, dass alle Rendering-Pipelines nahezu linear skal
 Die nahezu deckungsgleichen Kurven demonstrieren, dass die umfangreichen \ac{G-Buffer}-Schreibvorgänge selbst bei einem
 äußerst hohen Overdraw keine \ac{VRAM}-Blockade induzieren.
 Da opake Geometrie gerendert wird, testet die \ac{GPU}-Hardware die Tiefe bereits vor dem eigentlichen Fragment-Shader.
-Es ist zu konstatieren, dass verdeckte Pixel-Fragmente mittels \textit{Early-Z} (vgl.\ Kapitel~\ref{subsec:020201_overdraw})
+Es ist zu konstatieren, dass verdeckte Pixel-Fragmente mittels \textit{Early-Z} (vgl.\ Kapitel~\ref{subsec:020301_overdraw})
 auf Siliziumebene verworfen werden, bevor kostspielige
 Schreiboperationen in den Framebuffer oder \ac{G-Buffer} stattfinden. \cite[S. 801]{akenine-mollerRealtimeRendering2019}
 
@@ -421,7 +421,7 @@ $12$ bis \qty{13}{\milli\second} deutlich effizienter sind (siehe Abbildung~\ref
 Die starken Einbußen von Forward gegenüber den Deferred-Pipelines wird im Zusammenhang mit \textit{Shading-Overdraw} vermutet.
 Da in diesem Setup $N_{\text{Light}} = 200$ Lichter berechnet werden, führt die Forward-Pipeline komplexe
 Beleuchtungsmathematik auf Fragmenten aus, die später von anderen Objekten verdeckt
-werden (vgl.\ Kap.~\ref{subsec:020201_overdraw}).
+werden (vgl.\ Kap.~\ref{subsec:020301_overdraw}).
 Bei einer Anzahl von $8{,}3\text{ Millionen}$ Pixeln (4K) multipliziert sich diese redundante Rechenlast wesentlich
 stärker als bei den entkoppelten Deferred-Pipelines (ein \ac{ALU}-Limit wird schneller erreicht)
 ~\cite[Abschn.~1]{mallettDeferredAdaptiveCompute2018}.
@@ -499,7 +499,7 @@ Wäre die Ursache ein reines Rechenproblem der Shader (\ac{ALU}-Limit), müssten
 gleichmäßig skalieren.
 Die signifikant stärkere Einbuße der Deferred-Volume-Pipeline bei der 4K-Auflösung (\qty{240}{\percent}) im Vergleich
 zu den Forward- und Uber-Shader-Ansätzen (\qty{135}{\percent}) lässt sich primär auf den hardwarenahen Overhead des
-additiven Blendings (vgl.\ Kap.~\ref{subsec:020202_memory_bandwidth}) zurückführen und liefert ein starkes Indiz für die
+additiven Blendings (vgl.\ Kap.~\ref{subsec:020302_memory_bandwidth}) zurückführen und liefert ein starkes Indiz für die
 \hyperlink{hyp:H3}{Hypothese H3}.
 Deferred-Uber und Forward rechnen das finale Beleuchtungsergebnis in einem einzigen Durchlauf aus
 (Single-Pass-Architektur) und überschreiben den Zielpuffer direkt (nur eine Replace-Operation).
@@ -694,7 +694,7 @@ Sie verorten die größte architektonische Limitierung des Deferred-Volume-Ansat
 Wenn hunderte Licht-Volumina dieselbe Pixelfläche abdecken, zwingt die Deferred-Volume-Pipeline die \ac{GPU},
 für diese einzelnen Pixel hunderte Male den \ac{RMW}-Zyklus für das additive Blending (\ac{ROP}s) auf dem Speicherbus
 auszuführen~\cites[Folie~9]{lauritzenDeferredRenderingCurrent}[S.~676]{gregoryGameEngineArchitecture2018}
-(vgl.\ Kap.~\ref{subsec:020202_memory_bandwidth}).
+(vgl.\ Kap.~\ref{subsec:020302_memory_bandwidth}).
 Der \ac{VRAM}-Speicherbus kollabiert in der Folge unter der schieren Frequenz dieser redundanten Lese- und
 Schreibzugriffe.
 
@@ -713,9 +713,9 @@ Kapitel~\ref{subsec:050402_light_intensity_and_overlap_eval} aufgezeigten \texti
 Deferred-Volume-Pipeline möglichst geringfügig provoziert.
 Für die Messergebnisse wird erwartet, dass der Forward-Ansatz durch klassischen Shading-Overdraw an Effizienz verliert,
 da die aufwendige Beleuchtungsberechnung hier untrennbar mit der Geometrieauswertung verknüpft ist
-(vgl.\ Kap.~\ref{subsec:020101_forward_rendering}).
+(vgl.\ Kap.~\ref{subsec:020201_forward_rendering}).
 Somit sollte sich der Berechnungsaufwand theoretisch mit jedem überzeichneten Fragment vervielfachen
-(vgl.\ Kap.~\ref{subsec:020201_overdraw}).
+(vgl.\ Kap.~\ref{subsec:020301_overdraw}).
 
 % Aufbau
 \begin{center}
@@ -761,7 +761,7 @@ darstellt~\cites[Abschn.~1]{Thaler2011DeferredRendering}.
 Die Ergebnisse dieser Evaluation erzwingen somit eine Relativierung der \hyperlink{hyp:H1.1}{Hypothese H1.1}:
 Durch hardwarebasierte Optimierungen wie \textit{Early-Z} wird auf modernen Grafikkarten auch ohne dedizierten,
 softwarebasierten \textit{Z-Prepass} ein signifikanter Teil der redundanten Rechenlast der Beleuchtungsberechnung
-verdeckter Fragmente vermieden~\cite[S.~801~u.~803]{akenine-mollerRealtimeRendering2019} (vgl.\ Kap.~\ref{subsec:020201_overdraw}).
+verdeckter Fragmente vermieden~\cite[S.~801~u.~803]{akenine-mollerRealtimeRendering2019} (vgl.\ Kap.~\ref{subsec:020301_overdraw}).
 
 
 \section{{Hybride Stilisierung \& Entropie}}
@@ -868,7 +868,7 @@ Frameworks.
 \end{figure}
 
 % Deduktion.
-In den theoretischen Grundlagen in Kapitel~\ref{subsec:020203_warp_divergence_and_register_pressure} wurde
+In den theoretischen Grundlagen in Kapitel~\ref{subsec:020303_warp_divergence_and_register_pressure} wurde
 dargelegt, dass die \ac{GPU} Instruktionen im \ac{SIMT}-Verfahren in sogenannten \textit{Warps} verarbeitet.
 Der signifikante Leistungseinbruch der Deferred-Uber-Pipeline im gestreuten Szenario stellt die praktische
 Manifestation der \textit{Warp Divergence} dar und verifiziert \hyperlink{hyp:H2}{Hypothese H2} vollumfänglich.

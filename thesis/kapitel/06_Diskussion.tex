@@ -69,14 +69,14 @@ Grundannahme der effizienteren Verarbeitung hoher Anzahlen von Lichtquellen best
 % Deferred Drawbacks.
 In Bezug auf selektive Stilisierung in Deferred Pipelines und Effizient bei hoher Szeneentropie konnte zudem auf
 Performanceebene die Hypothese der Warp-Divergence
-(vgl.\ ~Kapitel~\ref{subsec:020203_warp_divergence_and_register_pressure}) für die Deferred-Uber-Pipeline in
+(vgl.\ ~Kapitel~\ref{subsec:020303_warp_divergence_and_register_pressure}) für die Deferred-Uber-Pipeline in
 Versuch~\ref{subsec:050501_entropy_eval} bestätigt werden, auch wenn eine eindeutige
 Zuweisung des Phänomens auf Hardwareebene durch den empirischen Aufbau der Versuche nicht endgültig verifiziert werden
 kann (etwa welchen anteiligen Einfluss Registerdruck hier hat).
 Obwohl der Deferred-Multi-Pass-Ansatz der Deferred-Volume-Pipeline in diesem Kontext keine Schwächen gezeigt hat,
 konnten in den Versuchen~\ref{subsec:050302_bandwidth_eval} und~\ref{subsec:050402_light_intensity_and_overlap_eval} die
 durch Blending in die Höhe getriebenen \ac{RMW}-Zyklen eindeutig identifiziert werden
-(vgl.\ Kapitel~\ref{subsec:020202_memory_bandwidth}).
+(vgl.\ Kapitel~\ref{subsec:020302_memory_bandwidth}).
 Die Deferred-Multi-Pass-Ansätze zeigen zudem, wie in Kapitel~\ref{subsec:040203_deferred_volume_pipeline} dargelegt, den
 weiteren Nachteil der erhöhten \ac{VRAM}-Belastung durch größere G-Buffer-Formate, um Artefakte wie Banding (siehe
 Abbildung~\ref{fig:hydra_banding_comparison}) zu vermeiden.
@@ -148,7 +148,7 @@ zunehmender Szenenkomplexität unverhältnismäßig stark sinkt.
     Lichtauswertung allerdings abzusehen (vgl.\ Abb.~\ref{fig:5_4_1_light_count_means}).
     Der Forward-inhärente quadratische Aufwand von $\mathcal{O}(N_{\text{obj}} \cdot N_{\text{light}})$ ist dem linearen Aufwand von
     $\mathcal{O}(N_{\text{obj}} + N_{\text{light}})$ in Deferred signifikant unterlegen
-    (vgl.\ ~\ref{subsec:020101_forward_rendering} u.~\ref{subsec:020102_deferred_rendering}).
+    (vgl.\ ~\ref{subsec:020201_forward_rendering} u.~\ref{subsec:020202_deferred_rendering}).
 
     \item[Monolithische Shader-Strukturen] ~\\
     Wenn Szenen mit einer extrem hohen Stil- oder Material-Entropie vorliegen, ist bei der Verwendung von monolithischen
@@ -156,7 +156,7 @@ zunehmender Szenenkomplexität unverhältnismäßig stark sinkt.
     triviale Shading-Operationen beziehen, in der selektiven Stilisierung mit Einschränkungen zu rechnen
     (vgl.\ ~\ref{subsec:050501_entropy_eval}).
     Dies gilt insbesondere für Deferred-Rendering-Paradigmen, die eine höhere Tendenz zu solchen monolithischen
-    Shader-Strukturen durch vereinheitlichte Shading-Pässe aufweisen (vgl.\ ~\ref{subsec:020102_deferred_rendering}).
+    Shader-Strukturen durch vereinheitlichte Shading-Pässe aufweisen (vgl.\ ~\ref{subsec:020202_deferred_rendering}).
 
     \item[Light-Volumes] ~\\
     Bei der Verwendung von Light-Volumes zur Lichtberechnung, die im Deferred Rendering weit verbreitet sind, ist in
@@ -164,7 +164,7 @@ zunehmender Szenenkomplexität unverhältnismäßig stark sinkt.
     Lichteinflüsse mit Performanceeinbußen zu rechnen
     (vgl.\ ~\ref{subsec:050302_bandwidth_eval} u.~\ref{subsec:050402_light_intensity_and_overlap_eval}).
     Die durch Additives Blending der Lichteinflüsse erhöhten \ac{RMW}-Zyklen auf der \ac{GPU} können sich als
-    signifikanter Performance-Engpass herausstellen (vgl.\ ~\ref{subsec:020202_memory_bandwidth}).
+    signifikanter Performance-Engpass herausstellen (vgl.\ ~\ref{subsec:020302_memory_bandwidth}).
     In diesem Zusammenhang muss weiterhin beachtet werden, dass das Deferred Rendering grundlegend höhere
     Speicherbelastungen aufweist, um Artefaktbildungen zu vermeiden und damit eine höhere Grundlast auf der \ac{GPU}
     verursacht (vgl.\ ~\ref{subsec:040203_deferred_volume_pipeline}).
