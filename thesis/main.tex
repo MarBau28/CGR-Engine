@@ -67,6 +67,8 @@
 \setcounter{bottomnumber}{4}
 \setcounter{totalnumber}{6}
 \KOMAoptions{listof=nochaptergap}
+\renewcommand*{\chapterheadstartvskip}{\vspace*{-\topskip}}
+\usepackage{flafter}
 
 % --- Kopfzeile ---
 \usepackage[automark, headsepline=0.4pt]{scrlayer-scrpage}
@@ -106,6 +108,8 @@
 \renewcommand{\theFancyVerbLine}{\ttfamily\tiny\color{gray!50}\arabic{FancyVerbLine}}
 \newtcolorbox{codeframe}{
     enhanced,
+    width=0.95\textwidth,
+    center,
     boxrule=0.5pt,
     colframe=academicBorder,
     colback=academicBg,
@@ -227,13 +231,6 @@
     % --- Zone 2: Große römische Zahlen (I, II, III...) ---
     \pagenumbering{Roman}
     \pagestyle{plain}
-    \newgeometry{
-        a4paper,
-        left=3.0cm,
-        right=2.5cm,
-        top=2.5cm,
-        bottom=2.5cm
-    }
 
     % abstract
     \input{sonstiges/abstract}
@@ -252,8 +249,6 @@
     \clearpage
 
     % --- Zone 3: Arabische Zahlen (1, 2, 3...) ---
-    \restoregeometry
-    \renewcommand*{\chapterheadstartvskip}{\vspace*{-\topskip}}
     \pagenumbering{arabic}
     \pagestyle{scrheadings}
 

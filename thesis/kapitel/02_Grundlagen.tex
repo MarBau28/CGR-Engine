@@ -8,50 +8,50 @@ Hierzu zählen die technischen Grundlagen der Rendering-Paradigmen sowie die Spe
 relevanten Hardware-Flaschenhälse und einer begrifflichen Übersicht von \ac{NPR}- und Stilisierungsbegriffen.
 
 
-%\section{Die Grafik-Pipeline und Hardware-Architektur}
-%\label{sec:0201_grafik_pipeline_hardware}
-%
-%Bevor die spezifischen Rendering-Paradigmen und hardwareseitigen Flaschenhälse erläutert werden, bedarf es einer
-%Definition der Standard-Grafik-Pipeline.
-%Dazu skizziert dieses Kapitel die Aufgabenverteilung zwischen \ac{CPU} und \ac{GPU}, den logischen Ablauf
-%der Rasterisierung sowie die Funktionsweise der programmierbaren Pipeline-Stufen (Shader).
-%
-%\subsection{Das Host-Device-Modell (CPU \& GPU)}
-%\label{subsec:020101_host_device_modell}
-%
-%Die Standard-Echtzeit-Rendering-Architektur basiert grundlegend auf dem asynchronen Zusammenspiel von \ac{CPU}
-%\textit{Host}) und \ac{GPU} (\textit{Device}).
-%Beide operieren parallel und weitestgehend unabhängig voneinander, um den Systemdurchsatz zu maximieren.
-%
-%Die \ac{CPU} ist für die sequenzielle Abarbeitung der Szenen-Logik verantwortlich.
-%Hierzu zählen die globale Statusverwaltung, Animationsberechnungen und räumliche Filterungen wie das
-%\textit{Frustum-Culling}, bei dem Objekte außerhalb des Kamerasichtfelds frühzeitig verworfen werden.
-%Die resultierenden, sichtbaren Geometrien bereitet die \ac{CPU} auf und sendet sie in Form von Render-Kommandos, den
-%sogenannten \textit{Draw-Calls}, an die Grafik-\ac{API}.
-%Dieser Vorgang wird als \textit{Dispatching} bezeichnet.
-%
-%Die \ac{GPU} empfängt diese Kommandos und übernimmt die eigentliche Bilderstellung.
-%Im Gegensatz zur \ac{CPU} ist die Architektur der Grafikkarte auf massiv parallele Datenverarbeitung ausgelegt.
-%Sie nutzt das \ac{SIMD}- beziehungsweise \ac{SIMT}-Paradigma (Single Instruction, Multiple Data/Threads),
-%um identische Befehlssätze simultan auf tausenden dedizierten Recheneinheiten auszuführen.
-%Durch die asynchrone Arbeitsweise verarbeitet die \ac{GPU} die Draw-Calls eines Frames, während die \ac{CPU} bereits
-%die Logik und das Dispatching des nachfolgenden Frames berechnet.
+\section{Die Grafik-Pipeline und Hardware-Architektur}
+\label{sec:0201_grafik_pipeline_hardware}
 
-%Der physische Speicher der Grafikkarte, der \ac{VRAM}, ist über einen in seiner Bandbreite limitierten
-%\textit{Speicherbus} mit dem eigentlichen \ac{GPU}-Chip verbunden.
-%Auf dem Chip selbst verteilen sich die Recheneinheiten auf sogenannte \ac{SM}.
-%Jeder \ac{SM} verfügt über dedizierten, extrem schnellen Speicher (\textit{Register} und \textit{L1-Cache}), die die
-%Befehle an die eigentlichen \acp{ALU}verteilen (vgl.\ Abb.~\ref{fig:gpu-hardware-model}).
+Bevor die spezifischen Rendering-Paradigmen und hardwareseitigen Flaschenhälse erläutert werden, bedarf es einer
+Definition der Standard-Grafik-Pipeline.
+Dazu skizziert dieses Kapitel die Aufgabenverteilung zwischen \ac{CPU} und \ac{GPU}, den logischen Ablauf
+der Rasterisierung sowie die Funktionsweise der programmierbaren Pipeline-Stufen (Shader).
 
-%\begin{figure}[htbp]
-%    \centering
-%    \includegraphics[width=0.95\textwidth]{abbildungen/GPU-hardware-model}
-%    \caption[Abstrahiertes GPU-Hardware-Modell]
-%    {Abstrahiertes GPU-Hardware-Modell. Der Datentransfer
-%    über den Speicherbus definiert das Bandbreiten-Limit. Eigene Darstellung in Anlehnung
-%    an Darstellungen aus~\cite{pixeljetstreamPixelJetStream2015}.}
-%    \label{fig:gpu-hardware-model}
-%\end{figure}
+\subsection{Das Host-Device-Modell (CPU \& GPU)}
+\label{subsec:020101_host_device_modell}
+
+Die Standard-Echtzeit-Rendering-Architektur basiert grundlegend auf dem asynchronen Zusammenspiel von \ac{CPU}
+(\textit{Host}) und \ac{GPU} (\textit{Device}).
+Beide operieren parallel und weitestgehend unabhängig voneinander, um den Systemdurchsatz zu maximieren.
+
+Die \ac{CPU} ist für die sequenzielle Abarbeitung der Szenen-Logik verantwortlich.
+Hierzu zählen die globale Statusverwaltung, Animationsberechnungen und räumliche Filterungen wie das
+\textit{Frustum-Culling}, bei dem Objekte außerhalb des Kamerasichtfelds frühzeitig verworfen werden.
+Die resultierenden, sichtbaren Geometrien bereitet die \ac{CPU} auf und sendet sie in Form von Render-Kommandos, den
+sogenannten \textit{Draw-Calls}, an die Grafik-\ac{API}.
+Dieser Vorgang wird als \textit{Dispatching} bezeichnet.
+
+Die \ac{GPU} empfängt diese Kommandos und übernimmt die eigentliche Bilderstellung.
+Im Gegensatz zur \ac{CPU} ist die Architektur der Grafikkarte auf massiv parallele Datenverarbeitung ausgelegt.
+Sie nutzt das \ac{SIMD}- beziehungsweise \ac{SIMT}-Paradigma (Single Instruction, Multiple Data/Threads),
+um identische Befehlssätze simultan auf tausenden dedizierten Recheneinheiten auszuführen.
+Durch die asynchrone Arbeitsweise verarbeitet die \ac{GPU} die Draw-Calls eines Frames, während die \ac{CPU} bereits
+die Logik und das Dispatching des nachfolgenden Frames berechnet.
+
+Der physische Speicher der Grafikkarte, der \ac{VRAM}, ist über einen in seiner Bandbreite limitierten
+\textit{Speicherbus} mit dem eigentlichen \ac{GPU}-Chip verbunden.
+Auf dem Chip selbst verteilen sich die Recheneinheiten auf sogenannte \ac{SM}.
+Jeder \ac{SM} verfügt über dedizierten, extrem schnellen Speicher (\textit{Register} und \textit{L1-Cache}), die die
+Befehle an die eigentlichen \acp{ALU} verteilen (vgl.\ Abb.~\ref{fig:gpu-hardware-model}).
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{abbildungen/GPU-hardware-model}
+    \caption[Abstrahiertes GPU-Hardware-Modell]
+    {Abstrahiertes GPU-Hardware-Modell. Der Datentransfer
+    über den Speicherbus definiert das Bandbreiten-Limit. Eigene Darstellung in Anlehnung
+    an Darstellungen aus~\cite{pixeljetstreamPixelJetStream2015}.}
+    \label{fig:gpu-hardware-model}
+\end{figure}
 
 
 \section{Rendering-Paradigmen}
