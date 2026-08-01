@@ -37,6 +37,22 @@ relevanten Hardware-Flaschenhälse und einer begrifflichen Übersicht von \ac{NP
 %Durch die asynchrone Arbeitsweise verarbeitet die \ac{GPU} die Draw-Calls eines Frames, während die \ac{CPU} bereits
 %die Logik und das Dispatching des nachfolgenden Frames berechnet.
 
+%Der physische Speicher der Grafikkarte, der \ac{VRAM}, ist über einen in seiner Bandbreite limitierten
+%\textit{Speicherbus} mit dem eigentlichen \ac{GPU}-Chip verbunden.
+%Auf dem Chip selbst verteilen sich die Recheneinheiten auf sogenannte \ac{SM}.
+%Jeder \ac{SM} verfügt über dedizierten, extrem schnellen Speicher (\textit{Register} und \textit{L1-Cache}), die die
+%Befehle an die eigentlichen \acp{ALU}verteilen (vgl.\ Abb.~\ref{fig:gpu-hardware-model}).
+
+%\begin{figure}[htbp]
+%    \centering
+%    \includegraphics[width=0.95\textwidth]{abbildungen/GPU-hardware-model}
+%    \caption[Abstrahiertes GPU-Hardware-Modell]
+%    {Abstrahiertes GPU-Hardware-Modell. Der Datentransfer
+%    über den Speicherbus definiert das Bandbreiten-Limit. Eigene Darstellung in Anlehnung
+%    an Darstellungen aus~\cite{pixeljetstreamPixelJetStream2015}.}
+%    \label{fig:gpu-hardware-model}
+%\end{figure}
+
 
 \section{Rendering-Paradigmen}
 \label{sec:0202_rendering_paradigms}
@@ -55,12 +71,12 @@ Es erfolgt zunächst eine Evaluierung aller Lichter, die ein zu zeichnendes Obje
 In einer weiteren Schleife werden diese Lichter anschließend für das jeweilige Objekt zusammen mit etwaigen anderen
 Materialeigenschaften verrechnet und
 angewendet~\cite[Folie~\textit{Forward Rendering – Single Pass}]{valientDeferredRenderingKillzone}
-(vgl.\ ~\ref{fig:naive_forward_rendering_flow}).
+(vgl. Abb.~\ref{fig:naive_forward_rendering_flow}).
 Die Beleuchtungsberechnung finden also untrennbar gekoppelt im selben Render-Pass (Fragment-Shader) statt.
 
 \begin{figure}[htbp]
     \centering
-    \resizebox{0.85\textwidth}{!}{%
+    \resizebox{0.95\textwidth}{!}{%
         \begin{tikzpicture}[
             >=Latex,
             node distance=0.7cm and 1.5cm,
@@ -104,28 +120,28 @@ Die Beleuchtungsberechnung finden also untrennbar gekoppelt im selben Render-Pas
 
         \end{tikzpicture}
     }
-    \caption[UML-Aktivitätsdiagramm der Single-Pass-Forward-Rendering-Pipeline]{UML-Aktivitätsdiagramm der
+    \caption[UML-Aktivitätsdiagramm einer Single-Pass-Forward-Rendering-Pipeline]{UML-Aktivitätsdiagramm einer
     Single-Pass-Forward-Rendering-Piepline.
     Die direkte Verschachtelung der Objekt- und Lichtevaluierung zeigt die inhärente quadratische Komplexität.}
     \label{fig:naive_forward_rendering_flow}
 \end{figure}
 
 % Komplexität.
-Dieser Umstand führt zu einem grundlegenden theoretischen Aufwand des Forward-Renderings, der sich proportional zur
-Anzahl der Geometrien und der einfallenden Lichtquellen verhält (quadratische Komplexität).
-~\cite[Abschn.~1]{Thaler2011DeferredRendering}.
+Dieser Umstand führt zu einer quadratischen Komplexität des Forward-Renderings, da der
+Berechnungsaufwand direkt proportional zum Produkt aus Geometrieanzahl und Lichtquellen
+skaliert~\cite[Abschn.~1]{Thaler2011DeferredRendering}.
 \begin{equation}
     \mathcal{O}(N_{\text{obj}} \cdot N_{\text{light}})
     \label{eq:forward_shading_complexity}
 \end{equation}
-Wobei $N_{\text{obj}}$ die Objektanzahl und $N_{\text{light}}$ die Anzahl der aktiven, Lichtquellen definiert.
+Hierbei definiert $N_{\text{obj}}$ die Objektanzahl und $N_{\text{light}}$ die Anzahl der aktiven Lichtquellen.
 
 % Overdraw-Teaser.
-Auf Hardware-Ebene manifestiert sich diese Komplexität in der Rasterisierung.
-Da die Beleuchtungsschleife für jedes erzeugte Fragment ausgeführt wird, skaliert die Rechenlast massiv mit der
-Pixelfläche der Objekte~\cite[Abschn.~3.2]{haradaForwardBringingDeferred2012}.
-Verdeckt ein nachfolgend gezeichnetes Objekt ein bereits berechnetes Fragment, war die vorherige, rechenintensive
-Lichtauswertung obsolet.
+Auf Hardware-Ebene entsteht diese Komplexität in der Rasterisierungsphase.
+Durch die Ausführung der Beleuchtungsberechnung pro Fragment skaliert der Rechenaufwand direkt
+mit dem Detailgrad der Objekt-Oberflächen~\cite[Abschn.~3.2]{haradaForwardBringingDeferred2012}.
+Verdeckt ein nachfolgend gezeichnetes Objekt ein bereits berechnetes Fragment, war die vorherige,
+rechenintensive Lichtauswertung hinfällig.
 Dieses ineffiziente Verhalten wird als \textit{Shading-Overdraw} bezeichnet und in
 Kapitel~\ref{subsec:020301_overdraw} detailliert beleuchtet.
 
@@ -133,8 +149,7 @@ Kapitel~\ref{subsec:020301_overdraw} detailliert beleuchtet.
 Die direkte Kopplung von Geometrie und Material bietet in der Praxis jedoch auch diverse Vorteile.
 Jedes Objekt kann ohne aufwändige Workarounds seinen eigenen hochspezialisierten Shader
 binden~\cite[Abschn.~1]{haradaForwardBringingDeferred2012}.
-Dies ist insbesondere vor dem Hintergrund der Evaluationen dieser Arbeit bezüglich selektiver Stilisierungen mittels
-\ac{NPR}-Effekten von Relevanz.
+Dieser Umstand ist insbesondere im Kontext selektiver Stilisierungen mittels \ac{NPR}-Effekten von Relevanz.
 
 \subsection{Deferred Rendering}
 \label{subsec:020202_deferred_rendering}
@@ -142,15 +157,17 @@ Dies ist insbesondere vor dem Hintergrund der Evaluationen dieser Arbeit bezügl
 % Funktionsweise.
 Deferred-Rendering zeichnet sich im Gegensatz zu Forward-Rendering durch die eindeutige Trennung von
 Geometrieverarbeitung und dem Shading der Geometrie aus.
-Die Geometrien sowie alle damit assoziierten Werte, wie etwa Normalen (Ausrichtungen), Albedos
-(Farbinformationen) oder Tiefeninformationen, werden in einem eigenständigen, separaten Pass verarbeitet und in
-einen Zwischenspeicher, dem sogenannten \ac{G-Buffer}, in Form eines \ac{FBO} geschrieben (bildschirmfüllendes Quad).
+Die Geometrien sowie deren Oberflächeneigenschaften, wie Normalen (Ausrichtungen), Albedo-Farben
+und Tiefenwerte, werden in einem separaten Pass verarbeitet und in einem Zwischenspeicher, dem
+sogenannten \ac{G-Buffer}, abgelegt.
+Dieser wird technisch als \ac{FBO} realisiert und speichert die Szenendaten als mehrkanalige 2D-Texturen
+in Bildschirmauflösung, bei denen jeder Bildpunkt die entsprechenden G-Buffer-Vektordaten enthält.
 In diesem Pass werden explizit keine Shading-Operationen, wie etwa die Beleuchtung der Objekte, durchgeführt.
 Erst in einem nachgelagerten Pass werden schließlich die Information aus dem \ac{G-Buffer} verwendet, um die
 Beleuchtung und sonstige Materialeigenschaften auf Bildschirm-Ebene (Screen-Space) auszuwerten und zu berechnen
-(vgl.\ ~\ref{fig:deferred_rendering_flow}).~\cites[Abschn.~2]{Thaler2011DeferredRendering}
+(vgl.\ Abb.~\ref{fig:deferred_rendering_flow})~\cites[Abschn.~2]{Thaler2011DeferredRendering}
 [Kap.~20.1]{akenine-mollerRealtimeRendering2019}
-[Folie~\textit{Deferred Rendering}]{valientDeferredRenderingKillzone}
+[Folie~\textit{Deferred Rendering}]{valientDeferredRenderingKillzone}.
 
 % Diagram.
 \begin{figure}[htbp]
@@ -228,21 +245,21 @@ und $N_{\text{light}}$ die Anzahl der aktiven Lichtquellen.
 Die Shading-Operationen werden folglich nur für die tatsächlich sichtbaren Fragmente (Pixel) berechnet.
 
 % Uber Shader/
-Werden Deferred-Ansätze nur in einem einzigen, dem Geometrie-Pass nachgelagerten, Pass umgesetzt, kommt es bei
-der Umsetzung unterschiedlicher Materialeigenschaften und möglichen Stilisierungen zwangsweise zu einer monolithischen
-Shader-Struktur im finalen Fragment-Shader und sogenannten
-\textit{Uber-Shadern}~\cites[S.~881]{akenine-mollerRealtimeRendering2019}[Abschn.~2.6]{Thaler2011DeferredRendering}
+Wird bei Deferred-Ansätzen die gesamte Beleuchtung in einem einzigen Schritt nach dem Geometrie-Pass
+berechnet, muss der finale Shader alle Material- und Stil-Varianten der Szene verarbeiten.
+Dies führt zwangsläufig zu sehr großen, monolithischen Programmen, sogenannten \textit{Uber-Shadern},
+da ein einzelner Fragment-Shader sämtliche Materialeigenschaften parallel abbilden
+muss~\cites[S.~881]{akenine-mollerRealtimeRendering2019}[Abschn.~2.6]{Thaler2011DeferredRendering}
 [Abschn.~6]{schiedDeferredAttributeInterpolation2015}.
-Für die in dieser Arbeit implementierten Single-Pass Deferred-Pipeline
-(im weiteren Verlauf \textit{Deferred-Uber} genannt) ist dieser Umstand vor dem Hintergrund der selektiven stilisierung
-mit \ac{NPR}-Effekten besonders bedeutend.
+Für die in dieser Arbeit umgesetzte Single-Pass-Deferred-Pipeline (nachfolgend \textit{Deferred-Uber}) ist dieser
+Umstand besonders bedeutend.
 
 % Light Volumes.
 Ein erweiterter und gängiger Ansatz der Implementierung von Deferred-Pipelines stellt eine Multi-Pass Shading
 Architektur unter der verwendung von \textit{Light-Volumes} dar~\cites[Abschn.~2]{mallettDeferredAdaptiveCompute2018}
 [Folie~"Conventional Deferred Shading"]{lauritzenDeferredRenderingCurrent}.
 In diesem Ansatz werden die Lichtquellen um spezielle Proxy-Geometrien erweitert, die jeweils den Wirkungsbereich dieser
-Lichtquellen darstellen~\cite[Abschn.~2.2]{Thaler2011DeferredRendering}.
+Lichtquellen darstellen (siehe Abb.~\ref{fig:light-volumes-example})~\cite[Abschn.~2.2]{Thaler2011DeferredRendering}.
 Für diesen Ansatz muss das eigentliche Shading in zwei separate Pässe aufgeteilt werden.
 Nach dem initialen Geometrie-Pass, in dem der \ac{G-Buffer} ohne die entsprechenden Proxy-Geometrien beschrieben wurde,
 werden die Light-Volumes in einem separaten Lighting-Pass rasterisiert~\cites[Abschn.~2]{Thaler2011DeferredRendering}
@@ -254,9 +271,17 @@ Die Einflüsse etwaiger überlappender Light-Volumes werden durch automatisierte
 auf den speziell dafür ausgelegten \acp{ROP} der \ac{GPU}
 akkumuliert~\cite[Kap.~11.2.4.10]{gregoryGameEngineArchitecture2018}
 (vergleiche Kap.~\ref{subsec:020302_memory_bandwidth}).
-In einem finalen \textit{Resolve}-Pass werden schließlich die Basis-Materialeigenschaften (wie etwa Farbinformationen) aus dem
-\ac{G-Buffer} mit der akkumulierten Beleuchtung kombiniert und um finale Shading- oder Post-Processing-Effekte
+In einem finalen \textit{Resolve}-Pass werden schließlich die Basis-Materialeigenschaften (wie etwa Farbinformationen)
+aus dem \ac{G-Buffer} mit der akkumulierten Beleuchtung kombiniert und um finale Shading- oder Post-Processing-Effekte
 ergänzt~\cite[Abschn.~2.3]{Thaler2011DeferredRendering} (siehe Abb.~\ref{fig:deferred_light_volumes_flow}).
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{abbildungen/deferred_light_volume_rendered}
+    \caption[Visualisierung gerenderter Light-Volumes]{Visualisierung gerenderter Light-Volumes zur Rekonstruktion von
+    Lichtgrenzen im Deferred Shading (Quelle: \cite{LearnOpenGLDeferredShadinga}).}
+    \label{fig:light-volumes-example}
+\end{figure}
 
 \begin{figure}[htbp]
     \centering
@@ -272,23 +297,22 @@ ergänzt~\cite[Abschn.~2.3]{Thaler2011DeferredRendering} (siehe Abb.~\ref{fig:de
             storage/.style={base, fill=blue!05, rounded corners=2mm}
         ]
 
-            % Nodes
+% Nodes
             \node (start) [storage] {\ac{G-Buffer} initialisiert\\(Geometrie-Pass beendet)};
 
-            % Lighting Pass
+% Lighting Pass
             \node (dec_vol) [decision, below=of start] {Alle Light-Volumes\\gerastert?};
             \node (raster) [process, below=of dec_vol] {Proxy-Geometrie\\rasterisieren};
             \node (read_g) [process, below=of raster] {\ac{G-Buffer} auslesen\\(Nur betroffene Fragmente)};
-            \node (accumulate) [process, below=of read_g] {In Lighting-Buffer schreiben\\(Additives Blending
-            via \ac{ROP}s)};
+            \node (accumulate) [process, below=of read_g] {In Lighting-Buffer schreiben\\(Additives Blending)};
 
-            % Resolve Pass
+% Resolve Pass
             \node (buffer_ready) [storage, right=of dec_vol, xshift=1.8cm] {Lighting-Buffer\\vollständig};
             \node (resolve) [process, below=of buffer_ready] {Resolve-Pass:\\Farbe \& Licht kombinieren \\
             + Finales Shading \&\\Post-Processing};
             \node (end) [startstop, below=of resolve] {Rendering abgeschlossen};
 
-            % Edges - Lighting Pass
+% Edges - Lighting Pass
             \draw[->] (start) -- (dec_vol);
             \draw[->] (dec_vol) -- node[right, font=\footnotesize] {Nein} (raster);
             \draw[->] (raster) -- (read_g);
@@ -296,7 +320,7 @@ ergänzt~\cite[Abschn.~2.3]{Thaler2011DeferredRendering} (siehe Abb.~\ref{fig:de
             \draw[->] (accumulate.west) -- ++(-1.0,0) |- node[pos=0.5, above left, font=\footnotesize]
                 {Nächstes Volume} (dec_vol.west);
 
-            % Edges - Resolve Pass
+% Edges - Resolve Pass
             \draw[->] (dec_vol) -- node[above, font=\footnotesize] {Ja} (buffer_ready);
             \draw[->] (buffer_ready) -- (resolve);
             \draw[->] (resolve) -- (end);
@@ -325,23 +349,22 @@ Im Folgenden werden die drei für diese Arbeit relevantesten Phänomene erörter
 % Einleitung und Grundprinzip.
 Wie in Kapitel~\ref{subsec:020201_forward_rendering} skizziert leiden vor allem klassische Forward-Rendering-Pipelines
 unter dem Phänomen des \textit{Fragment-Overdraws}~\cite[Abschn.~1.5]{Thaler2011DeferredRendering}.
-Dieses Phänomen beschreibt die Eigenschaft \ac{GPU}-Seitig unnötige Shading-Operationen auf Objekten auszuführen, die im
-späteren Verlauf von anderen Objekten teilweise oder gänzlich verdeckt und im Framebuffer überschrieben
+Dieses Phänomen beschreibt die Eigenschaft, \ac{GPU}-seitig unnötige Shading-Operationen auf Objekten auszuführen, die
+im späteren Verlauf von anderen Objekten teilweise oder gänzlich verdeckt und im Framebuffer überschrieben
 werden~\cites[S.~801--802]{akenine-mollerRealtimeRendering2019}[S.~55]{burnsVisibilityBufferCacheFriendly2013}.
-Dies führt zu einem massiven Konsum der verfügbaren Füllrate (\textit{fill rate}) und resultiert in modernen
-Architekturen primär in Leistungsengpässen durch limitierte Speicherbandbreite und unnötige
-Fragment-Shader-Auslastung~\cite[S.~788 und 801--802]{akenine-mollerRealtimeRendering2019}.
+Dies überlastet die verfügbare Füllrate (\textit{fill rate}), also die maximale Kapazität der \ac{GPU},
+berechnete Fragmentdaten wie Farbe und Tiefe in den Framebuffer des \ac{VRAM}s zu schreiben, und führt primär zu
+Leistungsengpässen durch begrenzte Speicherbandbreite~\cite[S.~788 und 801--802]{akenine-mollerRealtimeRendering2019}.
 
 % Lösungen-early-z.
 Die Kompensation von Overdraw erfolgt in erster Linie durch zwei vorherrschende Prinzipien: das automatisierte
 \textit{Early-Z} auf \ac{GPU}-Hardwareebene und \textit{Z-Prepass}-Algorithmen.
-Wie~\textcite[Kap.~11.2.4.8]{gregoryGameEngineArchitecture2018} beschreiben sind Early-Z-Tests direkt auf der Hardware
-moderner \acp{GPU} verankerte Tiefen-Tests auf Fragmentebene, um diese zu verwerfen, sollte bereits ein
-übergelagerter Pixel an dieser Stelle im Framebuffer existieren.
+Wie~\textcite[Kap.~11.2.4.8]{gregoryGameEngineArchitecture2018} beschreibt, sind Early-Z-Tests direkt in der
+Hardware moderner \acp{GPU} verankert; sie verwerfen Fragmente bereits vor der Shader-Ausführung, wenn an
+entsprechender Stelle im Framebuffer ein verdeckendes Fragment existiert.
 Die Pixel-Shader-Ebene (Fragment-Shader) wird somit für das entsprechende Fragment übersprungen.
 
 % Lösung Z-Prepass.
-Eine weitere gängige Praxis zur eliminierung von Overdraw ist die Implementierung eines Z-Prepass-Algorithmus.
 Ein klassischer Z-Prepass-Algorithmus ist in zwei Phasen unterteilt.
 In der initialen Phase erfolgt die Erstellung eines \textit{Z-Buffers}.
 Im Rahmen dieses Prozesses werden opake Geometrien von vorne nach hinten (Front-to-Back) gerendert, wobei ausschließlich
@@ -356,15 +379,16 @@ was eine zusätzliche Belastung der Performance zur Folge hat.
 \label{subsec:020302_memory_bandwidth}
 
 % Einleitung.
-Eine signifikante Einschränkung in der Architektur von \ac{GPU}s stellt die Speicherbandbreite (Memory Bandwidth) dar.
+Wie in Kapitel ~\ref{sec:0201_grafik_pipeline_hardware} skizziert, stellt die Speicherbandbreite (Memory Bandwidth) eine
+signifikante Einschränkung in der Architektur von \acp{GPU} dar.
 Sie definiert die maximale Übertragungsgeschwindigkeit von Daten zwischen dem dedizierten \ac{VRAM} und den
 eigentlichen Rechenkernen der \ac{GPU}~\cite[S.~30~u.~S.~791]{akenine-mollerRealtimeRendering2019}.
-Der Datenbus zwischen \ac{VRAM} und \ac{GPU} weist eine harte Kapazitätsgrenze auf, die in Gigabyte pro Sekunde (GB/s)
+Der Datenbus zwischen \ac{VRAM} und den \ac{GPU}-Rechenkernen weist eine harte Kapazitätsgrenze auf, die in Gigabyte pro Sekunde (GB/s)
 gemessen wird.
 Jeder Render-Vorgang erfordert einen Datenaustausch über diesen Bus, beispielsweise während des Auslesens von Texturen
 und Geometrie oder dem Schreiben von finalen Farbwerten in den
 Framebuffer~\cite[S.~56]{burnsVisibilityBufferCacheFriendly2013}.
-Moderne \acp{GPU} sind mit leistungsstarken \acp{ALU} ausgestattet.
+Moderne \acp{GPU} sind mit besonders vielen, parallel arbeitenden \acp{ALU} ausgestattet.
 Diese Einheiten ermöglichen die Ausführung von Berechnungen, wie etwa Fragment-Shading, mit einer hohen
 Geschwindigkeit~\cite[Kap.~23.2]{akenine-mollerRealtimeRendering2019}.
 Übersteigt der Bedarf an Lese- und Schreibzugriffen die physikalische Kapazität der Speicherbandbreite, stößt die
@@ -402,13 +426,16 @@ beschrieben, in weiteren \ac{ALU}-Stalls.
 \label{subsec:020303_warp_divergence_and_register_pressure}
 
 % Register Pressure.
+
+\paragraph{Registerdruck}
 Neben der limitierten Speicherbandbreite stellt der sogenannte Registerdruck (\textit{Register Pressure}) einen
 weiteren Leistungsengpass in der \ac{GPU}-Architektur dar~\cite[S.~801~u.~904]{akenine-mollerRealtimeRendering2019}.
 Jede \ac{GPU} verfügt über extrem schnellen lokalen Speicher in Form von
 Shader-Registern~\cite[Kap.~11.2.5.1,~Abschn.~\textit{Shader Registers}]{gregoryGameEngineArchitecture2018}.
-Diese Register bilden die schnellste Speicherstufe der Hardware, sind jedoch in ihrer Kapazität pro Rechenkern streng
-limitiert~\cite[S.~791]{akenine-mollerRealtimeRendering2019}.
-Wenn ein Shader kompiliert, wird die maximale Anzahl an Registern, die ein einzelner Thread zur Laufzeit benötigt,
+Diese Register stellen die schnellste Speicherstufe der \ac{GPU}-Hardware dar, sind jedoch in ihrer Kapazität
+pro Rechenkern streng limitiert~\cite[S.~791]{akenine-mollerRealtimeRendering2019}
+(vgl. Kap.~\ref{sec:0201_grafik_pipeline_hardware}).
+Beim Kompilieren eines Shaders wird die maximale Anzahl an Registern, die ein einzelner Thread zur Laufzeit benötigt,
 ermittelt.
 Bei der Ausführung wird für jeden Thread diese Anzahl an benötigten Registern
 reserviert~\cites[Abschn.~\textit{The Logical Pipeline}, Punkt~8]{pixeljetstreamPixelJetStream2015}
@@ -420,13 +447,15 @@ werden und damit die Anzahl maximal gleichzeitig ausführbaren Threads
 limitiert~\cite[S.~32~u.~904]{akenine-mollerRealtimeRendering2019}.
 
 % Warp Divergence.
+
+\paragraph{Warp Divergence}
 Ergänzend zur Limitierung aktiver Threads durch den Registerdruck existiert mit der sogenannten \textit{Warp-Divergence}
 (oft auch als \textit{thread divergence} bezeichnet) ein weiterer Flaschenhals bezüglich der Threadverarbeitung auf
 der \ac{GPU}~\cite[S.~32]{akenine-mollerRealtimeRendering2019}.
-Die Verarbeitung von Threads durch die \ac{GPU} erfolgt nicht isoliert, sondern gebündelt in festen Gruppen.
-Sogenannten \textit{Warps}
+Die Verarbeitung von Threads durch die \ac{GPU} erfolgt nicht isoliert, sondern gebündelt in festen Gruppen,
+sogenannten \textit{Warps}
 (oder \textit{Wavefronts} in AMD-Architekturen)~\cite[S.~31]{akenine-mollerRealtimeRendering2019}.
-Die Abarbeitung dieser Warps erfolgt entsprechend dem \ac{SIMD} beziehungsweise \ac{SIMT}-Paradigma.
+Die Abarbeitung dieser Warps erfolgt entsprechend dem \ac{SIMD}- beziehungsweise \ac{SIMT}-Paradigma.
 In der Praxis bedeutet dies, dass für alle Threads innerhalb eines Warps in jedem einzelnen Taktzyklus exakt dieselbe
 Instruktion ausgeführt wird.
 Diese Instruktion wird somit auf alle individuellen Datensätze der jeweiligen Threads im Warp angewendet, wie
@@ -435,7 +464,7 @@ Pixeln~\cite[Kap.~23.2]{akenine-mollerRealtimeRendering2019}.
 Unter der Prämisse, dass der Shader-Code linear und uniform verläuft
 (alle Threads eines Warps können mit den gleichen Instruktionen abgearbeitet werden), ist die \ac{GPU} in der Lage,
 mit maximaler Parallelität zu arbeiten und Shading-Berechnungen signifikant zu optimieren.
-Ein architektonischer Bottleneck in Form von Warp-Divergence entsteht dann, wenn dieser hardwareseitig erzwungene
+Ein architektonischer Flaschenhals in Form von Warp-Divergence entsteht dann, wenn dieser hardwareseitig erzwungene
 Gleichschritt durch dynamische Verzweigungen im Code aufgebrochen wird.
 Treten dynamische Verzweigungen, beispielsweise durch \texttt{if/else}- oder \texttt{switch}-Bedingungen auf,
 evaluieren Threads desselben Warps unterschiedliche Codepfade und damit unterschiedliche

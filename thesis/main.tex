@@ -27,7 +27,7 @@
     right=2.5cm,
     top=2.5cm,
     bottom=2.5cm,
-%    includehead
+    includehead
 ]{geometry}
 \usepackage{setspace}
 \setstretch{1.15}
@@ -38,6 +38,11 @@
 % --- Grafiken & Tabellen ---
 \usepackage{graphicx}
 \usepackage{subcaption}
+\usepackage{caption}
+\captionsetup{
+    font=small,
+    labelfont=bf
+}
 \usepackage{float}
 \usepackage[listings=false]{scrhack}
 \usepackage{booktabs}
@@ -73,7 +78,6 @@
 \setkomafont{pageheadfoot}{\normalfont\sffamily\small}
 \setkomafont{pagehead}{\normalfont\sffamily\small}
 \setkomafont{pagenumber}{\normalfont\sffamily\small}
-%\renewcommand*{\chapterheadstartvskip}{\vspace*{-\topskip}}
 
 % --- Externe PDFs einbinden ---
 \usepackage{pdfpages}
@@ -249,6 +253,7 @@
 
     % --- Zone 3: Arabische Zahlen (1, 2, 3...) ---
     \restoregeometry
+    \renewcommand*{\chapterheadstartvskip}{\vspace*{-\topskip}}
     \pagenumbering{arabic}
     \pagestyle{scrheadings}
 
