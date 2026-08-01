@@ -599,8 +599,8 @@ Dieser Umstand erhöht die \ac{VRAM}-Belastung von Deferred-Volume-Ansätzen im 
 Im Gegensatz zur Deferred-Uber-Architektur bietet die Deferred-Volume-Architektur den Vorteil, dass Bildraumeffekte,
 ohne den Zwang Pre-Lit-Verfahren anzuwenden, mit Post-Lit-Verfahren aufbereitet werden können
 (vgl.\ Abb.~\ref{fig:040202_pre-post-lit_comparison}).
-Für die spätere Performance-Analyse (siehe Kap.~\ref{subsec:050502_kernel_eval}) ist jedoch zu bemerken, dass diese
-Post-Lit-Evaluierungen mit einem leicht erhöhten algorithmischen Aufwand verbunden sind.
+Für die spätere Performance-Analyse (siehe Kap.~\ref{subsec:050502_kernel_eval}) ist jedoch zu berücksichtigen, dass
+diese Post-Lit-Evaluierungen mit einem geringfügig erhöhten algorithmischen Aufwand einhergehen.
 Dieser begründet sich im Resolve-Pass der Deferred-Volume-Pipeline durch die multiplen Texturzugriffe pro
 Kernel-Sample, konkret durch das simultane Abfragen von \ac{G-Buffer}-Identitätsdaten sowie des akkumulierten
 Lichtpuffers.
