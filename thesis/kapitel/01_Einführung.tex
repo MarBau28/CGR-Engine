@@ -29,6 +29,8 @@ sind~\cites[S.~34]{AdvancesRealTimeRendering}[Abschn.~20.1, S.~886--887]{akenine
 % Wirtschaftliche/Wissenschaftliche Relevanz von NPR.
 \ac{NPR}-Effekte werden primär mit künstlerischen Umsetzungen und stilisierten Darstellungen in der
 Unterhaltungsindustrie, wie etwa in Videospielen oder Filmproduktionen, in Verbindung gebracht.
+Der Begriff des \ac{NPR} bezeichnet dabei die bewusste Abkehr von physikalisch korrekten
+Beleuchtungsmodellen zugunsten eines funktionalen oder künstlerischen Ziels.
 Die gezielte Stilisierung ganzer Szenen oder einzelner Objekte zur Schaffung eines bestimmten künstlerischen Kontextes
 bildet hierbei einen der Hauptanwendungszwecke von modernem
 \ac{NPR}~\cite[S.651--652]{akenine-mollerRealtimeRendering2019}.
@@ -37,10 +39,9 @@ medizinischen Visualisierungen weitreichende Anwendung.
 In diesen Fachbereichen erfüllt die Stilisierung oftmals den funktionalen Zweck, durch eine simplere oder abstraktere
 Darstellung die allgemeine Lesbarkeit der Szene zu erhöhen oder den Fokus gezielt auf kritische Daten und spezifische
 Elemente zu lenken~\cite[Abschn.~2]{goochNonphotorealisticLightingModel1998}.
-Eine derartige funktionale Hervorhebung durch Simplifizierung ist mit gängigem \ac{PBR} in
-dieser Form oft nicht möglich, da rein fotorealistische Ansätze visuell häufig zu detailreich
-sind und die Wahrnehmbarkeit der wesentlichen Informationen
-mindern~\cite[Abschn.~1]{magdicsPostprocessingNPREffects2013}.
+Eine derartige funktionale Hervorhebung durch Simplifizierung ist mit gängigem \ac{PBR} in dieser Form oft nicht
+möglich, da rein fotorealistische Ansätze visuell häufig zu detailreich sind und die Wahrnehmbarkeit der wesentlichen
+Informationen mindern~\cite[Abschn.~1]{magdicsPostprocessingNPREffects2013}.
 
 % Status Quo Deferred Pipelines.
 Moderne Echtzeit-Rendering-Pipelines müssen enorme Mengen an 3D-Geometriedaten verarbeiten und gleichzeitig hochkomplexe
@@ -48,10 +49,10 @@ Beleuchtungsszenarien aus zahlreichen Lichtquellen berechnen.
 Das so genannte \textit{Deferred Rendering} entkoppelt die Geometrieverarbeitung strikt von der Lichtauswertung,
 ermöglicht so die drastische Reduzierung des Rechenaufwandes in komplexen Szenarien und hat sich folglich als
 Architektur-Paradigma zur effizienten Bewältigung hoher Lichtkomplexitäten etabliert.
-Aufgrund ihres inhärenten Aufbaus weisen standard Deferred-Pipelines jedoch einen architektonischen Nachteil
-auf, da sie in der Materialvielfalt (unterschiedliche Darstellungseigenschaften von Objekten) eingeschränkt sind.
-Infolgedessen wurden Deferred-Paradigmen historisch primär für die Auswertung homogener,
-fotorealistischer Oberflächen (\ac{PBR}) verwendet~\cite[Abschn.~1]{haradaForwardBringingDeferred2012}.
+Aufgrund ihres inhärenten Aufbaus weisen standard Deferred-Pipelines jedoch einen architektonischen Nachteil auf, da sie
+in der Materialvielfalt (unterschiedliche Darstellungseigenschaften von Objekten) eingeschränkt sind.
+Infolgedessen wurden Deferred-Paradigmen historisch primär für die Auswertung homogener, fotorealistischer Oberflächen
+(\ac{PBR}) verwendet~\cite[Abschn.~1]{haradaForwardBringingDeferred2012}.
 
 % Verlust der Semantik vs.~Granularität.
 Deferred Rendering projiziert die dreidimensionale Szenengeometrie in einen zweidimensionalen \ac{G-Buffer}.
@@ -61,19 +62,22 @@ Stattdessen werden in klassischen Pipelines lediglich physikalische Oberflächen
 Lichtberechnungen (\ac{PBR}), wie etwa Albedo, Normalen oder Rauheit, gespeichert.
 Viele \ac{NPR}-Effekte erfordern für eine fehlerfreie Ausführung jedoch zwingend einen gewissen Grad an semantischen
 Informationen~\cite[Abschn.~2.1 u.~3.3.2]{fonsecaDeferredShadingTutorial}.
-Die Zuweisung verschiedener Zeichenstile wie \textit{Toon-Shading} oder die exakte Trennung überlappender
-Objekte durch Umrisslinien benötigen beispielsweise spezifische Material-Identifikatoren (\textit{Shading-Model-IDs}),
-oder Objekt-IDs~\cites[Kap.~15.2.3]{akenine-mollerRealtimeRendering2019}
+Die Zuweisung unterschiedlicher Zeichenstile wie \textit{Toon-Shading} oder die exakte Trennung überlappender Objekte
+durch Umrisslinien erfordern spezifische Material-Identifikatoren (\textit{Shading-Model-IDs}) oder
+Objekt-IDs~\cites[Kap.~15.2.3]{akenine-mollerRealtimeRendering2019}
 [Folie~\textit{Our GBuffer Layout}]{gameworksToonRenderingHiFi}.
-Diese Metadaten fehlen in einem klassischen, auf \ac{PBR}-optimierten \ac{G-Buffer}.
-Dieser Umstand führt dazu, dass \ac{NPR} in Deferred-Architekturen häufig zu einem rein
-globalen Post-Processing-Filter über das gesamte Bild reduziert
-wird~\cite[Abschn.~1]{magdicsPostprocessingNPREffects2013}.
-Eine granulare, selektive/hybride Stilisierung, z.~B.\ Bauteil A als Skizze, Bauteil B massiv schattiert, wird dadurch technisch
-erschwert.
-Bei hoher stilistischer Vielfalt und stark selektiven Anwendungsfällen wird daher oft auf klassisches
-\textit{Forward-Rendering} zurückgegriffen, in welchem Objekte einzeln ausgewertet werden und so den Großteil ihrer
-semantischen Informationen im Rendering-Prozess behalten.
+Diese Metadaten fehlen in einem klassischen, auf \ac{PBR} optimierten \ac{G-Buffer}.
+Dieser Umstand reduziert \ac{NPR} in Deferred-Architekturen häufig auf einen rein globalen Post-Processing-Filter über
+das gesamte Bild~\cite[Abschn.~1]{magdicsPostprocessingNPREffects2013}.
+Eine granulare, selektive/hybride Stilisierung, z.~B.\ Bauteil A als Skizze, Bauteil B massiv schattiert, wird dadurch
+technisch erschwert.
+Bei hoher stilistischer Varianz greift die Praxis daher oft auf klassisches \textit{Forward-Rendering} zurück, da
+Objekte hierbei einzeln ausgewertet werden und ihre semantischen Kontextinformationen im Pipeline-Durchlauf behalten.
+Die Abgrenzung dieser Limitierung erfordert die Definition der \textit{hybriden Stilisierung}.
+Im Kontext dieser Arbeit beschreibt dieser Begriff die koexistierende Anwendung unterschiedlicher \ac{NPR}-Stile
+innerhalb desselben Frames.
+In der Praxis wird die \textquote{hybride Rendering-Architektur} hingegen oft als Kombination verschiedener
+Rendering-Paradigmen verstanden (vgl.\ Kap.~\ref{sec:0302_industry_state}).
 Dies erweist sich wiederum als ineffizient bei hoher
 Beleuchtungskomplexität~\cite[Abschn.~1]{haradaForwardBringingDeferred2012}.
 
@@ -83,13 +87,13 @@ die Basis-Rendering-Paradigmen wie klassisches Forward oder Deferred an ihre ind
 Leistungsgrenzen.
 Die Industrie greift hier auf diverse individuelle Lösungsansätze und Vermischungen von Rendering-Paradigmen zurück
 (siehe Kap.~\ref{sec:0302_industry_state}).
-Dabei offenbart sich ein grundlegender architektonischer Konflikt: Architekturen leiden bei der Stilisierung vieler
-Objekte entweder unter massiven redundanten Zeichenoperationen bei überlappender
-Geometrie~\cite[Abschn.~1]{fatahalianReducingShadingGPUs2010}, oder die Auswertung der diversen Stildaten
-überlastet die Speicher- und Rechenkapazitäten der
+Dabei offenbart sich ein grundlegender architektonischer Konflikt:
+Architekturen leiden bei der Stilisierung vieler Objekte entweder unter massiven redundanten Zeichenoperationen bei
+überlappender Geometrie~\cite[Abschn.~1]{fatahalianReducingShadingGPUs2010},
+oder die Auswertung der diversen Stildaten überlastet die Speicher- und Rechenkapazitäten der
 Grafikhardware~\cite[Abschn.~6]{schiedDeferredAttributeInterpolation2015}.
-In der Praxis mangelt es an empirischen Werkzeugen sowie einer systematischen Dokumentation der Bedingungen,
-unter denen diese Leistungseinbrüche beim selektiven \ac{NPR} auftreten.
+In der Praxis mangelt es an empirischen Werkzeugen sowie einer systematischen Dokumentation der Bedingungen, unter denen
+diese Leistungseinbrüche beim selektiven \ac{NPR} auftreten.
 Daraus leitet sich das Ziel dieser Arbeit ab.
 
 

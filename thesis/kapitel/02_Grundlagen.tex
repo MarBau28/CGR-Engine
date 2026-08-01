@@ -53,6 +53,66 @@ Befehle an die eigentlichen \acp{ALU} verteilen (vgl.\ Abb.~\ref{fig:gpu-hardwar
     \label{fig:gpu-hardware-model}
 \end{figure}
 
+\subsection{Die Rendering-Pipeline}
+\label{subsec:020102_rendering_pipeline}
+
+Die logische Rendering-Pipeline beschreibt den sequenziellen Prozess der Umwandlung von abstrakten, dreidimensionalen
+Geometriedaten in ein zweidimensionales Rasterbild.
+Moderne Grafik-\acp{API}s implementieren diese Pipeline als eine asynchrone Verkettung aus festgesetzten
+Hardware-Stufen und frei programmierbaren Blöcken, den sogenannten \textit{Shadern}.
+Der Datenfluss durch die Pipeline gliedert sich in folgende elementare Phasen und Datenstrukturen
+(vgl.\ Abb.~\ref{fig:rendering-pipeline}):
+
+\begin{itemize}
+    \item \textbf{Datenbereitstellung (VBO \& VAO):}
+    Bevor die \ac{GPU} Berechnungen durchführen kann, müssen die geometrischen Rohdaten im \ac{VRAM} allokiert werden.
+    Ein \ac{VBO} ist ein unstrukturierter Speicherblock auf der Grafikkarte, der
+    Vertex-Attribute (zum Beispiel Position, Normalen, Texturkoordinaten) vorhält.
+    Um diese Rohdaten für die Pipeline nutzbar zu machen, fungiert ein \ac{VAO} als
+    Zustandsobjekt.
+    Das \ac{VAO} definiert das Speicherlayout und teilt der Hardware mit, wie die Datenströme des \acp{VBO} zu
+    interpretieren und an den ersten Shader zu übergeben sind.
+
+    \item \textbf{Vertex-Processing (Vertex-Shader):}
+    Der \textit{Vertex-Shader} ist die erste programmierbare Stufe der Pipeline und wird für jeden Vertex exakt einmal
+    ausgeführt.
+    Seine primäre Aufgabe ist die mathematische Transformation der Eckpunkte vom lokalen Objektraum über den Welt- und
+    Kameraraum in den normierten Bildschirmraum.
+
+    \item \textbf{Rasterisierung:}
+    In dieser nicht manipulierbaren Hardware-Stufe werden die transformierten Vertizes zu geometrischen Primitiven
+    (in der Regel Dreiecken) zusammengesetzt.
+    Der \textit{Rasterizer} zerlegt diese Flächen in einzelne Fragmente und bestimmt die Abdeckung der Bildschirmpixel
+    durch das jeweilige Dreieck.
+    Für jeden betroffenen Pixel wird ein sogenanntes \textit{Fragment} generiert.
+    Simultan interpoliert die Hardware die Vertex-Attribute linear über die Fläche des Primitivs.
+
+    \item \textbf{Fragment-Processing (Fragment-Shader):}
+    Für jedes generierte Fragment im 2D-Bildraum wird der programmierbare \textit{Fragment-Shader} (teils auch
+    Pixel-Shader genannt) aufgerufen.
+    Diese Stufe berechnet die finale Farbe des Fragments unter Einbeziehung von Materialeigenschaften, Texturdaten und
+    Beleuchtungsmodellen.
+
+    \item \textbf{Output (Framebuffer \& Render-Pässe):}
+    Schließlich werden die validierten Farbwerte in den \textit{Framebuffer} geschrieben.
+    Der Framebuffer ist das Ziel-Speicherareal für die Bildausgabe.
+    Dies kann der sichtbare Bildschirm (Default-Framebuffer) oder ein unsichtbares Zwischenziel im Speicher sein
+    (zum Beispiel ein \ac{FBO} beim Deferred-Rendering).
+    Ein vollständiger Durchlauf dieser logischen Pipeline, vom Auslesen der Vertizes bis zum finalen Schreiben in den
+    Framebuffer, wird als \textit{Render-Pass} bezeichnet.
+    Komplexe Rendering-Architekturen erfordern häufig \textit{Multi-Pass-Rendering}, bei dem die Ausgabe eines Passes
+    als Eingabetextur für den darauffolgenden Pass dient.
+\end{itemize}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{abbildungen/rendering-pipeline}
+    \caption[Vereinfachte Rendering-Pipeline]
+    {Vereinfachte Darstellung der allgemeinen Rendering-Pipeline und der wesentlichen Verarbeitungsschritte im
+    Rendering-Zyklus der GPU.}
+    \label{fig:rendering-pipeline}
+\end{figure}
+
 
 \section{Rendering-Paradigmen}
 \label{sec:0202_rendering_paradigms}
@@ -87,34 +147,34 @@ Die Beleuchtungsberechnung finden also untrennbar gekoppelt im selben Render-Pas
             decision/.style={draw, diamond, aspect=2, inner sep=2pt, text width=2.2cm, align=center}
         ]
 
-            % Nodes
+% Nodes
             \node (start) [startstop] {Szenen-Rendering starten};
 
-            % Outer Loop: Objects
+% Outer Loop: Objects
             \node (dec_obj) [decision, below=of start] {Alle Objekte\\gerendert?};
             \node (end) [startstop, right=of dec_obj, xshift=1cm] {Rendering abgeschlossen};
             \node (bind_obj) [process, below=of dec_obj] {Geometrie \& individuelles\\Material/Shader binden};
 
-            % Lights
+% Lights
             \node (dec_light) [decision, below=of bind_obj] {Alle Lichter\\evaluiert?};
             \node (calc_light) [process, right=of dec_light, xshift=0.8cm] {Beleuchtung akkumulieren
             \\(Fragment-Shader)};
 
-            % Draw Call
+% Draw Call
             \node (draw) [process, below=of dec_light] {Pixel in Framebuffer schreiben};
 
-            % Edges - Main Flow
+% Edges - Main Flow
             \draw[->] (start) -- (dec_obj);
             \draw[->] (dec_obj) -- node[above, font=\footnotesize] {Ja} (end);
             \draw[->] (dec_obj) -- node[right, font=\footnotesize] {Nein} (bind_obj);
             \draw[->] (bind_obj) -- (dec_light);
             \draw[->] (dec_light) -- node[right, font=\footnotesize] {Ja} (draw);
 
-            % Edges - Lights
+% Edges - Lights
             \draw[->] (dec_light) -- node[above, font=\footnotesize] {Nein} (calc_light);
             \draw[->] (calc_light.north) -- ++(0,0.5) -| (dec_light.north);
 
-            % Edges - Objects
+% Edges - Objects
             \draw[->] (draw.west) -- ++(-1.0,0) |- node[near start, left, font=\footnotesize] {Nächstes Objekt}
             (dec_obj.west);
 
@@ -184,43 +244,43 @@ Beleuchtung und sonstige Materialeigenschaften auf Bildschirm-Ebene (Screen-Spac
             storage/.style={base, fill=blue!05, rounded corners=2mm}
         ]
 
-            % Nodes
+% Nodes
             \node (start) [startstop] {Szenen-Rendering starten};
 
-            % Geometry Pass
+% Geometry Pass
             \node (dec_obj) [decision, below=of start] {Alle Objekte\\verarbeitet?};
             \node (write_g) [process, below=of dec_obj] {Geometrie, Normalen, Albedo\\extrahieren};
             \node (store_g) [process, below=of write_g] {In \ac{G-Buffer} (\ac{FBO}) schreiben\\(Explizit kein Shading)};
 
-            % Buffer State Transition
+% Buffer State Transition
             \node (gbuffer) [storage, right=of dec_obj, xshift=1.5cm] {\ac{G-Buffer} vollständig\\(Geometrie-Pass beendet)};
 
-            % Lighting Pass
+% Lighting Pass
             \node (dec_light) [decision, below=of gbuffer] {Alle Lichter\\evaluiert?};
             \node (read_g) [process, below=of dec_light] {Daten aus \ac{G-Buffer} lesen\\(Screen-Space)};
             \node (calc_light) [process, below=of read_g] {Shading berechnen\\(Nur sichtbare Fragmente)};
 
-            % End
+% End
             \node (end) [startstop, right=of dec_light, xshift=1.5cm] {Rendering abgeschlossen};
 
-            % Edges - Geometry Loop
+% Edges - Geometry Loop
             \draw[->] (start) -- (dec_obj);
             \draw[->] (dec_obj) -- node[right, font=\footnotesize] {Nein} (write_g);
             \draw[->] (write_g) -- (store_g);
             \draw[->] (store_g.west) -- ++(-1.0,0) |- node[near start, left, font=\footnotesize] {Nächstes Objekt}
             (dec_obj.west);
 
-            % Edges - Transition
+% Edges - Transition
             \draw[->] (dec_obj) -- node[above, font=\footnotesize] {Ja} (gbuffer);
             \draw[->] (gbuffer) -- (dec_light);
 
-            % Edges - Lighting Loop
+% Edges - Lighting Loop
             \draw[->] (dec_light) -- node[right, font=\footnotesize] {Nein} (read_g);
             \draw[->] (read_g) -- (calc_light);
             \draw[->] (calc_light.west) -- ++(-1.0,0) node[below right, font=\footnotesize, xshift=-2cm]
                 {Nächstes Licht} |- (dec_light.west);
 
-            % Edges - End
+% Edges - End
             \draw[->] (dec_light) -- node[above, font=\footnotesize] {Ja} (end);
 
         \end{tikzpicture}
