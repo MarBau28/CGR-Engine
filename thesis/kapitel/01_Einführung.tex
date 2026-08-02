@@ -6,19 +6,19 @@ modernen Computergrafik für technische und unterhaltende Anwendungen von große
 Eine gezielte Stilisierung erhöht die visuelle Lesbarkeit, lenkt den Fokus des Betrachters und ermöglicht künstlerische
 Abstraktionen (siehe~\ref{fig:borderlands_npr_example}).
 Insbesondere bei großen Spieleproduktionen besteht die Notwendigkeit, wachsende Datenmengen und
-Szenenkomplexitäten in Echtzeit bewältigen zu müssen~\cite[Abschn.~1]{magdicsPostprocessingNPREffects2013}.
+Szenenkomplexitäten in Echtzeit bewältigen zu müssen~\parencite[vgl.][Abschn.~1]{magdicsPostprocessingNPREffects2013}.
 Die effiziente Handhabung der resultierenden Performance-Engpässe erfordert hochskalierbare Rendering-Architekturen.
 Die Gewährleistung dieser Skalierbarkeit erweist sich im Kontext der für \ac{NPR} oft erforderlichen Stil-Heterogenität
 jedoch als komplexe Problemstellung und offenbart einen fundamentalen Konflikt innerhalb von
 Standard-Rendering-Paradigmen, da diese strukturell für homogene Beleuchtungsberechnungen optimiert
-sind~\cites[S.~34]{AdvancesRealTimeRendering}[Abschn.~20.1, S.~886--887]{akenine-mollerRealtimeRendering2019}.
+sind~\parencites(vgl.)()[S.~34]{AdvancesRealTimeRendering}[Abschn.~20.1, S.~886--887]{akenine-mollerRealtimeRendering2019}.
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\textwidth]{abbildungen/Borderlands-4-Screenshot}
     \caption[Anwendungsbeispiel für künstlerisches NPR in \textit{Borderlands 4}]{Anwendungsbeispiel für künstlerisches
     NPR am Beispiel von \textit{Borderlands 4}
-    (2025) (Quelle: \cite{Borderlands4Screenshotsa}).}
+    (2025) (Quelle: \parencite{Borderlands4Screenshotsa}).}
     \label{fig:borderlands_npr_example}
 \end{figure}
 
@@ -33,15 +33,15 @@ Der Begriff des \ac{NPR} bezeichnet dabei die bewusste Abkehr von physikalisch k
 Beleuchtungsmodellen zugunsten eines funktionalen oder künstlerischen Ziels.
 Die gezielte Stilisierung ganzer Szenen oder einzelner Objekte zur Schaffung eines bestimmten künstlerischen Kontextes
 bildet hierbei einen der Hauptanwendungszwecke von modernem
-\ac{NPR}~\cite[S.651--652]{akenine-mollerRealtimeRendering2019}.
+\ac{NPR}~\parencite[vgl.][S.651--652]{akenine-mollerRealtimeRendering2019}.
 Darüber hinaus finden diese Techniken auch im Bereich von technischen Illustrationen, \ac{CAD}-Software oder
 medizinischen Visualisierungen weitreichende Anwendung.
 In diesen Fachbereichen erfüllt die Stilisierung oftmals den funktionalen Zweck, durch eine simplere oder abstraktere
 Darstellung die allgemeine Lesbarkeit der Szene zu erhöhen oder den Fokus gezielt auf kritische Daten und spezifische
-Elemente zu lenken~\cite[Abschn.~2]{goochNonphotorealisticLightingModel1998}.
+Elemente zu lenken~\parencite[vgl.][Abschn.~2]{goochNonphotorealisticLightingModel1998}.
 Eine derartige funktionale Hervorhebung durch Simplifizierung ist mit gängigem \ac{PBR} in dieser Form oft nicht
 möglich, da rein fotorealistische Ansätze visuell häufig zu detailreich sind und die Wahrnehmbarkeit der wesentlichen
-Informationen mindern~\cite[Abschn.~1]{magdicsPostprocessingNPREffects2013}.
+Informationen mindern~\parencite[vgl.][Abschn.~1]{magdicsPostprocessingNPREffects2013}.
 
 % Status Quo Deferred Pipelines.
 Moderne Echtzeit-Rendering-Pipelines müssen enorme Mengen an 3D-Geometriedaten verarbeiten und gleichzeitig hochkomplexe
@@ -52,7 +52,7 @@ Architektur-Paradigma zur effizienten Bewältigung hoher Lichtkomplexitäten eta
 Aufgrund ihres inhärenten Aufbaus weisen standard Deferred-Pipelines jedoch einen architektonischen Nachteil auf, da sie
 in der Materialvielfalt (unterschiedliche Darstellungseigenschaften von Objekten) eingeschränkt sind.
 Infolgedessen wurden Deferred-Paradigmen historisch primär für die Auswertung homogener, fotorealistischer Oberflächen
-(\ac{PBR}) verwendet~\cite[Abschn.~1]{haradaForwardBringingDeferred2012}.
+(\ac{PBR}) verwendet~\parencite[vgl.][Abschn.~1]{haradaForwardBringingDeferred2012}.
 
 % Verlust der Semantik vs.~Granularität.
 Deferred Rendering projiziert die dreidimensionale Szenengeometrie in einen zweidimensionalen \ac{G-Buffer}.
@@ -61,14 +61,14 @@ Informationen verloren.
 Stattdessen werden in klassischen Pipelines lediglich physikalische Oberflächendaten für standardisierte
 Lichtberechnungen (\ac{PBR}), wie etwa Albedo, Normalen oder Rauheit, gespeichert.
 Viele \ac{NPR}-Effekte erfordern für eine fehlerfreie Ausführung jedoch zwingend einen gewissen Grad an semantischen
-Informationen~\cite[Abschn.~2.1 u.~3.3.2]{fonsecaDeferredShadingTutorial}.
+Informationen~\parencite[vgl.][Abschn.~2.1 u.~3.3.2]{fonsecaDeferredShadingTutorial}.
 Die Zuweisung unterschiedlicher Zeichenstile wie \textit{Toon-Shading} oder die exakte Trennung überlappender Objekte
 durch Umrisslinien erfordern spezifische Material-Identifikatoren (\textit{Shading-Model-IDs}) oder
-Objekt-IDs~\cites[Kap.~15.2.3]{akenine-mollerRealtimeRendering2019}
+Objekt-IDs~\parencites(vgl.)()[Kap.~15.2.3]{akenine-mollerRealtimeRendering2019}
 [Folie~\textit{Our GBuffer Layout}]{gameworksToonRenderingHiFi}.
 Diese Metadaten fehlen in einem klassischen, auf \ac{PBR} optimierten \ac{G-Buffer}.
 Dieser Umstand reduziert \ac{NPR} in Deferred-Architekturen häufig auf einen rein globalen Post-Processing-Filter über
-das gesamte Bild~\cite[Abschn.~1]{magdicsPostprocessingNPREffects2013}.
+das gesamte Bild~\parencite[vgl.][Abschn.~1]{magdicsPostprocessingNPREffects2013}.
 Eine granulare, selektive/hybride Stilisierung, z.~B.\ Bauteil A als Skizze, Bauteil B massiv schattiert, wird dadurch
 technisch erschwert.
 Bei hoher stilistischer Varianz greift die Praxis daher oft auf klassisches \textit{Forward-Rendering} zurück, da
@@ -79,7 +79,7 @@ innerhalb desselben Frames.
 In der Praxis wird die \textquote{hybride Rendering-Architektur} hingegen oft als Kombination verschiedener
 Rendering-Paradigmen verstanden (vgl.\ Kap.~\ref{sec:0302_industry_state}).
 Dies erweist sich wiederum als ineffizient bei hoher
-Beleuchtungskomplexität~\cite[Abschn.~1]{haradaForwardBringingDeferred2012}.
+Beleuchtungskomplexität~\parencite[vgl.][Abschn.~1]{haradaForwardBringingDeferred2012}.
 
 % überleitung und Hardware-Restriktionen.
 Die Kombination aus massenhafter Geometrie, Beleuchtungskomplexität und stilistischer Vielfalt zwingt in der Praxis
@@ -89,9 +89,9 @@ Die Industrie greift hier auf diverse individuelle Lösungsansätze und Vermisch
 (siehe Kap.~\ref{sec:0302_industry_state}).
 Dabei offenbart sich ein grundlegender architektonischer Konflikt:
 Architekturen leiden bei der Stilisierung vieler Objekte entweder unter massiven redundanten Zeichenoperationen bei
-überlappender Geometrie~\cite[Abschn.~1]{fatahalianReducingShadingGPUs2010},
+überlappender Geometrie~\parencite[vgl.][Abschn.~1]{fatahalianReducingShadingGPUs2010},
 oder die Auswertung der diversen Stildaten überlastet die Speicher- und Rechenkapazitäten der
-Grafikhardware~\cite[Abschn.~6]{schiedDeferredAttributeInterpolation2015}.
+Grafikhardware~\parencite[vgl.][Abschn.~6]{schiedDeferredAttributeInterpolation2015}.
 In der Praxis mangelt es an empirischen Werkzeugen sowie einer systematischen Dokumentation der Bedingungen, unter denen
 diese Leistungseinbrüche beim selektiven \ac{NPR} auftreten.
 Daraus leitet sich das Ziel dieser Arbeit ab.
@@ -101,7 +101,7 @@ Daraus leitet sich das Ziel dieser Arbeit ab.
 \label{sec:0102_goal_and_core_question}
 
 % Das primäre Ziel (WHAT & WHY).
-Das Ziel dieser Arbeit ist die Entwicklung eines Praxiswerkzeugs zur empirischen Performance-Analyse
+Das Ziel dieser Arbeit ist die Entwicklung eines Praxiswerkzeugs zur empirischen Per\-for\-mance\--Ana\-lyse
 verschiedener Basis-Rendering-Architekturen im Kontext des selektiven \ac{NPR}.
 Aus den gewonnenen Messdaten wird ein heuristisches Entscheidungsmodell abgeleitet, das als Orientierungshilfe
 für die Evaluation elementarer Rendering-Paradigmen dient.
@@ -115,8 +115,9 @@ Zusätzlich dient die Software als isolierte Referenzumgebung, um die Leistungsg
 Rendering-Paradigmen unabhängig zu quantifizieren.
 
 % Forschungsfrage.
-Aus diesen Zielen leitet sich die zentrale Forschungsfrage der vorliegenden Arbeit ab, die im Rahmen der Systemanalyse
-empirisch untersucht und beantwortet wird:
+Aus diesen Zielen leiten sich die zentralen Forschungsfragen der vorliegenden Ar\-beit \-ab, die im Rahmen der
+Systemanalyse empirisch untersucht und beantwortet werden:
+
 \begin{quote}
     \textit{Wie lassen sich Non-Photorealistic Rendering-Pipelines architektonisch so konzipieren und umsetzen, dass
     eine selektive, objektbasierte Stilisierung unter hoher Entropie ermöglicht wird, und wie verhält

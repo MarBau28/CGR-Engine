@@ -2,7 +2,7 @@
 \label{ch:04_konzeption_realisierung}
 
 Im folgenden Kapitel wird der Aufbau und die technische Umsetzung des in C++ und OpenGL (unter Verwendung der
-\textit{raylib}-Bibliothek~\cites{Raylib, RaylibExamples, raysan5RaylibSrcRlglh})
+\textit{raylib}-Bibliothek~\parencite[vgl.][]{Raylib, RaylibExamples, raysan5RaylibSrcRlglh})
 implementierten Test-Frameworks \ac{HyDra} beschrieben.
 Es werden die Struktur der Daten, die Implementierungen der untersuchten Rendering-Pipelines, die Implementierungen der
 verwendeten \ac{NPR}-Effekte, die individuellen architektonischen Limitationen sowie die Umsetzung der
@@ -21,7 +21,7 @@ Für die Deferred-Pipelines wird zudem ein semantischer \ac{G-Buffer} aufbereite
 zusätzlich die Vergabe von objektspezifischen \textit{Style-IDs} erfolgt.
 Ein weiterer Bestandteil dieser vorbereitenden \ac{CPU}-Logik ist das implementierte \textit{View-Frustum-Culling}.
 Es fungiert als Filter, der die sichtbare Geometrie evaluiert, bevor die Grafikkarte involviert
-wird~\cite[Kap.~11.2.7, Abschn.~\textit{Frustum Culling}]{gregoryGameEngineArchitecture2018}.
+wird~\parencite[vgl.][Kap.~11.2.7, Abschn.~\textit{Frustum Culling}]{gregoryGameEngineArchitecture2018}.
 
 \subsection{Frame-Lebenszyklus}
 \label{subsec:040101_frame_lifecycle}
@@ -56,7 +56,7 @@ Vor der eigentlichen Datenübertragung an die \ac{GPU} wird die Geometrie einem 
 unterzogen.
 Ein \textit{View-Frustum-Culling} dient hierbei als Filter, um Geometrien, die sich außerhalb des
 sichtbaren Bereichs der Kamera befinden, von der weiteren Verarbeitung
-auszuschließen~\cite[Kap.~11.2.7, Abschn.~\textit{Frustum Culling}]{gregoryGameEngineArchitecture2018}.
+auszuschließen~\parencite[vgl.][Kap.~11.2.7, Abschn.~\textit{Frustum Culling}]{gregoryGameEngineArchitecture2018}.
 Für die verbleibenden, sichtbaren Entitäten erfolgt anschließend der \ac{PCIe}-Speichertransfer
 (\texttt{rlUpdateVertexBuffer()}) der Modell-Transformationsmatrizen und Style-IDs.
 
@@ -66,7 +66,7 @@ orchestriert.
 In dieser Phase werden die notwendigen Zustandsänderungen durch das Szeneverwaltungs-Modul (\texttt{SceneManager})
 vorgenommen und die instanziierten Draw-Calls an die \ac{GPU} übermittelt.
 Die Grafikhardware übernimmt daraufhin, asynchron zum Main-Thread, die Rasterisierung und Ausführung der definierten
-Shader-Logik~\cite[S.~494]{OpenGLInsights}.
+Shader-Logik~\parencite[vgl.][S.~494]{OpenGLInsights}.
 Die exakte Implementierung der Rendering-Pipelines wird in den nachfolgenden Kapiteln erläutert.
 
 % Telemetry Drain.
@@ -203,7 +203,7 @@ Lichtintensität und Objektdichte (Radius der Objektwolke) führt.
 Die Datenhaltung der Szenegeometrien und Punktlicht-Quellen mitsamt ihrer assoziierten Style-IDs und
 Transformationsmatrizen erfolgt in Arrays, die mit der Maximalanzahl der erstellbaren Objekte vorallokiert werden.
 Jeder Geometrie wird ein Index zugewiesen.
-Anhand dieser Indizes werden nach dem \ac{SoA}-Muster~\cite[S.~793]{akenine-mollerRealtimeRendering2019} für jedes
+Anhand dieser Indizes werden nach dem \ac{SoA}-Muster~\parencite[vgl.][S.~793]{akenine-mollerRealtimeRendering2019} für jedes
 Objekt drei Arrays für die Style-ID, die räumliche Position und die bereits vorab berechnete
 Transformationsmatrix gespeichert.
 
@@ -245,9 +245,9 @@ if (state.useClusteredStyles) {
 
 % Culling-Mechanismus.
 Die Prüfung der Sichtbarkeit erfolgt mittels eines klassischen Schnitttests der Objekte gegen die sechs Ebenen
-des Kamera-View-Frustums~\cite[S.~688, Abschn. \textit{Frustum Culling}]{gregoryGameEngineArchitecture2018}.
+des Kamera-View-Frustums~\parencite[vgl.][S.~688, Abschn. \textit{Frustum Culling}]{gregoryGameEngineArchitecture2018}.
 Darüber hinaus wird die Größe (der Radius) der Light-Volume-Proxies für die Deferred-Volume-Pipeline durch die
-Lichtintensität beeinflusst~\cite[S.~891]{akenine-mollerRealtimeRendering2019}.
+Lichtintensität beeinflusst~\parencite[vgl.][S.~891]{akenine-mollerRealtimeRendering2019}.
 Im Rahmen des View-Frustum-Cullings werden diese ebenfalls berücksichtigt, um die Darstellung von Lichtern, deren
 Wirkungsbereich vollständig außerhalb des Sichtfeldes liegt, zu vermeiden und somit keine unnötigen
 Beleuchtungsberechnungen für spätere Performance-Evaluationen zu verursachen.
@@ -260,7 +260,7 @@ Der SceneManager durchläuft hierfür eine Iteration über die Style-IDs der sic
 pipelinespezifische Queues (z.\ B.\ \texttt{fwdTransformsGooch}, \texttt{fwdTransformsToon}) an.
 Dieser Sortiervorgang auf der \ac{CPU} ist eine architektonische Notwendigkeit des Forward-Ansatzes, um
 kostenintensive Shader-State-Changes auf der \ac{GPU} zu
-bündeln~\cite[S.~795 u. S.~886]{akenine-mollerRealtimeRendering2019}.
+bündeln~\parencite[vgl.][S.~795 u. S.~886]{akenine-mollerRealtimeRendering2019}.
 
 \subsection{Datenfluss der Stilisierung und G-Buffer Layout}
 \label{subsec:040103_g-buffer_layout}
@@ -272,7 +272,7 @@ Schließlich werden die Style-IDs als instanziierte Vertex-Attribute für jede G
 übertragen.
 Die Style-IDs werden nicht pro Vertex, sondern einmal pro Instanz im Vertex-Shader ausgelesen, um sie
 effizient an den Fragment-Shader weiterzureichen, der die \ac{G-Buffer}Textur
-erstellt~\cite[S.~797-798]{akenine-mollerRealtimeRendering2019}.
+erstellt~\parencite[vgl.][S.~797-798]{akenine-mollerRealtimeRendering2019}.
 In der Forward Pipeline erfolgt die Mitlieferung der Style-IDs pro verarbeiteter Geometrie direkt in den
 Shader-Aufrufen (Draw-Calls).
 
@@ -282,7 +282,7 @@ Wie in Tabelle~\ref{tab:gbuffer_layout} aufgezeigt, wird für das Render-Target 
 Für den Normalen-Buffer (\texttt{\ac{RT}1}) wird hingegen ein hochauflösendes 16-Bit-Format (\texttt{R16G16B16A16})
 verwendet.
 Diese erhöhte Präzision ist eine architektonische Notwendigkeit, da geringere Bit-Tiefen bei den nachfolgenden
-Bildraum-Lichtberechnungen zu visuellen Banding-Artefakten führen~\cite[Folie~37]{AdvancesRealTimeRendering}.
+Bildraum-Lichtberechnungen zu visuellen Banding-Artefakten führen~\parencite[vgl.][Folie~37]{AdvancesRealTimeRendering}.
 Diese Präzisionssteigerung zulasten der Speicherbandbreite wird im Rahmen der Evaluation der
 Deferred-Volume-Pipeline in Kapitel ~\ref{subsec:040203_deferred_volume_pipeline} im Detail dargelegt.
 
@@ -358,13 +358,13 @@ zugewiesen.
 Dieser Ansatz weist allerdings, vor allem in Hinblick auf die selektive Stilisierung, diverse Schwachstellen und
 Limitationen auf.
 Eine wesentliche Schwachstelle ist die Begrenzung in Form von vorherrschenden Uniform-Buffer-Limits.
-In der für das Framework gewählten Grafik-API OpenGL 3.3 erfolgt die Übergabe der Lichtdaten-Arrays standardmäßig über
-\acp{UBO}, um den \ac{CPU}-seitigen Overhead einzelner Uniform-Zuweisungen pro Lichtquelle zu
-minimieren~\cite[S.~798]{akenine-mollerRealtimeRendering2019}.
+In der für das Framework gewählten Grafik-\ac{API} OpenGL 3.3 erfolgt die Übergabe der Lichtdaten-Arrays standardmäßig
+über \acp{UBO}, um den \ac{CPU}-seitigen Overhead einzelner Uniform-Zuweisungen pro Lichtquelle zu
+minimieren~\parencite[vgl.][S.~798]{akenine-mollerRealtimeRendering2019}.
 Die maximale physische Speichergröße, die ein einzelner Uniform-Block umfassen darf, wird treiberseitig durch das
 hardwareabhängige Limit \texttt{GL\_MAX\_UNIFORM\_BLOCK\_SIZE} definiert.
 Während dieser Wert auf moderner Desktop-Hardware variiert, schreibt die OpenGL-3.3-Spezifikation herstellerübergreifend
-eine garantierte Mindestgröße von \texttt{16 KiB} vor~\cite[S.~321, Tab.~6.45]{OpenGL33Core2010}.
+eine garantierte Mindestgröße von \texttt{16 KiB} vor~\parencite[vgl.][S.~321, Tab.~6.45]{OpenGL33Core2010}.
 
 Wird jede der Punktlichtquellen im Shader durch eine vereinfachte Struktur aus einer Positions- und einer
 Farb-/Intensitätskomponente mit einer Gesamtgröße von \texttt{32 Bytes} abgebildet, lässt sich die theoretisch maximale
@@ -376,7 +376,7 @@ Lichtanzahl $N_{\text{Licht}}$ innerhalb des garantierten \ac{API}-Mindestlimits
 \end{equation}
 
 Auf Hardware-Ebene existiert diese Restriktion, weil Uniform-Daten in dedizierten, extrem schnellen On-Chip-Registern
-(Constant Registers) der \ac{GPU} gehalten werden müssen~\cite[S.~35]{akenine-mollerRealtimeRendering2019}.
+(Constant Registers) der \ac{GPU} gehalten werden müssen~\parencite[vgl.][S.~35]{akenine-mollerRealtimeRendering2019}.
 Dieses fundamentale \ac{API}-Limit begründet, warum die Single-Pass-Architekturen des Frameworks
 (Forward und Deferred-Uber) auf eine Kapazitätsgrenze von maximal 500 Punktlichtern beschränkt sind, um eine vollständige
 Plattformkompatibilität ohne Treiber-Abstürze zu gewährleisten.
@@ -386,7 +386,7 @@ Eine weitere grundlegende Einschränkung der Forward-Pipeline ist, dass sich tra
 Post-Processing-Effekte, wie der zur malerischen stilisierung verwendete Kuwahara-Filter oder Sobel-basierte Verfahren
 zur Kantenerkennung, nicht ohne Weiteres selektiv auf einzelne Objekte anwenden lassen.
 Für die Generierung dieser Effekte ist präzises Wissen bezüglich der finalen Szene sowie der Umgebungsgeometrie
-erforderlich~\cite[Abschn.~5]{magdicsPostprocessingNPREffects2013}.
+erforderlich~\parencite[vgl.][Abschn.~5]{magdicsPostprocessingNPREffects2013}.
 Im Rahmen des implementierten Forward-Renderings erfolgt die Anwendung der Shader direkt und isoliert auf die einzelnen
 Geometrien innerhalb der Draw-Calls, wodurch keine umgebungsbezogenen Daten (semantische Objektidentität) des finalen
 Bildes während des Shadings auf der \ac{GPU} vorhanden sind.
@@ -444,7 +444,7 @@ Quellcode~\ref{lst:deferred_branching_structure} skizziert die Kontrollstruktur 
 Auf Hardware-Ebene zwingen diese \texttt{if-else}-Zweige die \ac{GPU} bei unterschiedlicher Fragment-Stilisierung in
 eine ineffiziente, sequenzielle Abarbeitung.
 Weisen benachbarte Fragmente innerhalb desselben Warps unterschiedliche \texttt{Style-IDs} auf, müssen alle betroffenen
-Code-Pfade nacheinander durchlaufen werden~\cite[S.~32]{akenine-mollerRealtimeRendering2019}
+Code-Pfade nacheinander durchlaufen werden~\parencite[vgl.][S.~32]{akenine-mollerRealtimeRendering2019}
 (vgl.\ Kap.~\ref{subsec:020303_warp_divergence_and_register_pressure}).
 Die laufzeitrelevanten Auswirkungen werden in der empirischen Evaluation in Kapitel~\ref{ch:05_evaluation}
 (insbesondere im Abschnitt~\ref{subsec:050501_entropy_eval}) quantitativ untersucht.
@@ -493,10 +493,10 @@ Eine weitere Einschränkung der Deferred-Uber-Pipeline ist, dass bei der selekti
 Post-Process-Effekte (Bildraum-Filter), wie dem im \ac{HyDra}-Framework verwendeten Kuwahara-Filter, auf
 \textit{Pre-Lit}-Varianten der Effekte zurückgegriffen werden muss.
 Der Begriff Pre-Lit beschreibt hier die Anwendung des Bildraum-Filters auf die unbeleuchtete Geometrie, bevor die
-reguläre Beleuchtungsberechnung (hier \textit{Blinn-Phong}~\cite[Kap.~11.1.3.2]{gregoryGameEngineArchitecture2018})
+reguläre Beleuchtungsberechnung (hier \textit{Blinn-Phong}~\parencite[vgl.][Kap.~11.1.3.2]{gregoryGameEngineArchitecture2018})
 erfolgt.
 Da der Kuwahara-Filter für die Bestimmung von Mittelwert und Varianz die Farbinformationen der Nachbarpixel innerhalb
-eines definierten Radius benötigt (Filter-Kernel~\cite[Abschn.~2]{kyprianidisImageVideoAbstraction2009}) müsste für
+eines definierten Radius benötigt (Filter-Kernel~\parencite[vgl.][Abschn.~2]{kyprianidisImageVideoAbstraction2009}) müsste für
 eine \textit{Post-Lit}-Variante (Filterung des fertig beleuchteten Bildes) das finale Beleuchtungsergebnis der gesamten
 Nachbarschaft vorliegen.
 In einem Single-Pass-Uber-Shader müsset hierfür die globale Lichtschleife für jedes einzelne Kernel-Sample
@@ -537,7 +537,7 @@ Zusätzlich zur Deferred-Uber-Pipeline wurde im \ac{HyDra}-Framework die \textit
 implementiert, um die ebenfalls weit verbreiteten Multi-Pass-Rendering-Verfahren, bezogen auf den Lighting-Pass,
 zu repräsentieren und vergleichend heranzuziehen.
 Dieses Paradigma reflektiert den in der Praxis wesentlich verbreiteteren Ansatz in
-Deferred-Pipelines~\cite[Folie~5]{lauritzenDeferredRenderingCurrent}.
+Deferred-Pipelines~\parencite[vgl.][Folie~5]{lauritzenDeferredRenderingCurrent}.
 Deferred Rendering mit Light-Volumes zeichnet sich, wie in Kapitel~\ref{subsec:020202_deferred_rendering} dargelegt,
 durch das Zeichnen von Proxy-Geometrien (hier in Form einer Kugel) um die entsprechenden Punktlichtquellen aus.
 Der vorliegende Ansatz teilt den in der Deferred-Uber-Pipeline verwendeten Uber-Shader in zwei ausgelagerte Pässe auf.
@@ -547,7 +547,7 @@ Dies erfolgt indem die Beleuchtungslogik in isolierte, iterative Draw-Calls verp
 Die charakteristische Last der Deferred-Volume-Pipeline verlagert sich hierbei auf andere Systemressourcen:
 Durch das additive Blending der Light-Volumes entstehen die primären Engpässe bei den Raster-Operationen
 (\acp{ROP}) sowie bei der
-\ac{VRAM}-Bandbreite~\cites[Folie~9]{lauritzenDeferredRenderingCurrent}[S.~676]{gregoryGameEngineArchitecture2018}.
+\ac{VRAM}-Bandbreite~\parencites(vgl.)()[Folie~9]{lauritzenDeferredRenderingCurrent}[S.~676]{gregoryGameEngineArchitecture2018}.
 Die genauen laufzeitrelevanten Auswirkungen werden in der empirischen Evaluation in Kapitel~\ref{ch:05_evaluation}
 (insbesondere in Abschnitt~\ref{subsec:050402_light_intensity_and_overlap_eval}) quantitativ analysiert.
 
@@ -557,13 +557,13 @@ Deferred-Volume-Pipeline äußert sich in der Anfälligkeit für visuelle Quanti
 Verwendung von Bildformaten mit niedriger Bit-Tiefe (8-Bit pro Kanal) innerhalb der \ac{G-Buffer}.
 In Ansätzen mit einem einzigen Lighting-Pass erfolgt die Akkumulation der Lichtbeiträge innerhalb einer Schleife auf Treiberebene in
 lokalen \ac{GPU}-Registern mit nativer
-32-Bit-Fließkommapräzision~\cite[Kap.~11.2.5.1, Abschn.~\textit{Shader Registers}]{gregoryGameEngineArchitecture2018}.
+32-Bit-Fließkommapräzision~\parencite[vgl.][Kap.~11.2.5.1, Abschn.~\textit{Shader Registers}]{gregoryGameEngineArchitecture2018}.
 Im Gegensatz dazu entkoppelt die Deferred-Volume-Pipeline die Lichtberechnung in diskrete Pässe, deren
 Ergebnisse mittels additiven Hardware-Blending (\textit{Blending Stage}) im Framebuffer aufsummiert werden
 (vgl.\ Kap.~\ref{subsec:020202_deferred_rendering}).
 Wird hierbei ein 8-Bit-Buffer verwendet, unterliegt das Zwischenergebnis nach der Evaluierung jedes
 einzelnen Lichtvolumens einer fortlaufenden Quantisierung sowie einer harten Rundung auf den Wertebereich $[0, 1]$
-(\textit{Clamping})~\cite[Kap.~4.1.7]{OpenGL33Core2010}.
+(\textit{Clamping})~\parencite[vgl.][Kap.~4.1.7]{OpenGL33Core2010}.
 Die wiederholte Rundung der Lichtbeiträge führt zu einer Akkumulation von Rundungsfehlern, die sich visuell
 als stufenförmige Banding-Artefakte darstellen (siehe Abb.~\ref{fig:hydra_banding_comparison}).
 Diese Artefakte sind besonders in künstlerischen und abstrahierenden Effekten, wie sie im \ac{NPR} Anwendung finden,
@@ -634,8 +634,9 @@ ausgelesen werden.
 \label{sec:0403_npr_payloads}
 
 % Einleitung und Auflistung.
-Für die Evaluation der zugrunde liegenden Rendering-Pipelines werden im \ac{HyDra}-Framework neben einer Baseline
-(Blinn-Phong-Shading~\cite[Kap.~11.1.3.2]{gregoryGameEngineArchitecture2018}) verschiedene \ac{NPR}-Effekte implementiert.
+Für die Evaluation der zugrunde liegenden Rendering-Pipelines werden im \ac{HyDra}-Frame\-work neben einer Baseline
+(Blinn-Phong-Shading~\parencite[vgl.][Kap.~11.1.3.2]{gregoryGameEngineArchitecture2018}) verschiedene \ac{NPR}-Effekte
+implementiert.
 Im Folgenden werden die Charakteristika der verwendeten Stile sowie ihre grundlegende algorithmische Komplexität
 erläutert, um sie für die in Kapitel~\ref{ch:05_evaluation} durchgeführten Evaluationen zu kontextualisieren.
 Eine detaillierte Beschreibung der Implementierung wird in dieser Arbeit nicht vorgenommen, da für alle
@@ -668,7 +669,7 @@ worden.
     \bottomrule
     \endlastfoot
 
-    \textbf{Kuwahara}\newline \cites{kyprianidisImageVideoAbstraction2009}{papariArtisticEdgeCorner2007} &
+    \textbf{Kuwahara}\newline \parencites(vgl.)()[]{kyprianidisImageVideoAbstraction2009}[]{papariArtisticEdgeCorner2007} &
     Iterative Kernel-Texture-Fetches in 4 Quadranten zur Varianz- und Mittelwertberechnung.
     Radiusabhängige Schleifen.
     & Erzeugt eine stilisierte, malerische Abstraktion (Painterly-Look) durch Homogenisierung lokaler Farbflächen
@@ -677,7 +678,7 @@ worden.
 
     \midrule
 
-    \textbf{Toon}\newline \cite{lakeStylizedRenderingTechniques2000} &
+    \textbf{Toon}\newline \parencite[vgl.][]{lakeStylizedRenderingTechniques2000} &
     Skalarprodukte ($N \cdot L$) und Quantisierung (Banding) der diffusen Beleuchtung über Floor/Step-Funktionen.
     & Reduziert kontinuierliche Schattierungsverläufe auf diskrete Helligkeitsstufen; Charakteristisch für die Ästhetik
     klassischer Cel-Animationen (siehe Abb.~\ref{fig:040201_outline_comparison}). \\
@@ -685,7 +686,7 @@ worden.
 
     \midrule
 
-    \textbf{Gooch}\newline \cite{goochNonphotorealisticLightingModel1998} &
+    \textbf{Gooch}\newline \parencite[vgl.][]{goochNonphotorealisticLightingModel1998} &
     Lineare Interpolation zwischen definierten kalt- und warm-Farben basierend auf dem Skalarprodukt ($N \cdot L$).
     & Verbessert die visuelle Wahrnehmung von Geometriedetails durch Temperaturkontraste; Vorrangig verwendet für
     technische Illustrationen (siehe Abb.~\ref{fig:gooch_example}). \\
@@ -693,7 +694,7 @@ worden.
 
     \midrule
 
-    \textbf{Sobel}\newline \cite[Kap.~3.3]{saitoComprehensibleRendering3D1990} &
+    \textbf{Sobel}\newline \parencite[vgl.][Kap.~3.3]{saitoComprehensibleRendering3D1990} &
     Diskrete~$3\times3$ Kernel-Texture-Fetches auf Depth- und Normal-Buffern im \ac{G-Buffer} zur Gradienten- und
     Kantenerkennung.
     & Extrahiert und betont Geometrie- sowie Tiefendiskontinuitäten zur klaren visuellen Segmentierung von Objekten im
@@ -702,7 +703,7 @@ worden.
 
     \midrule
 
-    \textbf{Inverted-Hull}\newline \cite[Kap.~15.2.2]{akenine-mollerRealtimeRendering2019} &
+    \textbf{Inverted-Hull}\newline \parencite[vgl.][Kap.~15.2.2]{akenine-mollerRealtimeRendering2019} &
     Verschieben der Oberfläche entlang der Normalen bei gleichzeitiger Umkehrung der gerenderten Flächen.
     & Generiert eine konsistente, geschlossene Außenkontur im Objektraum durch das vergrößerte Rendern der maskierten
     Rückseiten (siehe Abb.~\ref{fig:hydra_inverted-hull}). \\
@@ -714,7 +715,7 @@ geringer projizierter Bildschirmfläche.
 Da bei bildschirmbasierten Operatoren die Arbeit auf einer festen Pixel-Nachbarschaft erfolgt, kommt es bei einer
 Verkleinerung des Objekts, z.~B. durch zunehmende Kameraentfernung, oder an den Objekträndern zu einem Verlust oder
 der inhaltlichen Verfälschung der notwendigen diskreten Abtastpunkte innerhalb der
-Objektgrenzen~\cite[Abschn.~5]{kyprianidisImageVideoAbstraction2009}
+Objektgrenzen~\parencite[vgl.][Abschn.~5]{kyprianidisImageVideoAbstraction2009}
 (siehe Abb.~\ref{fig:npr_spatial_low_pixel_problem}).
 Innerhalb des \ac{HyDra}-Frameworks werden zur Umgehung dieser Effekte jene Samples verworfen, deren Style-ID
 nicht mit dem Zentrum übereinstimmt, um eine Verrechnung benachbarter Objekte mit unterschiedlicher Stilisierung zu
@@ -817,25 +818,25 @@ Geometrie-Verwaltungsebene zwischen den verschiedenen Pipelines zu vermeiden.
 % Einleitung
 Die Erfassung von Ausführungszeiten auf der Host-Seite (\ac{CPU}) ist für die Bewertung der reinen
 \ac{GPU}-Leistung unzureichend, da moderne Grafiktreiber hochgradig asynchron
-arbeiten~\cite[S.~1005]{akenine-mollerRealtimeRendering2019}.
+arbeiten~\parencite[vgl.][S.~1005]{akenine-mollerRealtimeRendering2019}.
 Die \ac{CPU} sendet Render-Kommandos an eine Warteschlange und setzt die Ausführung unmittelbar fort, noch bevor die
 \ac{GPU} das erste Polygon
-verarbeitet~\cite[Abschn.~\textit{The logical pipeline} 1--2]{pixeljetstreamPixelJetStream2015}.
+verarbeitet~\parencite[vgl.][Abschn.~\textit{The logical pipeline} 1--2]{pixeljetstreamPixelJetStream2015}.
 
 % Verfahren.
 Das \ac{HyDra}-Framework injiziert über \texttt{glQueryCounter} asynchrone Zeitstempel direkt in den
 \ac{GPU}-Befehlsstrom.
 Diese \textit{OpenGL Query Objects} ermöglichen eine hardwareseitige Zeiterfassung, um die Ausführungsdauer der
-einzelnen Render-Pässe isoliert zu messen~\cite[Kap.~2.14]{OpenGL33Core2010}.
+einzelnen Render-Pässe isoliert zu messen~\parencite[vgl.][Kap.~2.14]{OpenGL33Core2010}.
 Da das unmittelbare Auslesen dieser Markierungen im selben Frame einen kritischen Pipeline-Stall erzeugen
-würde~\cite[S.~794]{akenine-mollerRealtimeRendering2019},
+würde~\parencite[vgl.][S.~794]{akenine-mollerRealtimeRendering2019},
 implementiert die \texttt{GpuProfiler}-Klasse ein asynchrones, \textquote{non-blocking}
-Ring-Buffer-Verfahren~\cite[Kap.~34.2.5]{OpenGLInsights}, welches die \ac{CPU}- und \ac{GPU}-Abläufe im Regelfall
+Ring-Buffer-Verfahren~\parencite[vgl.][Kap.~34.2.5]{OpenGLInsights}, welches die \ac{CPU}- und \ac{GPU}-Abläufe im Regelfall
 entkoppelt.
 Durch die strikte Begrenzung der maximal im Flug befindlichen Frame-Abfragen
 auf~\texttt{GpuProfiler::MAX\_IN\_FLIGHT = 16} verhindert der \texttt{BenchmarkOrchestrator} zudem bei hoher
 \ac{GPU}-Auslastung ein Überschreiben noch nicht ausgelesener Hardware-Abfragen der \ac{GPU} durch die \ac{CPU}.
-Der kontrollierte \textquote{Notfall-Stall} stoppt die \ac{CPU}-Befehlsübertragung und stellt somit sicher, dass jeder
+Der kontrollierte \textquote{Notfall-Stall} stoppt die \ac{CPU}-Be\-fehls\-über\-tra\-gung und stellt somit sicher, dass jeder
 gerenderte Frame ohne Datenverlust lückenlos und chronologisch in die Telemetrie einfließt
 (vgl.\ Quellcode~\ref{lst:orchestrator_stall}).
 

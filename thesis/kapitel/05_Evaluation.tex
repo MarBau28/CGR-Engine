@@ -54,7 +54,7 @@ des verwendeten Evaluations-Frameworks \ac{HyDra}.
     Hinsichtlich der \ac{CPU}-Auslastung wird angenommen, dass das \ac{CPU}-seitige Filtern und Zuordnen von
     Lichtquellen pro Objekt sowie das hochfrequente Binden objektspezifischer Licht-Uniforms einen signifikanten
     \ac{API}-Overhead provoziert, der die \ac{CPU}-Zuweisungszeit bei anwachsender Instanzenanzahl nicht-linear
-    skalieren lässt~\cite[Abschn.~1]{haradaForwardBringingDeferred2012}.
+    skalieren lässt~\parencite[vgl.][Abschn.~1]{haradaForwardBringingDeferred2012}.
 
     \item \hypertarget{hyp:H2}{\textbf{Hypothese H2 (Deferred-Uber Style-Entropie):}}
     Für die Deferred-Pipeline mit einfachem Beleuchtungs-Pass (Single-Pass) und monolithischem Uber-Shader wird anhand
@@ -131,11 +131,11 @@ Tabelle~\ref{tab:controlled_vars} fasst die Standardkonfiguration der Kontrollva
 % Aufwärmphase.
 Vor der aktiven Datenaufzeichnung durchläuft das System eine Warm-up-Phase von zehn Sekunden.
 Dieser Prozess dient dazu, die Hardware-Caches und Textur-Caches
-aufzubauen~\cites[Kap.~18.4, Abschn.~\textit{Memory Issues}]{akenine-mollerRealtimeRendering2019}
+aufzubauen~\parencites(vgl.)()[Kap.~18.4, Abschn.~\textit{Memory Issues}]{akenine-mollerRealtimeRendering2019}
 []{NVIDIATuringArchitectureWhitepaper}.
 Hierdurch werden inkonsistente Frametimes, die durch asynchrone Ladevorgänge, späte Speicherallokationen oder
 aufgeschobene Statusänderungen des Grafiktreibers in den ersten Frames
-entstehen~\cite[Kap.~18.4.2, Abschn.~\textit{State Changes}]{akenine-mollerRealtimeRendering2019},
+entstehen~\parencite[vgl.][Kap.~18.4.2, Abschn.~\textit{State Changes}]{akenine-mollerRealtimeRendering2019},
 für die Messung minimiert.
 Während der Wechsel zwischen Rendering-Pipelines oder beim Voranschreiten abhängiger Schritt-Variablen wird ebenfalls
 eine Warm-up-Pause von zehn Sekunden erzwungen.
@@ -150,7 +150,7 @@ dedizierten Arrays für den Export.
 % Datenaufbereitung.
 Die präsentierten Graphen und Messergebnisse basieren auf arithmetischen Mittelwerten der Sampling-Phase.
 Zur Bereinigung unvorhersehbarer Micro-Stutterer (\textit{Frame-Rate Spikes}) kommt das etablierte
-$3\sigma$-Kriterium der Statistik zum Einsatz~\cite{pukelsheimThreeSigmaRule1994}.
+$3\sigma$-Kriterium der Statistik zum Einsatz~\parencite[vgl.][]{pukelsheimThreeSigmaRule1994}.
 Aus dem initialen Datensatz $X$ einer Parameter-Konfiguration werden der empirische Mittelwert $\mu$ sowie die
 Standardabweichung $\sigma$ berechnet.
 Ein Messwert $x_i \in X$ wird ausschließlich einbezogen, sofern er innerhalb des $3\sigma$-Intervalls liegt:
@@ -181,7 +181,7 @@ Konkret soll das absolute Limit der Vertex-Verarbeitung (\textit{Triangle Throug
 Zu diesem Zweck wird die Pipeline einem reinen Geometrie-Stresstest ohne Beleuchtungseinflüsse ($N_{\text{Light}} = 0$)
 ausgesetzt, um zu prüfen, ob die massiven Speicherschreibvorgänge der Deferred-Pipelines bei hoher Dreiecks-Dichte im
 Vergleich zur Forward-Pipeline einen signifikanten Bandbreiten-Engpass
-erzeugen~\cite[S.~55]{burnsVisibilityBufferCacheFriendly2013}.
+erzeugen~\parencite[vgl.][S.~55]{burnsVisibilityBufferCacheFriendly2013}.
 
 % Versuchs-Setup
 \begin{center}
@@ -220,7 +220,7 @@ weitestgehend konstant ($\mathcal{O}(1)$) bleibt.
 
 % Deduktion.
 Die ermittelte Laufzeit-Parität zwischen den Pipelines widerlegt die Hypothese der hohen Speicher- und
-Bandbreitenkosten für reine Geometrieszenarien~\cite[S.~905]{akenine-mollerRealtimeRendering2019}.
+Bandbreitenkosten für reine Geometrieszenarien~\parencite[vgl.][S.~905]{akenine-mollerRealtimeRendering2019}.
 Das Füllen der breiteren Deferred-Buffer erzeugt gegenüber dem Forward-Buffer keinen limitierenden Bandbreiten-Overhead
 auf dem \ac{VRAM}-Bus.
 
@@ -229,10 +229,10 @@ Es sei jedoch methodisch angemerkt, dass eine rein geometrische Skalierung auf k
 geeignet ist, um die \ac{VRAM}-Speicherbandbreite zu sättigen.
 Die extrem hohe Dreiecksdichte bei $LOD = 4$ ($16{,}38\text{ Mio.}$ Dreiecke auf $2.000$ Instanzen bei 1080p) führt
 dazu, dass die Größe der verarbeiteten Dreiecke den Subpixel-Bereich erreicht oder sogar
-unterschreitet~\cite[S.~1]{fatahalianReducingShadingGPUs2010}.
+unterschreitet~\parencite[vgl.][S.~1]{fatahalianReducingShadingGPUs2010}.
 Die Hardware stößt bei der Transformation dieser winzigen Dreiecke an ihre Kapazitätsgrenze, noch bevor
 eine signifikante Anzahl von Fragmenten erzeugt werden kann, die den \ac{VRAM}-Bus überhaupt belasten
-würden~\cites[Kap.~18.2.3]{akenine-mollerRealtimeRendering2019}[Folie~\textit{Tiny triangles}]{Karis_Nanite_SIGGRAPH_Advances_2021_final}.
+würden~\parencites(vgl.)()[Kap.~18.2.3]{akenine-mollerRealtimeRendering2019}[Folie~\textit{Tiny triangles}]{Karis_Nanite_SIGGRAPH_Advances_2021_final}.
 
 \subsection{{Objektanzahl}}
 \label{subsec:050202_obejct_count_eval}
@@ -240,7 +240,7 @@ würden~\cites[Kap.~18.2.3]{akenine-mollerRealtimeRendering2019}[Folie~\textit{T
 % Einleitung.
 Das Ziel dieser Testreihe besteht in der isolierten Evaluation der \ac{CPU}-Performance beim Dispatch-Prozess sowie
 bei der Szenenlogik (Frustum Culling, Sichtbarkeitsprüfung und Matrix-Updates).
-Um jegliche \ac{GPU}-Engpässe auszuschließen, wird die Geometrie-Instanzenanzahl ohne Beleuchtungseinflüsse
+Um jegliche \ac{GPU}-Engpässe auszuschließen, wird die Geometrie-In\-stan\-zen\-an\-zahl ohne Beleuchtungseinflüsse
 ($N_{\text{Light}} = 0$) und bei minimalem Detailgrad ($LOD = 0$, 12-Dreieck-Würfel) skaliert.
 Hierbei wird geprüft, ob der \ac{CPU}-Overhead die Skalierung limitiert und welche architektonischen Unterschiede
 zwischen den Rendering-Pipelines auf Host-Seite (\ac{CPU}) bestehen.
@@ -291,7 +291,7 @@ Rendering-Paradigmen einen primären Engpass darstellt.
 Darüber hinaus kann beobachtet werden, dass die umfangreichen mathematischen Operationen (Frustum Culling,
 \ac{MVP}-Matrix-Updates) die Datenverarbeitung auf der \ac{CPU} hier weitaus größer belasten.
 Das Forward Rendering weist in diesem Kontext eine geringere Skalierbarkeit auf, da es pro Objekt auf der \ac{CPU} eine
-Lichtliste evaluieren und binden muss~\cite[S.~891]{akenine-mollerRealtimeRendering2019}.
+Lichtliste evaluieren und binden muss~\parencite[vgl.][S.~891]{akenine-mollerRealtimeRendering2019}.
 Wie~\textcite[S.~1]{Thaler2011DeferredRendering} beschreibt, müssen bei Single-Pass-Forward-Architekturen für jedes
 Objekt zunächst alle beeinflussenden Lichtquellen gesucht werden.
 Dieser Suchlauf kostet kontinuierlich \ac{CPU}-Zeit, auch wenn er bei $N_{\text{Light}} = 0$ für alle $N_{\text{Inst}}
@@ -302,7 +302,7 @@ verifiziert somit \hyperlink{hyp:H1.2}{Hypothese H1.2}.
 % Limitationen.
 Diese Konzeption stellt eine bewusste Systementscheidung des Frameworks dar.
 Zwar hätte ein alternativer Multi-Pass-Forward-Ansatz (ein Render-Pass pro Lichtquelle) diese objektspezifische
-Suchlogik umgangen~\cite[S.~1]{Thaler2011DeferredRendering}, jedoch wurde dieses Paradigma im Rahmen des
+Suchlogik umgangen~\parencite[vgl.][S.~1]{Thaler2011DeferredRendering}, jedoch wurde dieses Paradigma im Rahmen des
 Untersuchungsrahmens gezielt ausgeschlossen.
 
 \subsection{{Overdraw-Dichte}}
@@ -346,7 +346,7 @@ beschreiben müsste.
 \end{center}
 
 % Beschreibung.
-Obwohl alle analysierten Rendering-Pipelines einen messbaren Anstieg der \ac{GPU}-Ausführungszeit aufweisen, sind, wie
+Obwohl alle analysierten Rendering-Pipelines einen messbaren Anstieg der \ac{GPU}-Aus\-füh\-rungs\-zeit aufweisen, sind, wie
 in Abbildung~\ref{fig:5_2_3_overdraw_fillrate_scaling} zu beobachten, die Abweichungen untereinander minimal.
 
 % Ergebnis Graph
@@ -365,7 +365,7 @@ Die nahezu deckungsgleichen Kurven demonstrieren, dass die umfangreichen \ac{G-B
 Da opake Geometrie gerendert wird, testet die \ac{GPU}-Hardware die Tiefe bereits vor dem eigentlichen Fragment-Shader.
 Es ist zu konstatieren, dass verdeckte Pixel-Fragmente mittels \textit{Early-Z} (vgl.\ Kapitel~\ref{subsec:020301_overdraw})
 auf Hardware-Ebene verworfen werden, bevor kostspielige Schreiboperationen in den Framebuffer
-stattfinden~\cite[S. 801]{akenine-mollerRealtimeRendering2019}.
+stattfinden~\parencite[vgl.][S. 801]{akenine-mollerRealtimeRendering2019}.
 
 
 \section{{Bandbreite und Auflösung}}
@@ -386,7 +386,7 @@ Sowohl die Geometrie als auch die Lichtverhältnisse bleiben auf einen Standard 
 $N_{\text{Inst}} = 5.000$ Objekt-Instanzen festgelegt.
 Im Rahmen der Evaluierung werden ausschließlich die Auflösung und damit gerenderten Pixel analysiert.
 Da Deferred Rendering die Beleuchtung strikt im 2D-Screen-Space berechnet, wird erwartet, dass die Kosten an die
-Pixelanzahl gekoppelt sind~\cite[Abschn.~9.2]{Chapter9Deferred}.
+Pixelanzahl gekoppelt sind~\parencite[vgl.][Abschn.~9.2]{Chapter9Deferred}.
 
 % Aufbau.
 \begin{center}
@@ -430,7 +430,7 @@ Beleuchtungsmathematik auf Fragmenten aus, die später von anderen Objekten verd
 werden (vgl.\ Kap.~\ref{subsec:020301_overdraw}).
 Bei einer Anzahl von $8{,}3\text{ Millionen}$ Pixeln (4K) multipliziert sich diese redundante Rechenlast wesentlich
 stärker als bei den entkoppelten Deferred-Pipelines (ein \ac{ALU}-Limit wird schneller erreicht)
-~\cite[Abschn.~1]{mallettDeferredAdaptiveCompute2018}.
+~\parencite[vgl.][Abschn.~1]{mallettDeferredAdaptiveCompute2018}.
 Diese Vervielfachung der redundanten Rechenlast bei steigender Pixelanzahl stützt die Annahme aus
 \hyperlink{hyp:H1.1}{Hypothese H1.1}.
 
@@ -511,7 +511,7 @@ additiven Blendings (vgl.\ Kap.~\ref{subsec:020302_memory_bandwidth}) zurückfü
 Deferred-Uber und Forward rechnen das finale Beleuchtungsergebnis in einem einzigen Durchlauf aus
 (Single-Pass-Architektur) und überschreiben den Zielpuffer direkt (nur eine Replace-Operation).
 Die Multi-Pass-Architektur der Volume-Pipeline hingegen erfordert zwingend den kontinuierlichen Einsatz von additivem
-Blending zur Akkumulation der Lichtbeiträge~\cite[S.~9]{lauritzenDeferredRenderingCurrent}.
+Blending zur Akkumulation der Lichtbeiträge~\parencite[vgl.][S.~9]{lauritzenDeferredRenderingCurrent}.
 \textcite[S.~803]{akenine-mollerRealtimeRendering2019} weisen darauf hin, dass derartige Blending-Operationen auf dem
 \ac{VRAM}-Bus im Vergleich zu einfachen Schreibvorgängen mit signifikant höheren Kosten verbunden sind.
 In Kombination mit dem simultanen Auslesen der breiten \ac{G-Buffer} resultiert dieser zusätzliche
@@ -605,7 +605,7 @@ Aus den Beobachtungen kann abgeleitet werden, dass die Deferred-Pipelines bei st
 skalieren als einfache Forward-Ansätze.
 Diese Erkenntnis validiert die in der Literatur beschriebene Überlegenheit von Deferred-Rendering im Bereich massiver
 Lichtevaluationen und bestätigt den primären Existenzgrund dieses Paradigmas im
-Allgemeinen~\cite[S.~1]{Thaler2011DeferredRendering}.
+Allgemeinen~\parencite[vgl.][S.~1]{Thaler2011DeferredRendering}.
 Obwohl die Deferred-Uber-Pipeline den gleichen Loop zur Beleuchtungsberechnung ausführt wie der Forward-Ansatz, wird
 durch das Entkoppeln der Geometrie der Shading-Overdraw effektiv vermieden.
 Der Einsatz des \ac{G-Buffer}s gewährleistet, dass die Schleife für die Lichtberechnung lediglich für die auf dem
@@ -615,7 +615,7 @@ Evaluationsbereichs einzelner Light-Volumes zurückführen.
 Anstelle eines volumenunabhängigen Vollbild-Passes wird seitens der \ac{GPU} lediglich eine Rasterisierung der
 Licht-Proxy-Geometrien vorgenommen.
 Die \ac{ALU}-Last beschränkt sich somit exakt auf die Screen-Space-Projektion, in der das Lichtvolumen die Geometrie
-tatsächlich beeinflusst~\cite[S.~886]{akenine-mollerRealtimeRendering2019}.
+tatsächlich beeinflusst~\parencite[vgl.][S.~886]{akenine-mollerRealtimeRendering2019}.
 Bei einer extremen Last von $5.000$ Lichtquellen lässt sich zudem die Hypothese aufstellen, dass das Limit der
 Deferred-Volume-Pipeline primär durch die \ac{VRAM}-Bandbreite der \ac{ROP}s aufgrund des massiven
 \textit{Read-Modify-Write}-Zyklus des additiven Blendings erreicht wird
@@ -700,7 +700,7 @@ Sie verorten die größte architektonische Limitierung des Deferred-Volume-Ansat
 überlappenden Einflussbereichen verschiedener Lichtquellen.
 Wenn hunderte Licht-Volumina dieselbe Pixelfläche abdecken, zwingt die Deferred-Volume-Pipeline die \ac{GPU},
 für diese einzelnen Pixel hunderte Male den \ac{RMW}-Zyklus für das additive Blending (\ac{ROP}s) auf dem Speicherbus
-auszuführen~\cites[Folie~9]{lauritzenDeferredRenderingCurrent}[S.~676]{gregoryGameEngineArchitecture2018}
+auszuführen~\parencites(vgl.)()[Folie~9]{lauritzenDeferredRenderingCurrent}[S.~676]{gregoryGameEngineArchitecture2018}
 (vgl.\ Kap.~\ref{subsec:020302_memory_bandwidth}).
 Der \ac{VRAM}-Speicherbus kollabiert in der Folge unter der schieren Frequenz dieser redundanten Lese- und
 Schreibzugriffe.
@@ -765,11 +765,11 @@ Der Engine Overhead weist zudem bei sämtlichen Pipelines eine hohe Konstanz auf
 % Deduktion
 Die Ergebnisse dieser Evaluation widerlegen die weit verbreitete Annahme, dass der Overdraw, insbesondere in
 Kombination mit Beleuchtung, in einfachen Forward-Pipelines einen der größten Engpässe
-darstellt~\cites[Abschn.~1]{Thaler2011DeferredRendering}.
+darstellt~\parencites(vgl.)()[Abschn.~1]{Thaler2011DeferredRendering}.
 Die Ergebnisse dieser Evaluation bedingen somit eine Relativierung der \hyperlink{hyp:H1.1}{Hypothese H1.1}:
 Durch hardwarebasierte Optimierungen wie \textit{Early-Z} wird auf modernen Grafikkarten auch ohne dedizierten,
 softwarebasierten \textit{Z-Prepass} ein signifikanter Teil der redundanten Rechenlast der Beleuchtungsberechnung
-verdeckter Fragmente vermieden~\cite[S.~801~u.~803]{akenine-mollerRealtimeRendering2019}
+verdeckter Fragmente vermieden~\parencite[vgl.][S.~801~u.~803]{akenine-mollerRealtimeRendering2019}
 (vgl.\ Kap.~\ref{subsec:020301_overdraw}).
 
 
@@ -888,7 +888,7 @@ Die Forward- und Deferred-Volume-Architekturen hingegen erweisen sich als system
 architektonischen Engpass.
 Die strikte Trennung der \textit{Draw-Calls} nach Material (Forward) oder die Nutzung von mehreren insgesamt
 kleineren Shader-Pässen (Deferred-Volume) gewährleistet eine Homogenität der aktiven
-Warps~\cite[S.~886]{akenine-mollerRealtimeRendering2019}.
+Warps~\parencite[vgl.][S.~886]{akenine-mollerRealtimeRendering2019}.
 
 % Register Pressure und Limits.
 In Bezug auf die lineare Degradation des Deferred-Shaders bei der Kombination mehrerer Stile lässt sich die

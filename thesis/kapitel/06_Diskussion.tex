@@ -39,7 +39,7 @@ weniger relevant für die Performance des Gesamtsystems.
 
 % Forward Stilisierung.
 Forward-Pipelines bieten bei der Verwaltung diverser Shader und Materialien praktische Vorteile
-gegenüber Deferred-Architekturen~\cite[Abschn.~9.2]{Chapter9Deferred}, die Umsetzung selektiver Stilisierungen
+gegenüber Deferred-Architekturen~\parencite[vgl.][Abschn.~9.2]{Chapter9Deferred}, die Umsetzung selektiver Stilisierungen
 unterliegt jedoch einer strukturellen Restriktion (vgl.\ Kap.~\ref{subsec:040201_forward_pipeline}), da ihre
 objektbasierte Shading-Auswertung die selektive Anwendung klassischer Bildraum-Verfahren (Screen Space) verhindert.
 Wie in Kapitel~\ref{subsec:040201_forward_pipeline} aufgezeigt, ist es je nach Anwendungsfall jedoch möglich, dass
@@ -50,7 +50,7 @@ Verwendung von Inverted-Hull statt Sobel-Outlines).
 Eine weitere Einschränkung der untersuchten Forward-Pipeline abseits von Performance und selektiver Stilisierungen ist
 die begrenzte Anzahl maximal darstellbarer Lichtquellen durch \textit{Uniform-Buffer-Limits}.
 Diese Begrenzung lässt sich allerdings weniger auf die Natur von Forward-Rendering-Architekturen im Allgemeinen
-zurückführen und mehr auf die Natur von Single-Pass-Architekturen~\cite[Abschn.~1]{Thaler2011DeferredRendering}.
+zurückführen und mehr auf die Natur von Single-Pass-Architekturen~\parencite[vgl.][Abschn.~1]{Thaler2011DeferredRendering}.
 Diese Einschränkung trifft also ebenfalls auf die untersuchte Deferred-Uber-Pipeline zu.
 In der Deferred-Uber-Pipeline ist durch den Singe-Pass Umstand zudem der Zwang zu \textit{Pre-Lit}-Verwahren, wie in
 Kapitel~\ref{subsec:040202_deferred_uber_pipeline} aufgezeigt, festgestellt worden.
@@ -82,12 +82,12 @@ Abbildung~\ref{fig:hydra_banding_comparison}) zu vermeiden.
 Es ist anzumerken, das viele der benannten Bottlenecks und Drawbacks der einzelnen Paradigmen, wie in
 Kapitel~\ref{sec:0302_industry_state} und~\ref{sec:0301_academic_state} dargelegt, zumindest teilweise durch moderne
 Verfahren und hybride Ansätze kompensiert werden können.
-Verfahren wie beispielsweise \textit{Clustered Forward}~\cite{olssonClusteredDeferredForward2012} oder
-\textit{Forward+}~\cite{haradaForwardBringingDeferred2012} erweitern die
+Verfahren wie beispielsweise \textit{Clustered Forward}~\parencite[vgl.][]{olssonClusteredDeferredForward2012} oder
+\textit{Forward+}~\parencite[vgl.][]{haradaForwardBringingDeferred2012} erweitern die
 Basisparadigmen hierfür grundlegend.
 Moderne Entwicklungen aus der Spieleindustrie zeigen hingegen die Idee auf, hybride Verfahren mit einer Kombination aus
 Forward und Deferred Ansätzen für den Ausgleich der jeweiligen Schwächen einer Rendering-Architektur zu
-nutzen~\cite{muhammadPrettyFramesPRAGMATA2026, gameworksToonRenderingHiFi, valientDeferredRenderingKillzone}.
+nutzen~\parencite[vgl.][]{muhammadPrettyFramesPRAGMATA2026, gameworksToonRenderingHiFi, valientDeferredRenderingKillzone}.
 
 
 \section{Heuristisches Entscheidungsmodell}
@@ -298,10 +298,10 @@ wesentlich fragmentiertere Umgebungen vorhanden und die entsprechenden Basispara
 vor.
 Was in der Praxis als \textquote{Standard} oder \textquote{Basis} moderner Rendering-Architekturen gilt, ist
 entsprechend nur schwer einzugrenzen und zu evaluieren.
-Dies zeigen mittlerweile weit verbreitete Ansätze wie \textit{Forward+}~\cite{haradaForwardBringingDeferred2012},
-\textit{Clustered}-Ansätze~\cite{olssonClusteredDeferredForward2012},
-\textit{Tiled Shading}~\cite{olssonTiledClusteredForward2012} oder die Nutzung von
-\textit{Visibility-Buffern} in Deferred-Architekturen~\cite{burnsVisibilityBufferCacheFriendly2013}
+Dies zeigen mittlerweile weit verbreitete Ansätze wie \textit{Forward+}~\parencite[vgl.][]{haradaForwardBringingDeferred2012},
+\textit{Clustered}-Ansätze~\parencite[vgl.][]{olssonClusteredDeferredForward2012},
+\textit{Tiled Shading}~\parencite[vgl.][]{olssonTiledClusteredForward2012} oder die Nutzung von
+\textit{Visibility-Buffern} in Deferred-Architekturen~\parencite[vgl.][]{burnsVisibilityBufferCacheFriendly2013}
 als Erweiterungen der Basisparadigmen.
 Insbesondere bezüglich der Multi-Pass-Variante des Forward-Renderings weist die entwickelte Software dieser Arbeit eine
 methodische Lücke in der Implementierung und der daraus resultierenden Evaluation auf.
@@ -309,7 +309,7 @@ methodische Lücke in der Implementierung und der daraus resultierenden Evaluati
 % Materiallimits.
 Bestimmte grundlegende Materialeigenschaften, wie etwa Transluzenzen oder Spiegelungen, stellen ebenfalls gängige und
 Anforderungen an Echtzeiterendering-Systeme
-dar~\cites[Abschn.~\textit{Deferred G-buffer}]{muhammadPrettyFramesPRAGMATA2026}
+dar~\parencites(vgl.)()[Abschn.~\textit{Deferred G-buffer}]{muhammadPrettyFramesPRAGMATA2026}
 [Abschn.~\textit{G-Buffer : Our approach}]{valientDeferredRenderingKillzone}
 [S.~887]{akenine-mollerRealtimeRendering2019}.
 In der vorliegenden Untersuchung werden sie jedoch nicht berücksichtigt.
@@ -319,7 +319,7 @@ Dies erschwert eine ganzheitliche Evaluation und Ableitung für diverse Praxisf�
 In der Industriepraxis gehören darüber hinaus verschiedene Typen von Lichtquellen, wie Richtungs- (Directional) oder
 Flächenlichter (Area Lights), und die damit verbundenen Anforderungen, wie etwa \textit{Shadow Mapping}, zum
 Standardrepertoire einer Szene in der
-Spieleentwicklung~\cites[Abschn.~2.4.1]{fonsecaDeferredShadingTutorial}
+Spieleentwicklung~\parencites(vgl.)()[Abschn.~2.4.1]{fonsecaDeferredShadingTutorial}
 [Kap.~11.1.3.3]{gregoryGameEngineArchitecture2018}.
 Das \ac{HyDra}-Framework weist hier ebenfalls Lücken durch die Verwendung von ausschließlich dynamisch generierten
 Punktlichtquellen auf.
@@ -338,7 +338,7 @@ sind jedoch nicht dazu geeignet, entsprechende detaillierte Handlungsempfehlunge
 abzuleiten.
 Das detaillierte Auslesen von Hardware-internen Daten müsste durch die zusätzliche Integration von spezifischen
 Hardware-Profilern wie \textit{NVIDIA Nsight} oder der \textit{Radeon Developer Tool Suite (RDTS)}
-erfolgen~\cite[Kap.~18.1]{akenine-mollerRealtimeRendering2019}.
+erfolgen~\parencite[vgl.][Kap.~18.1]{akenine-mollerRealtimeRendering2019}.
 
 % Hardwarespezifika.
 Über die strukturellen Lücken der vorliegenden Software hinaus ist anzumerken, dass die empirischen Evaluationen aus
@@ -352,13 +352,13 @@ Hardware ebenfalls als dynamischer Vektor dargestellt werden, um eine allgemeing
 \label{sec:0604_lessons_learned}
 
 % Architekturentscheidungen.
-Im Entwicklungsverlauf ist insbesondere die Verwendung von \textit{OpenGL}~\cite{KhronosOpenGLRegistry} sowie vor allem
-der Bibliothek \textit{raylib}~\cites{Raylib, RaylibExamples} zur Abstraktion der OpenGL-\ac{API} als positiv zu
+Im Entwicklungsverlauf ist insbesondere die Verwendung von \textit{OpenGL}~\parencite[vgl.][]{KhronosOpenGLRegistry} sowie vor allem
+der Bibliothek \textit{raylib}~\parencite[vgl.][]{Raylib, RaylibExamples} zur Abstraktion der OpenGL-\ac{API} als positiv zu
 bewerten.
 Ein signifikanter Anteil des rudimentären OpenGL-Overheads konnte durch die Verwendung von raylib vermieden werden.
 Für die granulare Manipulation diverser Teile des Frameworks, wie etwa der direkten Manipulation der \ac{G-Buffer},
 musste allerdings auch innerhalb von raylib auf Low-Level-Boilerplate-Code zurückgegriffen werden
-(\texttt{rlgl}~\cite{raysan5RaylibSrcRlglh}).
+(\texttt{rlgl}~\parencite[vgl.][]{raysan5RaylibSrcRlglh}).
 Die Granularität der Software stellte sich in der Analyse als signifikante Herausforderung heraus, da die reine Menge an
 Boilerplate-Code zur Ausführung der Rendering-Pipelines einen wesentlichen Beitrag zur Komplexität und damit zur
 Fehleranfälligkeit der Software leistet.

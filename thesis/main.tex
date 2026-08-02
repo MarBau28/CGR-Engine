@@ -126,60 +126,23 @@
 }
 
 % --- Literaturverzeichnis (IEEE) ---
-\usepackage[
-    backend=biber,
-    style=ieee,
-    maxcitenames=1,
-    mincitenames=1,
-    doi=true,
-    isbn=true,
-    url=true
-]{biblatex}
-\AtEveryBibitem{
-    \iffieldundef{doi}
-    {}
-    {
-        \clearfield{url}
-        \clearfield{isbn}
-    }
-}
-\DefineBibliographyStrings{ngerman}{
-    presentedat = {präsentiert auf der\addspace},
-    andothers   = {et\addabbrvspace al\adddot}
-}
-\DeclareSourcemap{
-    \maps[datatype=bibtex]{
-        \map{
-            \step[fieldsource=doi,final]
-            \step[fieldset=url,null]
-            \step[fieldset=urldate,null]
-        }
-        \map{
-            \step[fieldset=pagetotal,null]
-        }
-    }
-}
-\AtEveryBibitem{
-    \iffieldundef{url}{
-        \clearfield{urlyear}
-        \clearfield{urlmonth}
-        \clearfield{urlday}
-    }{}
-}
-\addbibresource{verzeichnisse/literatur.bib}
-
-% --- Literaturverzeichnis (Harvard / Authoryear) ---
 %\usepackage[
 %    backend=biber,
-%    style=authoryear,
-%    sorting=nyt,
-%    maxcitenames=2,
+%    style=ieee,
+%    maxcitenames=1,
 %    mincitenames=1,
-%    maxbibnames=10,
 %    doi=true,
-%    isbn=false,
+%    isbn=true,
 %    url=true
 %]{biblatex}
+%\AtEveryBibitem{
+%    \iffieldundef{doi}
+%    {}
+%    {
+%        \clearfield{url}
+%        \clearfield{isbn}
+%    }
+%}
 %\DefineBibliographyStrings{ngerman}{
 %    presentedat = {präsentiert auf der\addspace},
 %    andothers   = {et\addabbrvspace al\adddot}
@@ -197,12 +160,6 @@
 %    }
 %}
 %\AtEveryBibitem{
-%    \iffieldundef{doi}
-%    {}
-%    {
-%        \clearfield{url}
-%        \clearfield{isbn}
-%    }
 %    \iffieldundef{url}{
 %        \clearfield{urlyear}
 %        \clearfield{urlmonth}
@@ -210,6 +167,62 @@
 %    }{}
 %}
 %\addbibresource{verzeichnisse/literatur.bib}
+
+% --- Literaturverzeichnis (Harvard / Authoryear) ---
+\usepackage[
+    backend=biber,
+    style=authoryear,
+    sorting=nyt,
+    maxcitenames=2,
+    mincitenames=1,
+    maxbibnames=10,
+    doi=true,
+    isbn=false,
+    url=true
+]{biblatex}
+\DefineBibliographyStrings{ngerman}{
+    andothers   = {et\addabbrvspace al\adddot}
+}
+\DeclareSourcemap{
+    \maps[datatype=bibtex]{
+        \map{
+            \step[fieldsource=doi,final]
+            \step[fieldset=url,null]
+            \step[fieldset=urldate,null]
+        }
+        \map{
+            \step[fieldset=pagetotal,null]
+        }
+    }
+}
+\AtEveryBibitem{
+    \iffieldundef{doi}
+    {}
+    {
+        \clearfield{url}
+        \clearfield{isbn}
+    }
+    \iffieldundef{url}{
+        \clearfield{urlyear}
+        \clearfield{urlmonth}
+        \clearfield{urlday}
+    }{}
+}
+\addbibresource{verzeichnisse/literatur.bib}
+
+% Anpassungen für Harvard: Eckige Klammern bei parencite/parencites
+\DeclareCiteCommand{\parencite}[\mkbibbrackets]
+  {\usebibmacro{prenote}}
+  {\usebibmacro{citeindex}%
+   \usebibmacro{cite}}
+  {\multicitedelim}
+  {\usebibmacro{postnote}}
+\DeclareMultiCiteCommand{\parencites}[\mkbibbrackets]{\parencite}{\multicitedelim}
+
+% Abstände zwischen den Einträgen im Literaturverzeichnis erhöhen
+\setlength{\bibitemsep}{1.2em}
+\setlength{\bibnamesep}{0.5em}
+
 
 % --- Hyperlinks ---
 \usepackage[hidelinks]{hyperref}

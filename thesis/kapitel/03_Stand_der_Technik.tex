@@ -15,11 +15,11 @@ ermöglichen die wissenschaftliche Einordnung des entwickelten Evaluations-Frame
 
 % Einleitung.
 Deferred-Rendering-Paradigmen stellen sowohl in der akademischen Forschung als auch in der industriellen Praxis
-etablierte Standards dar~\cite[S.~2]{mallettDeferredAdaptiveCompute2018}.
+etablierte Standards dar~\parencite[vgl.][S.~2]{mallettDeferredAdaptiveCompute2018}.
 Moderne Echtzeit-Rendering-Pipelines werden maßgeblich von komplexen Beleuchtungsanforderungen getrieben, wodurch das
 effiziente Handhaben von Deferred-Architekturen in den Fokus rückt.
 Gleichzeitig werden im Bereich des Forward-Renderings durch diverse Optimierungsverfahren die klassischen Schwächen
-dieses Ansatzes zunehmend relativiert~\cite{olssonClusteredDeferredForward2012, haradaForwardBringingDeferred2012}.
+dieses Ansatzes zunehmend relativiert~\parencite[vgl.][]{olssonClusteredDeferredForward2012, haradaForwardBringingDeferred2012}.
 Die Wahl des Rendering-Ansatzes richtet sich somit in der Praxis streng nach den spezifischen Leistungs- und
 Qualitätsanforderungen der jeweiligen Anwendung.
 Der wissenschaftliche Diskurs untersucht diesbezüglich Lösungen in Bezug auf Leistungsfähigkeit und Grenzen beider
@@ -34,28 +34,28 @@ Zusätzlich zu dieser Komplexität ergibt sich eine kombinatorische Zunahme der 
 kompilierte Shader-Varianten für jeweilige Material- und Lichtkonfigurationen), sobald diverse Materialeigenschaften
 und Lichttypen in einer Szene verrechnet werden müssen.
 Dieser Limitierung liegt die inhärente Eigenschaft von Forward-Pipelines zugrunde, bei hoher Szenen-Entropie
-zwangsweise eine gewisse Menge an Overdraw zu erzeugen~\cite[S.~1]{fatahalianReducingShadingGPUs2010}.
+zwangsweise eine gewisse Menge an Overdraw zu erzeugen~\parencite[vgl.][S.~1]{fatahalianReducingShadingGPUs2010}.
 Ansätze wie ein Z-Prepass zur frühzeitigen Verwerfung verdeckter Fragmente gehören in Forward-Pipelines zwar zum
-Standard~\cite[S.~57]{burnsVisibilityBufferCacheFriendly2013}, reichen bei hoher Objekt- und Lichtkomplexität
+Standard~\parencite[vgl.][S.~57]{burnsVisibilityBufferCacheFriendly2013}, reichen bei hoher Objekt- und Lichtkomplexität
 jedoch nicht aus, um die Effizienz von Deferred-Ansätzen zu
-erreichen~\cite[S.~4]{Thaler2011DeferredRendering}.
+erreichen~\parencite[vgl.][S.~4]{Thaler2011DeferredRendering}.
 Modernere Techniken wie \textit{Clustered Forward} oder \textit{Forward+} adressieren dieses Problem, indem
 Lichtquellen in 2D-Kacheln oder 3D-Clustern räumlich sortiert
-werden~\cites{olssonClusteredDeferredForward2012, haradaForwardBringingDeferred2012}.
+werden~\parencite[vgl.][]{olssonClusteredDeferredForward2012, haradaForwardBringingDeferred2012}.
 Dies ermöglicht eine Effizienz, die Deferred-Ansätzen nahekommt, während der primäre Vorteil der Forward-Architektur,
 die hohe Flexibilität bei der Materialauswertung, erhalten bleibt.
 
 % Deferred Rendering.
 Deferred-Rendering-Pipelines haben sich in Umgebungen mit hoher geometrischer Komplexität und anspruchsvollen
-Beleuchtungsszenarien weitestgehend durchgesetzt~\cite[Abschn.~2]{mallettDeferredAdaptiveCompute2018}, weisen jedoch
+Beleuchtungsszenarien weitestgehend durchgesetzt~\parencite[vgl.][Abschn.~2]{mallettDeferredAdaptiveCompute2018}, weisen jedoch
 ebenfalls diverse architektonische Limitierungen auf.
 Der signifikanteste Flaschenhals ist die hohe Auslastung der Speicherbandbreite (Memory Bandwidth), welche durch den
 permanenten Schreib- und Lesezugriff auf den \ac{G-Buffer} induziert
-wird~\cite[S.~55]{burnsVisibilityBufferCacheFriendly2013}.
+wird~\parencite[vgl.][S.~55]{burnsVisibilityBufferCacheFriendly2013}.
 Ein moderner Lösungsansatz aus der Forschung ist die Implementierung entkoppelter Architekturen wie des
-\ac{V-Buffer}~\cite{burnsVisibilityBufferCacheFriendly2013}, welcher als Shading-Grundlage für hochkomplexe
+\ac{V-Buffer}~\parencite[vgl.][]{burnsVisibilityBufferCacheFriendly2013}, welcher als Shading-Grundlage für hochkomplexe
 Geometrie-Pipelines wie der \textit{Nanite}-Architektur in der Unreal Engine 5
-dient~\cite[Folie~\textit{Visibility Buffer}]{Karis_Nanite_SIGGRAPH_Advances_2021_final}.
+dient~\parencite[vgl.][Folie~\textit{Visibility Buffer}]{Karis_Nanite_SIGGRAPH_Advances_2021_final}.
 Im Gegensatz zum traditionellen \ac{G-Buffer} speichert der V-Buffer pro Pixel lediglich minimale geometrische Metadaten
 (wie Primitive- und Instanz-IDs) sowie Tiefenwerte.
 Die speicherintensive Materialauswertung wird vollständig in einen nachgelagerten Pass verschoben.
@@ -68,23 +68,23 @@ Da Deferred Rendering die Beleuchtung jedoch erst im nachgelagerten Bildraum ber
 der Kanten nicht mehr zur Verfügung.
 Für Kantenglättung in Deferred-Pipelines werden temporale Verfahren wie \ac{TAA} verwendet, die dieses Problem lösen,
 indem sie das fertige Bild über mehrere Frames hinweg zeitlich
-verrechnen~\cites[S.~5]{Thaler2011DeferredRendering}{taaantialiasing}.
+verrechnen~\parencites(vgl.)()[S.~5]{Thaler2011DeferredRendering}[]{taaantialiasing}.
 Die Evaluierung semitransparenter Geometrie ist im reinen Deferred-Pfad nicht lösbar, da ein Standard-\ac{G-Buffer}
 pro Pixel nur eine einzige diskrete Tiefenschicht speichert.
 Da für transparentes Alpha-Blending jedoch die Material- und Lichtwerte mehrerer hintereinander liegender Flächen
 entlang der Sichtachse verrechnet werden müssen, gehen die erforderlichen Informationen verdeckter Schichten verloren.
 Dieses Defizit wird in der industriellen Praxis standardmäßig über einen nachgelagerten Forward-Pass für
-transluzente Objekte gelöst~\cite[S.~56]{burnsVisibilityBufferCacheFriendly2013}.
+transluzente Objekte gelöst~\parencite[vgl.][S.~56]{burnsVisibilityBufferCacheFriendly2013}.
 
 % Non-Photorealistic-Rendering.
 Hinsichtlich des \ac{NPR} unterscheidet die aktuelle Literatur primär zwischen
 \textit{Object-Space}- und
-\textit{Screen-Space}-Methoden~\cite[S.~148]{magdicsPostprocessingNPREffects2013}.
+\textit{Screen-Space}-Methoden~\parencite[vgl.][S.~148]{magdicsPostprocessingNPREffects2013}.
 Object-Space-Ansätze sind in der Regel in Forward-Pipelines verankert und berechnen Stilisierungen direkt auf
 der Geometrie, was eine granulare, objektbasierte Anpassung ermöglicht.
 Bei hoher Szenenkomplexität weisen diese Verfahren jedoch eine unzureichende Skalierbarkeit auf, was primär auf den
 Fragment-Overdraw bei rechenintensiven Abstraktionseffekten zurückzuführen
-ist~\cite[S.~1]{fatahalianReducingShadingGPUs2010}.
+ist~\parencite[vgl.][S.~1]{fatahalianReducingShadingGPUs2010}.
 Die moderne Rendering-Forschung weicht zur Umgehung dieser Performance-Limits oft auf Screen-Space-Methoden
 (Post-Processing) aus, was architektonisch stark den Paradigmen des Deferred-Renderings entspricht.
 Wie~\textcite[S.~148]{magdicsPostprocessingNPREffects2013} beschreiben, ist diese Screen-Space-Verarbeitung zwar
@@ -97,19 +97,19 @@ zweistufigen Ansatz: Im ersten Schritt werden alle räumlichen 3D-Informationen 
 gesammelt, um diese Metadaten im zweiten Schritt für globale, Screen-Space-basierte \ac{NPR}-Effekte nutzbar zu machen.
 Dies ermöglicht es, Stilisierungen im Screen-Space auch geometriebewusst durchzuführen.
 Klassische Deferred-Pipelines weisen in diesem Kontext jedoch eine fundamentale Schwäche bezüglich der Materialvielfalt
-auf~\cite[S.~1]{haradaForwardBringingDeferred2012}.
+auf~\parencite[vgl.][S.~1]{haradaForwardBringingDeferred2012}.
 Das Auswerten zahlreicher spezifischer Stilisierungen in einem vereinheitlichten Screen-Space-Pass
 führt zu starken Performance-Einbußen, da abweichende Materialpfade benachbarter Pixel innerhalb eines Warps
 zu der in Kapitel~\ref{subsec:020303_warp_divergence_and_register_pressure} beschriebenen Warp-Divergence
-führen~\cite[Abschn.~2.6]{Thaler2011DeferredRendering}.
+führen~\parencite[vgl.][Abschn.~2.6]{Thaler2011DeferredRendering}.
 In der Konsequenz bleiben performante Stilisierungen bei klassischem Deferred-Rendering meist auf globale
-Post-Processing-Filter beschränkt~\cite[S.~148]{magdicsPostprocessingNPREffects2013}.
+Post-Processing-Filter beschränkt~\parencite[vgl.][S.~148]{magdicsPostprocessingNPREffects2013}.
 
 % Fazit.
 Zusammenfassend lässt sich festhalten, dass reine Forward- oder Deferred-Architekturen in modernen Produktionen
 selten in ihrer Reinform existieren, da die Forschung im Bereich der Rendering-Architekturen primär auf
 hybride Lösungsansätze, im Sinne einer Kombination verschiedener Pipeline-Paradigmen, sowie die Reduktion
-architektonischer Engpässe fokussiert ist~\cite[S.~56]{burnsVisibilityBufferCacheFriendly2013}.
+architektonischer Engpässe fokussiert ist~\parencite[vgl.][S.~56]{burnsVisibilityBufferCacheFriendly2013}.
 Obwohl die Literatur diverse architektonische Lösungen für hohe Geometrie- und Beleuchtungskomplexität bietet,
 unterliegt die spezifische Schnittmenge von Deferred-Pipelines und selektivem \ac{NPR} weiterhin
 praktischen und Performance-technischen Limitierungen.
@@ -125,10 +125,10 @@ Der theoretische Konflikt zwischen der für Deferred Shading charakteristischen 
 der für \ac{NPR} oft erforderlichen Heterogenität individueller Stilisierungen zwingt die
 Industrie zu architektonischen Kompromissen.
 Der Ansatz, alle für komplexe \ac{NPR}-Modelle benötigten Parameter separat in den \ac{G-Buffer} zu schreiben, führt
-unweigerlich zu einem sogenannten \textit{Fat \ac{G-Buffer}}~\cite[S.~71]{AdvancesRealTimeRendering}.
+unweigerlich zu einem sogenannten \textit{Fat \ac{G-Buffer}}~\parencite[vgl.][S.~71]{AdvancesRealTimeRendering}.
 In modernen AAA-Produktionen der Spieleindustrie werden teilweise bis zu acht \acp{RT} gleichzeitig
 beschrieben, was starke Bandbreiten-Engpässe (Memory Bandwidth Bottlenecks) verursachen
-kann~\cite[S.~884]{akenine-mollerRealtimeRendering2019}.
+kann~\parencite[vgl.][S.~884]{akenine-mollerRealtimeRendering2019}.
 Folglich existiert in der Industriepraxis kein universeller beziehungsweise einheitlicher Deferred-\ac{NPR}-Algorithmus.
 Stattdessen greifen Entwickler auf hoch spezialisierte, kompromissbehaftete Architekturen zurück, um selektive
 Stilisierungen innerhalb gegebener Hardware-Grenzen zu realisieren.
@@ -145,23 +145,23 @@ für \ac{PBR}-Daten vorgesehene \ac{G-Buffer}-Kanäle gezielt umgewidmet, um die
 ID-Masken zu belegen (siehe Abbildung~\ref{fig:g-buffer_hifirush}).
 Ein ähnliches Verfahren zeigt die Architektur von \textit{Uncharted 4}, in der eine komprimierte \textquote{Material-ID} im
 \ac{G-Buffer} mitgeführt wird, um im nachgelagerten Lighting-Pass zwischen verschiedenen Shader-Features zu
-differenzieren~\cite[Folie~\enquote{Deferred Pipeline}]{deferredLightinginUncharted4}.
+differenzieren~\parencite[vgl.][Folie~\enquote{Deferred Pipeline}]{deferredLightinginUncharted4}.
 Überträgt man diesen Ansatz auf das \ac{NPR}, um eine selektive Stilisierung direkt im regulären Lighting-Pass zu verankern,
 führt dies in der Praxis unweigerlich zu monolithischen
-Shader-Strukturen (Uber-Shadern)~\cite[Folie~\enquote{Problems}]{deferredLightinginUncharted4}.
+Shader-Strukturen (Uber-Shadern)~\parencite[vgl.][Folie~\enquote{Problems}]{deferredLightinginUncharted4}.
 Eine steigende Stil- und Materialvielfalt induziert innerhalb eines solchen Shaders einen massiven Registerdruck
 (\textit{Register Pressure}) und provoziert durch die notwendigen Fallunterscheidungen zeitgleich ineffiziente
 \textit{Warp Divergence} (vgl.\ Kap.~\ref{subsec:020303_warp_divergence_and_register_pressure}).
 Diese architektonischen Flaschenhälse limitieren die
 Gesamteffizienz der Rendering-Pipeline bei hoher Szenen-Entropie auf der \ac{GPU}
-signifikant~\cite[Abschn.~6]{schiedDeferredAttributeInterpolation2015}.
+signifikant~\parencite[vgl.][Abschn.~6]{schiedDeferredAttributeInterpolation2015}.
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.95\textwidth]{abbildungen/hifirushgbuffer}
     \caption[Speicherlayout der Hi-Fi Rush G-Buffer]
     {Speicherlayout der Hi-Fi Rush G-Buffer. Eigene Darstellung in Anlehnung
-    an \cite[Folie~\enquote{Our G-Buffer Layout}]{gameworksToonRenderingHiFi}.}
+    an \parencite[Folie~\enquote{Our G-Buffer Layout}]{gameworksToonRenderingHiFi}.}
     \label{fig:g-buffer_hifirush}
 \end{figure}
 
@@ -173,29 +173,29 @@ die eine grundlegende Deferred-Pipeline um einen nachgelagerten Forward-Pass erw
 Limitierungen des \ac{G-Buffer}s hinsichtlich der Materialvielfalt zu begegnen.
 Shading-Operationen, die hochkomplexe Materialbrechungen oder Transparenzen erfordern, werden in einem oder mehreren, an
 den Deferred-Pass anschließenden, Forward-Rendering-Schritten berechnet und im finalen Framebuffer
-kombiniert~\cite[S.~887]{akenine-mollerRealtimeRendering2019}.
+kombiniert~\parencite[vgl.][S.~887]{akenine-mollerRealtimeRendering2019}.
 Da dieser Forward-Pass jedoch die ursprünglichen Schwächen bezüglich der Beleuchtungskomplexität erbt, haben sich
-Techniken wie \textit{Clustered Forward}~\cite{olssonClusteredDeferredForward2012} und
-\textit{Forward+}~\cite{haradaForwardBringingDeferred2012} für diesen Hybridschritt etabliert.
+Techniken wie \textit{Clustered Forward}~\parencite[vgl.][]{olssonClusteredDeferredForward2012} und
+\textit{Forward+}~\parencite[vgl.][]{haradaForwardBringingDeferred2012} für diesen Hybridschritt etabliert.
 Durch räumliches Frustum- oder Tile-basiertes \textit{Light-Culling} reduzieren sie die Anzahl der pro Fragment zu
 berechnenden Lichtquellen drastisch.
 Die Etablierung dieser Ansätze als Industriestandard zeigt sich beispielhaft an der \textit{id Tech 6} Engine:
 Die Architektur kombiniert Clustered Deferred Shading für opake Basisgeometrie mit einem nachgelagerten
 Clustered-Forward-Pass für transluzente Objekte und komplexe Effekte.
 Durch die räumliche 3D-Cluster-Zuweisung bleibt die Lichtauswertung sowohl im Deferred- als auch im Forward-Pfad
-performant~\cite{DOOM}.
+performant~\parencite[vgl.][]{DOOM}.
 
 % Ansatz C: Selektives Post-Processing.
 
 \paragraph{Selektives Post-Processing}
 Eine weitere gängige Industriepraxis bildet das selektive Screen-Space Post-Processing.
 Hierbei wird die Stilisierung nicht auf Materialebene berechnet, sondern als bildbasierter 2D-Filter
-in der Nachbearbeitung angebracht~\cite[S.~661]{akenine-mollerRealtimeRendering2019}.
+in der Nachbearbeitung angebracht~\parencite[vgl.][S.~661]{akenine-mollerRealtimeRendering2019}.
 Die Industrie implementiert Verfahren wie das \textit{Stencil-Masking}, um bei globalen Filtern dennoch eine selektive,
-objektbasierte Zuweisung zu gewährleisten~\cite[S.~81]{AdvancesRealTimeRendering}.
+objektbasierte Zuweisung zu gewährleisten~\parencite[vgl.][S.~81]{AdvancesRealTimeRendering}.
 In klassischen Deferred-Pipelines ist der \textit{Stencil-Buffer} (\textit{Schablonenspeicher}) hardwareseitig meist
 direkt an den \textit{Depth-Buffer} (\textit{Tiefenpuffer}).
-gekoppelt~\cite[Folie~\enquote{\ac{G-Buffer}: Our approach}]{valientDeferredRenderingKillzone}.
+gekoppelt~\parencite[vgl.][Folie~\enquote{\ac{G-Buffer}: Our approach}]{valientDeferredRenderingKillzone}.
 Anstatt Identifikationsnummern aufwendig als Farbinformationen in den regulären \ac{G-Buffer} zu schreiben, markieren die zu
 stilisierenden Objekte ihre Pixel während des ersten Render-Durchlaufs (Geometrie-Pass) mit einem spezifischen
 Referenzwert direkt im Stencil-Buffer.
@@ -209,7 +209,34 @@ benötigt wird.
 Die \textit{CryEngine 3} demonstriert diese Praxis anschaulich: Sie nutzt \textit{Stencil-Masking} gezielt, um
 rechenintensive Post-Processing-Algorithmen wie die Kantenerkennung (Edge-Detection) performant nur auf bestimmte
 Objekte im Vordergrund anzuwenden, während der Rest der Szene unberührt
-bleibt~\cite[S.~81]{AdvancesRealTimeRendering}.
+bleibt~\parencite[vgl.][S.~81]{AdvancesRealTimeRendering}.
+
+\begin{figure}[H]
+    \centering
+    % Erste Teilabbildung: Finales Rendering
+    \begin{subfigure}[b]{0.95\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{abbildungen/pragmata_screenshot}
+        \caption{Finales Rendering einer Spielszene.}
+        \label{fig:pragmata_final}
+    \end{subfigure}
+
+    \vspace{0.25cm} % Optionaler vertikaler Abstand zwischen den Teilabbildungen
+
+    % Zweite Teilabbildung: G-Buffer / Render-Pässe
+    \begin{subfigure}[b]{0.95\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{abbildungen/pragmata_gbuffer}
+        \caption{Frame-Analyse des G-Buffers und der isolierten Render-Pässe.}
+        \label{fig:pragmata_passes}
+    \end{subfigure}
+
+    % Gemeinsame Haupt-Caption
+    \caption[Visualisierung von Pipeline-Fragmentierung in \textit{PRAGMATA}]{Visualisierung von Pipeline-Fragmentierung
+    am Beispiel von \textit{PRAGMATA} (2026) zur Veranschaulichung spezialisierter
+    Industrie-Workarounds (Quelle: \parencite{muhammadPrettyFramesPRAGMATA2026}).}
+    \label{fig:pragmata_pipeline_analysis}
+\end{figure}
 
 % Zusammenfassung & Überleitung zum Gap.
 Die Betrachtung der Industriepraxis offenbart, dass die Umsetzung selektiver, objektbasierter Stilisierungen in
@@ -218,7 +245,7 @@ hybriden Forward-Overlays besteht.
 Dass moderne Rendering-Pipelines hierbei zunehmend fragmentieren, veranschaulicht die Analyse der aktuellen
 AAA-Produktion \textit{PRAGMATA} (2026), deren selektives Post-Processing durch die Aufspaltung in zahlreiche isolierte
 Render-Pässe und eigens generierte Masken realisiert
-wird~\cite[Abschn.~\enquote{Frame}]{muhammadPrettyFramesPRAGMATA2026}
+wird~\parencite[vgl.][Abschn.~\enquote{Frame}]{muhammadPrettyFramesPRAGMATA2026}
 (vgl.\ Abbildung~\ref{fig:pragmata_pipeline_analysis}).
 Solche architektonischen Kompromisse sind zwar für spezifische, isolierte Anwendungsfälle praktikabel, lassen sich
 aber nur schwer auf Szenen mit extrem hoher Material- und Stil-Entropie unter Verwendung weniger leistungsfähiger
@@ -226,10 +253,10 @@ Hardware skalieren.
 Aus dieser Diskrepanz zwischen hoch-spezialisierten Industrie-Workarounds und der Notwendigkeit einer skalierbaren
 Lösung ergibt sich die Forschungslücke der vorliegenden Arbeit, welche im folgenden systematisch eingegrenzt wird.
 
-%% PRAGMATA 1
+% PRAGMATA 1
 %\begin{figure}[b]
 %    \centering
-%    \begin{subfigure}[b]{0.75\textwidth}
+%    \begin{subfigure}[b]{0.9\textwidth}
 %        \centering
 %        \includegraphics[width=\linewidth]{abbildungen/pragmata_screenshot}
 %        \caption{Finales Rendering einer Spielszene.}
@@ -244,7 +271,7 @@ Lösung ergibt sich die Forschungslücke der vorliegenden Arbeit, welche im folg
 %\begin{figure}[t]
 %    \ContinuedFloat
 %    \centering
-%    \begin{subfigure}[b]{0.75\textwidth}
+%    \begin{subfigure}[b]{0.9\textwidth}
 %        \centering
 %        \includegraphics[width=\linewidth]{abbildungen/pragmata_gbuffer}
 %        \caption{Frame-Analyse des korrespondierenden G-Buffers und der isolierten Render-Pässe.}
@@ -255,33 +282,6 @@ Lösung ergibt sich die Forschungslücke der vorliegenden Arbeit, welche im folg
 %    (Fortsetzung).}
 %    \label{fig:pragmata_b}
 %\end{figure}
-
-\begin{figure}[htbp]
-    \centering
-    % Erste Teilabbildung: Finales Rendering
-    \begin{subfigure}[b]{0.95\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{abbildungen/pragmata_screenshot}
-        \caption{Finales Rendering einer Spielszene.}
-        \label{fig:pragmata_final}
-    \end{subfigure}
-
-    \vspace{0.5cm} % Optionaler vertikaler Abstand zwischen den Teilabbildungen
-
-    % Zweite Teilabbildung: G-Buffer / Render-Pässe
-    \begin{subfigure}[b]{0.95\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{abbildungen/pragmata_gbuffer}
-        \caption{Frame-Analyse des G-Buffers und der isolierten Render-Pässe.}
-        \label{fig:pragmata_passes}
-    \end{subfigure}
-
-    % Gemeinsame Haupt-Caption
-    \caption[Visualisierung der Pipeline-Fragmentierung in \textit{PRAGMATA}]{Visualisierung der Pipeline-Fragmentierung
-    in modernen AAA-Produktionen am Beispiel von \textit{PRAGMATA} (2026) zur Veranschaulichung spezialisierter
-    Industrie-Workarounds (Quelle: \cite{muhammadPrettyFramesPRAGMATA2026}).}
-    \label{fig:pragmata_pipeline_analysis}
-\end{figure}
 
 
 \section{Limitierungen bestehender Ansätze und Identifikation der Forschungslücke}
@@ -297,7 +297,7 @@ weitgehend unbetrachtet.
 
 % Forschungslücke.
 Globale Screen-Space-Filter stellen in der Praxis einen einfachen und etablierten Standard
-dar~\cite[S.~147]{magdicsPostprocessingNPREffects2013}.
+dar~\parencite[vgl.][S.~147]{magdicsPostprocessingNPREffects2013}.
 Im spezifischen Kontext der selektiven, objektbasierten Stilisierung, vornehmlich innerhalb der weit verbreiteten
 Deferred-Rendering-Paradigmen, stoßen gängige Praktiken jedoch in Abhängigkeit von der intendierten visuellen Stilistik
 an grundlegende architektonische Grenzen.
@@ -309,7 +309,7 @@ bevorzugen ist.
 % Empirische Evidenz.
 Theoretische Performance-Engpässe wie Bandbreitenlimitierungen im \ac{G-Buffer} oder hoher Registerdruck in
 Uber-Shadern sind in der Literatur zwar
-dokumentiert~\cites[S.~881]{akenine-mollerRealtimeRendering2019}[Abschn.~2.6]{Thaler2011DeferredRendering}
+dokumentiert~\parencites(vgl.)()[S.~881]{akenine-mollerRealtimeRendering2019}[Abschn.~2.6]{Thaler2011DeferredRendering}
 [Abschn.~6]{schiedDeferredAttributeInterpolation2015}.
 Wie~\textcite[S.~905]{akenine-mollerRealtimeRendering2019} jedoch anmerken, verschieben sich diese Limitierungen in der
 Praxis dynamisch mit der jeweiligen Szenenkomplexität.
