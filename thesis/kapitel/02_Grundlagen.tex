@@ -21,27 +21,33 @@ der Rasterisierung sowie die Funktionsweise der programmierbaren Pipeline-Stufen
 
 Die Standard-Echtzeit-Rendering-Architektur basiert grundlegend auf dem asynchronen Zusammenspiel von \ac{CPU}
 (\textit{Host}) und \ac{GPU} (\textit{Device}).
-Beide operieren parallel und weitestgehend unabhängig voneinander, um den Systemdurchsatz zu maximieren.
+Beide operieren parallel und weitestgehend unabhängig voneinander, um den Systemdurchsatz zu
+maximieren~\cite[Kap.~11.2.1.2 u.~11.2.5.1]{gregoryGameEngineArchitecture2018}.
 
-Die \ac{CPU} ist für die sequenzielle Abarbeitung der Szenen-Logik verantwortlich.
-Hierzu zählen die globale Statusverwaltung, Animationsberechnungen und räumliche Filterungen wie das
-\textit{Frustum-Culling}, bei dem Objekte außerhalb des Kamerasichtfelds frühzeitig verworfen werden.
-Die resultierenden, sichtbaren Geometrien bereitet die \ac{CPU} auf und sendet sie in Form von Render-Kommandos, den
-sogenannten \textit{Draw-Calls}, an die Grafik-\ac{API}.
-Dieser Vorgang wird als \textit{Dispatching} bezeichnet.
+Die \ac{CPU} ist für die Abarbeitung der Szenen-Logik verantwortlich.
+Hierzu zählen etwa die globale Statusverwaltung, Animationsberechnungen und räumliche Filterungen wie das
+\textit{Frustum-Culling}, bei dem Objekte außerhalb des Kamerasichtfelds frühzeitig verworfen
+werden~\cites[Kap.3.1]{akenine-mollerRealtimeRendering2019}
+[Kap.~11.2.7.1, Abschn.~\textit{Frustum-Culling}]{gregoryGameEngineArchitecture2018}.
+Die resultierenden, sichtbaren Geometrien sendet die \ac{CPU} schließlich in Form von Render-Instruktionen
+(\textit{Draw Calls}) an die
+Grafik-\ac{API}~\cite[Abschn.~\textit{The logical pipeline}]{pixeljetstreamPixelJetStream2015}.
 
-Die \ac{GPU} empfängt diese Kommandos und übernimmt die eigentliche Bilderstellung.
+Die \ac{GPU} empfängt diese Instruktionen und übernimmt die eigentliche Bilderstellung.
 Im Gegensatz zur \ac{CPU} ist die Architektur der Grafikkarte auf massiv parallele Datenverarbeitung ausgelegt.
-Sie nutzt das \ac{SIMD}- beziehungsweise \ac{SIMT}-Paradigma (Single Instruction, Multiple Data/Threads),
+Sie nutzt das \ac{SIMD}- beziehungsweise \ac{SIMT}-Paradigma,
 um identische Befehlssätze simultan auf tausenden dedizierten Recheneinheiten auszuführen.
 Durch die asynchrone Arbeitsweise verarbeitet die \ac{GPU} die Draw-Calls eines Frames, während die \ac{CPU} bereits
-die Logik und das Dispatching des nachfolgenden Frames berechnet.
+die Logik und das Dispatching des nachfolgenden Frames
+berechnet~\cites[Kap.~23.2]{akenine-mollerRealtimeRendering2019}{pixeljetstreamPixelJetStream2015}.
 
 Der physische Speicher der Grafikkarte, der \ac{VRAM}, ist über einen in seiner Bandbreite limitierten
-\textit{Speicherbus} mit dem eigentlichen \ac{GPU}-Chip verbunden.
+\textit{Speicherbus} mit dem eigentlichen \ac{GPU}-Chip
+verbunden~\cites[Kap.~11.2.5.1]{gregoryGameEngineArchitecture2018}[S.~794]{akenine-mollerRealtimeRendering2019}.
 Auf dem Chip selbst verteilen sich die Recheneinheiten auf sogenannte \ac{SM}.
-Jeder \ac{SM} verfügt über dedizierten, extrem schnellen Speicher (\textit{Register} und \textit{L1-Cache}), die die
-Befehle an die eigentlichen \acp{ALU} verteilen (vgl.\ Abb.~\ref{fig:gpu-hardware-model}).
+Jeder \ac{SM} verfügt über dedizierten, schnellen Speicher in Form von \textit{Registern} und \textit{L1-Cache}), die
+die Befehle an die eigentlichen \acp{ALU} verteilen~\cite{pixeljetstreamPixelJetStream2015}
+(vgl.\ Abb.~\ref{fig:gpu-hardware-model}).
 
 \begin{figure}[htbp]
     \centering
@@ -56,52 +62,54 @@ Befehle an die eigentlichen \acp{ALU} verteilen (vgl.\ Abb.~\ref{fig:gpu-hardwar
 \subsection{Die Rendering-Pipeline}
 \label{subsec:020102_rendering_pipeline}
 
-Die logische Rendering-Pipeline beschreibt den sequenziellen Prozess der Umwandlung von abstrakten, dreidimensionalen
-Geometriedaten in ein zweidimensionales Rasterbild.
-Moderne Grafik-\acp{API}s implementieren diese Pipeline als eine asynchrone Verkettung aus festgesetzten
-Hardware-Stufen und frei programmierbaren Blöcken, den sogenannten \textit{Shadern}.
-Der Datenfluss durch die Pipeline gliedert sich in folgende elementare Phasen und Datenstrukturen
+Die logische Rendering-Pipeline beschreibt den Prozess der Umwandlung von abstrakten, dreidimensionalen
+Geometriedaten in ein zweidimensionales Bild.
+Moderne Grafik-\acp{API}s implementieren diese Pipeline als eine Verkettung aus festgesetzten
+Hardware-Stufen und frei programmierbaren Blöcken, den sogenannten
+\textit{Shadern}~\cite[S.669--670]{gregoryGameEngineArchitecture2018}.
+Der Datenfluss durch die Pipeline gliedert sich in folgende grundlegende Phasen und Datenstrukturen
 (vgl.\ Abb.~\ref{fig:rendering-pipeline}):
 
 \begin{itemize}
     \item \textbf{Datenbereitstellung (VBO \& VAO):}
     Bevor die \ac{GPU} Berechnungen durchführen kann, müssen die geometrischen Rohdaten im \ac{VRAM} allokiert werden.
     Ein \ac{VBO} ist ein unstrukturierter Speicherblock auf der Grafikkarte, der
-    Vertex-Attribute (zum Beispiel Position, Normalen, Texturkoordinaten) vorhält.
+    Vertex-Attribute (bspw.\ Position, Normalen, Texturkoordinaten) vorhält~\cite[Kap.~2.9.2]{OpenGL33Core2010}.
     Um diese Rohdaten für die Pipeline nutzbar zu machen, fungiert ein \ac{VAO} als
     Zustandsobjekt.
     Das \ac{VAO} definiert das Speicherlayout und teilt der Hardware mit, wie die Datenströme des \acp{VBO} zu
-    interpretieren und an den ersten Shader zu übergeben sind.
+    interpretieren und an den Vertex-Shader zu übergeben sind~\cite[Kap.~2.10]{OpenGL33Core2010}.
 
     \item \textbf{Vertex-Processing (Vertex-Shader):}
     Der \textit{Vertex-Shader} ist die erste programmierbare Stufe der Pipeline und wird für jeden Vertex exakt einmal
     ausgeführt.
     Seine primäre Aufgabe ist die mathematische Transformation der Eckpunkte vom lokalen Objektraum über den Welt- und
-    Kameraraum in den normierten Bildschirmraum.
+    Kameraraum in den Bildschirmraum~\cite[Kap.~3.5]{akenine-mollerRealtimeRendering2019}.
 
     \item \textbf{Rasterisierung:}
     In dieser nicht manipulierbaren Hardware-Stufe werden die transformierten Vertizes zu geometrischen Primitiven
     (in der Regel Dreiecken) zusammengesetzt.
-    Der \textit{Rasterizer} zerlegt diese Flächen in einzelne Fragmente und bestimmt die Abdeckung der Bildschirmpixel
-    durch das jeweilige Dreieck.
-    Für jeden betroffenen Pixel wird ein sogenanntes \textit{Fragment} generiert.
-    Simultan interpoliert die Hardware die Vertex-Attribute linear über die Fläche des Primitivs.
+    Der \textit{Rasterizer} bestimmt die Abdeckung der Bildschirmpixel durch das jeweilige Dreieck.
+    Für jeden abgedeckten Pixel wird ein sogenanntes \textit{Fragment} generiert.
+    Simultan interpoliert die Hardware die Vertex-Attribute (Etwa Farbwerte) linear über die Fläche des
+    Primitivs~\cite[Kap.~11.1.4.7]{gregoryGameEngineArchitecture2018}.
 
     \item \textbf{Fragment-Processing (Fragment-Shader):}
-    Für jedes generierte Fragment im 2D-Bildraum wird der programmierbare \textit{Fragment-Shader} (teils auch
-    Pixel-Shader genannt) aufgerufen.
+    Für jedes generierte Fragment im 2D-Bildraum wird der programmierbare \textit{Fragment-Shader} (oft
+    \textit{Pixel-Shader} genannt) aufgerufen.
     Diese Stufe berechnet die finale Farbe des Fragments unter Einbeziehung von Materialeigenschaften, Texturdaten und
-    Beleuchtungsmodellen.
+    Beleuchtungsmodellen~\cite[Kap.~3.8]{akenine-mollerRealtimeRendering2019}.
 
     \item \textbf{Output (Framebuffer \& Render-Pässe):}
     Schließlich werden die validierten Farbwerte in den \textit{Framebuffer} geschrieben.
-    Der Framebuffer ist das Ziel-Speicherareal für die Bildausgabe.
-    Dies kann der sichtbare Bildschirm (Default-Framebuffer) oder ein unsichtbares Zwischenziel im Speicher sein
-    (zum Beispiel ein \ac{FBO} beim Deferred-Rendering).
+    Der Framebuffer ist der Zielspeicher für die Bildausgabe.
+    Dies kann der sichtbare Bildschirm oder ein unsichtbares Zwischenziel im Speicher sein
+    (zum Beispiel ein \ac{FBO} beim Deferred-Rendering)~\cite[Kap.~11.1.4.6]{gregoryGameEngineArchitecture2018}.
     Ein vollständiger Durchlauf dieser logischen Pipeline, vom Auslesen der Vertizes bis zum finalen Schreiben in den
-    Framebuffer, wird als \textit{Render-Pass} bezeichnet.
+    Framebuffer beschreibt einen einzelnen \textit{Render-Pass}.
     Komplexe Rendering-Architekturen erfordern häufig \textit{Multi-Pass-Rendering}, bei dem die Ausgabe eines Passes
-    als Eingabetextur für den darauffolgenden Pass dient.
+    als Eingabetextur für den darauffolgenden Pass
+    dient~\cites[Kap.~11.2.5.1, Abschn.~\textit{Textures} u.\ Kap.~11.2.5.3]{gregoryGameEngineArchitecture2018}.
 \end{itemize}
 
 \begin{figure}[htbp]
