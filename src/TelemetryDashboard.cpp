@@ -76,11 +76,11 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuLogicPro
     auto currentHeight = static_cast<float>(GetScreenHeight());
     float uiScale      = (currentHeight / 1080.0f) * Config::EngineSettings::UiScale;
 
-    int fontLg  = static_cast<int>(24 * uiScale);
+    int fontLg  = static_cast<int>(22 * uiScale);
     int fontMd  = static_cast<int>(18 * uiScale);
     int fontSm  = static_cast<int>(14 * uiScale);
     int pad     = static_cast<int>(15 * uiScale);
-    int spacing = static_cast<int>(26 * uiScale);
+    int spacing = static_cast<int>(24 * uiScale);
 
     int panelWidth  = static_cast<int>(550 * uiScale);
     int panelHeight = static_cast<int>(1325 * uiScale);
@@ -125,6 +125,10 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuLogicPro
     else if (state.activeRenderPath == RenderPath::Forward)
         modeString = "forward (Baseline)";
     DrawText(modeString, valueX, textY, fontMd, colSpecial);
+    textY += spacing;
+
+    DrawText("Benchmark Suite", textX, textY, fontMd, colText);
+    DrawText(selectedSuiteName.c_str(), valueX, textY, fontMd, colWarning);
     textY += spacing;
 
     DrawText("Resolution", textX, textY, fontMd, colText);
@@ -290,13 +294,11 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuLogicPro
     DrawText("CONTROLS", textX, textY, fontSm, colMuted);
     textY += static_cast<int>(18 * uiScale);
 
-    DrawText("Benchmark Start / Suite", textX, textY, fontMd, colText);
-    DrawText("[B] [N]", valueX, textY, fontMd, colAction);
-    textY += spacing;
-    DrawText(TextFormat("> %s", selectedSuiteName.c_str()), textX, textY, fontSm, colWarning);
-    textY += static_cast<int>(18 * uiScale);
     DrawText("Toggle Pipeline", textX, textY, fontMd, colText);
     DrawText("[TAB]", valueX, textY, fontMd, colAction);
+    textY += spacing;
+    DrawText("Benchmark Start / Suite", textX, textY, fontMd, colText);
+    DrawText("[B] / [N]", valueX, textY, fontMd, colAction);
     textY += spacing;
     DrawText("Scale Resolution", textX, textY, fontMd, colText);
     DrawText("[- / +]", valueX, textY, fontMd, colAction);
@@ -351,7 +353,7 @@ void TelemetryDashboard::Draw(EngineState &state, const CpuProfiler &cpuLogicPro
 
     if (state.requestScreenshot) {
         rlDrawRenderBatchActive();
-        namespace fs = std::filesystem;
+        namespace fs       = std::filesystem;
         fs::path outputDir = fs::current_path().parent_path() / "outputs" / "screenshots";
 
         if (!fs::exists(outputDir)) {
