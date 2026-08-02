@@ -62,7 +62,8 @@ Die speicherintensive Materialauswertung wird vollständig in einen nachgelagert
 Neben der Bandbreitenproblematik existieren in klassischen Deferred-Architekturen zwei weitere praktische Nachteile:
 die fehlende native Kompatibilität mit hardwarebasiertem \ac{MSAA} sowie eine grundlegende Einschränkung bei
 transluzenten Oberflächen.
-\ac{MSAA} glättet Objektkanten bereits während des geometrischen Rasterisierungsschritts (vgl.\ Kap.~\ref{0202}).
+\ac{MSAA} glättet Objektkanten bereits während des geometrischen Rasterisierungsschritts
+(vgl.\ Kap.~\ref{subsec:020102_rendering_pipeline}).
 Da Deferred Rendering die Beleuchtung jedoch erst im nachgelagerten Bildraum berechnet, stehen diese Geometriedetails
 der Kanten nicht mehr zur Verfügung.
 Für Kantenglättung in Deferred-Pipelines werden temporale Verfahren wie \ac{TAA} verwendet, die dieses Problem lösen,
