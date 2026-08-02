@@ -709,6 +709,13 @@ worden.
     Rückseiten (siehe Abb.~\ref{fig:hydra_inverted-hull}). \\
 \end{longtable}
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{abbildungen/hydra_capture_20260712_222142}
+    \caption[Gooch-Shading im HyDra-Framework]{Gooch-Shading im HyDra-Framework.}
+    \label{fig:gooch_example}
+\end{figure}
+
 % Kanten-Bleeding
 Ein inhärentes Problem der selektiven Kuwahara-Filterung in Deferred Pipelines äußert sich bei Objekten mit sehr
 geringer projizierter Bildschirmfläche.
@@ -725,22 +732,6 @@ Diese werden durch einen konstanten Fallback-Wert in Form der unfiltrierten Basi
 Diese Modifikation dient der Gewährleistung einer stilistischen Konsistenz des Kuwahara-Filters auch bei selektiver
 Anwendung des Effektes.
 
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.85\linewidth]{abbildungen/hydra_capture_20260712_222142}
-    \caption[Gooch-Shading im HyDra-Framework]{Gooch-Shading im HyDra-Framework.}
-    \label{fig:gooch_example}
-\end{figure}
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.85\linewidth]{abbildungen/hydra_capture_20260524_103923}
-    \caption[Kollabieren der selektiven Kuwahara-Bildraumfilterung im HyDra-Framework]
-    {Kollabieren der selektiven Kuwahara-Bildraumfilterung bei weit entfernten und kleinen Geometrien im
-    HyDra-Framework (vergrößerte Darstellung).}
-    \label{fig:npr_spatial_low_pixel_problem}
-\end{figure}
-
 % Mathematisch
 Wie~\textcite[Abschn.~II-B]{papariArtisticEdgeCorner2007} darlegen, leidet die klassische Kuwahara-Filterstruktur unter
 einer inhärenten mathematischen Instabilität, sobald mehrere Subregionen identische Standardabweichungen aufweisen.
@@ -750,12 +741,20 @@ Identitäts-Maskierung die Quadranten.
 Die Varianz der abgetasteten Nachbarpixel sinkt hierbei gegen null, wodurch der Algorithmus die mathematische Basis
 verliert, um eine eindeutige Region zu isolieren.
 
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\linewidth]{abbildungen/hydra_capture_20260524_103923}
+    \caption[Kollabieren der selektiven Kuwahara-Bildraumfilterung im HyDra-Framework]
+    {Kollabieren der selektiven Kuwahara-Bildraumfilterung bei weit entfernten und kleinen Geometrien im
+    HyDra-Framework (vergrößerte Darstellung).}
+    \label{fig:npr_spatial_low_pixel_problem}
+\end{figure}
+
 % Entropie Listing.
 \begin{listing}[htbp]
     \begin{codeframe}
         \begin{minted}{glsl}
 // Fetch neighbor's spatial and identity data
-vec4 neighborNormalData = texture(gNormalTex, sampleUV);
 int neighborStyleID = int(round(neighborNormalData.a * 255.0));
 vec3 col;
 // Validate Neighbor
