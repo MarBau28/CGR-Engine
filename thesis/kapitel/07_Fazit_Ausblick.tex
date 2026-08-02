@@ -31,10 +31,12 @@ Die empirischen Messungen identifizierten spezifische Hardware-Bottlenecks für 
 Rendering-Pipelines.
 Die Single-Pass-Forward-Pipeline wies vor allem bei ansteigender Lichtkomplexität, durch \ac{ALU}-Last bedingt,
 Schwächen auf.
-Die Single-Pass-Deferred-Over-Pipeline zeigte bei hoher räumlicher Stil-Entropie
-signifikante Leistungseinbrüche auf, die durch Warp-Divergenz und Registerdruck bedingt waren.
-Die Deferred-Volume-Pipeline wies bei extrem überlappenden Lichtquellen eine fundamentale Bandbreitenlimitierung
-durch erhöhte \ac{RMW}-Zyklen auf.
+Die Single-Pass-Forward-Pipeline wies vor allem bei ansteigender Lichtkomplexität aufgrund hoher \ac{ALU}-Last
+deutliche Schwächen auf.
+Die Single-Pass-Deferred-Uber-Pipeline zeigte bei hoher räumlicher Stil-Durchmischung signifikante Leistungseinbrüche,
+die durch Warp-Divergenz und Registerdruck verursacht wurden.
+Die Deferred-Volume-Pipeline unterlag bei stark überlappenden Lichtquellen einer Bandbreitenlimitierung durch erhöhte
+\ac{RMW}-Zyklen.
 
 % Architekturergebnisse.
 Auf architektonischer Ebene zeigte die Single-Pass-Forward-Pipeline zudem die signifikante Einschränkung,
@@ -47,27 +49,25 @@ Insgesamt erwiesen sich Single-Pass Architekturen als unzureichend, um extrem ho
 Die Synthese dieser Ergebnisse lässt die zentrale Forschungsfrage dahingehend beantworten, dass im Kontext der
 selektiven Stilisierung keine universell überlegene Basis-Rendering-Architektur existiert.
 Die Leistungsfähigkeiten wurde dynamisch und ausschließlich anhand der dominierenden Szenenlast determiniert.
-Aus den gewonnenen Erkenntnissen resultierte in Kapitel~\ref{sec:0602_heuristic_model} ein heuristisches
-Entscheidungsmodell, welches Entwicklern ein konkretes Werkzeug zur objektiven, frühzeitigen Architekturbewertung anhand
-deterministischer Hard Limits und empirischer Soft Limits bereitstellt.
-Das entwickelte \ac{HyDra}-Framework stellt Entwicklern zudem eine empirische und gekapselte Testumgebung für die
-untersuchten Rendering-Architekturen, frei von proprietärem Engine-Overhead, zur Verfügung.
+Den zentralen praktischen Beitrag dieser Arbeit bildet das entwickelte \ac{HyDra}-Framework, welches Entwicklern eine
+gekapselte, von proprietärem Engine-Overhead freie Testumgebung zur empirischen Evaluation von Rendering-Architekturen
+bereitstellt.
+Als abgeleitetes Resultat dieser Testumgebung wurde in Kapitel~\ref{sec:0602_heuristic_model} ein heuristisches
+Entscheidungsmodell formuliert, das anhand deterministischer \textit{Hard-Limits} und empirischer \textit{Soft-Limits}
+als konkretes Werkzeug zur frühzeitigen Architekturbewertung dient.
 
 
 \section{Ausblick und zukünftige Arbeiten}
 \label{sec:0702_future_work}
 
-% Einleitung.
-Abschließend werden mögliche Erweiterungen der entwickelten Software vorgestellt und auf Forschungsebene relevante
-Erweiterungsmetriken anhand der in Kapitel~\ref{sec:0603_reflektion_and_limits} dargestellten Limitationen der Software,
-der Methodik und Untersuchungsvektoren vorgestellt.
-
 % Profiler.
-Die in der Methodik identifizierten Schwächen der reinen Zeitmessung machten für Folgestudien eine technologische
-Weiterentwicklung der Telemetrie-Erfassung erforderlich.
-Wenn zwingend die genauen Auswirkungen von Hardware-Phänomenen wie beispielsweise Registerdruck, Cache-Misses oder
-exakter Speichersättigung evaluiert werden müssen, ist die Integration systemnaher Hardware-Profiler wie
-\textit{NVIDIA Nsight} oder der \textit{Radeon Developer Tool Suite (RDTS)} in künftigen Studien notwendig.
+Die nachfolgenden Ansätze bauen größtenteils auf den in Kapitel~\ref{sec:0603_reflektion_and_limits} identifizierten
+Limitationen auf.
+Aus den methodischen Schwächen der reinen Zeitmessung folgt beispielsweise für Folgestudien die Notwendigkeit einer
+erweiterten Telemetrie-Erfassung.
+Sollen die genauen Auswirkungen von Hardware-Phänomenen wie Registerdruck, Cache-Misses oder Speichersättigung
+evaluiert werden, ist die Integration systemnaher Hardware-Profiler wie \textit{NVIDIA Nsight} oder der \textit{Radeon
+Developer Tool Suite (RDTS)} erforderlich.
 
 % Pipeline-Erweiterung.
 Im Rahmen der architektonischen Weiterentwicklung des \ac{HyDra}-Frameworks sind Ergänzungen weiterer
@@ -84,10 +84,10 @@ und das damit einhergehende Shadow-Mapping sowie erweiterte Materialeigenschafte
 primärer Relevanz.
 
 % Effekt-Untersuchungen.
-Des Weiteren besteht die Möglichkeit, neben der stilistischen Entropie durch komplexere Materialeigenschaften auch
-zusätzliche Studien zu Anti-Aliasing aud den untersuchten Rendering-Paradigmen durchzuführen.
-Dies ist besonders im Hinblick auf die selektive Stilisierung durch dadurch verursachte harte Materialkanten von
-Interesse.
+Zudem lassen sich neben der stilistischen Entropie durch komplexere Materialeigenschaften auch die Einflüsse von
+Anti-Aliasing-Verfahren im Kontext der untersuchten Rendering-Paradigmen analysieren.
+Dies betrifft insbesondere die selektive Stilisierung, da die verursachten Artefakte wie harte Materialkanten das
+Erscheinungsbild maßgeblich beeinflussen.
 Anti-Aliasing kann somit als weitere semantische Evaluationsgrundlage der Rendering-Pipelines herangezogen werden.
 
 % Hardware.

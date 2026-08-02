@@ -15,9 +15,9 @@ einer kritischen Reflexion unterzogen.
 \label{sec:0601_interpretation_results}
 
 % Einleitung.
-Die in Kapitel ~\ref{sec:0102_goal_and_core_question} dargelegten Forschungsfragen lassen sich für die in dieser Arbeit
-gewählten Rendering-Pipelines, deren Implementation die absoluten Basis-Architekturen der jeweiligen
-Rendering-Paradigmen darstellen, individuell beantworten.
+Die in Kapitel~\ref{sec:0102_goal_and_core_question} definierten Forschungsfragen lassen sich für die untersuchten
+Pipelines individuell beantworten.
+Die gewählten Implementierungen repräsentieren dabei die jeweiligen Basis-Architekturen der Rendering-Paradigmen.
 
 % Forward Basis Performance.
 Wie in Kapitel ~\ref{ch:03_acedemic_and_industry_state} dargelegt und
@@ -25,25 +25,23 @@ Kapitel~\ref{subsec:050101_evaluation_tagets_and_hypothesis} postuliert, wird da
 Single-Pass-Forward-Rendering auf Performance-Ebene theoretisch primär durch zwei Flaschenhälse definiert:
 Fragment-Overdraw und die Verarbeitung großer Anzahlen von Lichtquellen.
 Wie die Ergebnisse aus~\ref{subsec:050203_overdraw_eval} und~\ref{subsec:050403_shading_overdraw_eval} darstellen,
-wird auf Hardwareebene moderner \ac{GPU}s bereits ein extrem großer Teil an Overdraw-Engpässen mitigiert.
+wird auf Hardwareebene moderner \ac{GPU}s bereits ein großer Teil an Overdraw-Engpässen mitigiert.
 Auch wenn Overdraw, wie~\textcite[Abschn.~1,~Punkt~5]{Thaler2011DeferredRendering} darlegt, nie gänzlich eliminiert
 werden kann, sind die inhärenten Funktionen moderner \acp{GPU} bereits ausreichend, um auch ohne zusätzliche
 Algorithmen, wie ein dedizierter Z-Prepass, Overdraw als primären Bottleneck weitestgehend zu umgehen.
 Versuch~\ref{fig:5_4_1_light_count_means} bestätigt hingegen die grundlegende These des signifikanten Bottlenecks
-hinsichtlich extrem hoher Lichtquellen.
+hinsichtlich extrem hoher Lichtquellenanzahlen.
 Weiterhin stellt Versuch~\ref{subsec:050202_obejct_count_eval} den wenig evaluierten Bottleneck auf \ac{CPU}-Ebene für
 Forward-Pipelines in Form von ansteigende \ac{CPU}-Dispatch-Zeiten durch State-Changes, Culling und
-Lichtquellen-Suchläufe.
+Lichtquellen-Suchläufe dar.
 Wie in Abbildung~\ref{fig:5_2_2_cpu_scaling_logic_vs_render} dargestellt, ist dieser Effekt allerdings vergleichsweise
-weniger signifikant für die Performance des Gesamtsystems.
+weniger relevant für die Performance des Gesamtsystems.
 
 % Forward Stilisierung.
-Die Beantwortung der grundlegenden Frage nach der Umsetzung von Forward-Pipelines bezüglich selektiver Stilisierung
-wirft, wie in Kapitel~\ref{subsec:040201_forward_pipeline} beschrieben, eine grundlegende Restriktion auf.
-Forward-Pipelines weisen zwar in der reinen Verwaltung verschiedener Shader und Materialien signifikante praktische
-Vorteile gegenüber Deferred-Paradigmen auf~\cite[Abschn.~9.2]{Chapter9Deferred}, aufgrund ihrer grundlegenden
-Eigenschaft, Shading-Operationen auf Objektebene (Object Space) darzustellen, sind sie jedoch nicht in der Lage,
-klassische Bildraum (Screen-Space) basierte Verfahren, wie etwa Kernel-basierte Effekte, selektiv darzustellen.
+Forward-Pipelines bieten bei der Verwaltung diverser Shader und Materialien praktische Vorteile
+gegenüber Deferred-Architekturen~\cite[Abschn.~9.2]{Chapter9Deferred}, die Umsetzung selektiver Stilisierungen
+unterliegt jedoch einer strukturellen Restriktion (vgl.\ Kap.~\ref{subsec:040201_forward_pipeline}), da ihre
+objektbasierte Shading-Auswertung die selektive Anwendung klassischer Bildraum-Verfahren (Screen Space) verhindert.
 Wie in Kapitel~\ref{subsec:040201_forward_pipeline} aufgezeigt, ist es je nach Anwendungsfall jedoch möglich, dass
 vergleichbare \ac{NPR}-Effekte auf Objektebene existieren, die ersatzweise verwendet werden können (beispielsweise die
 Verwendung von Inverted-Hull statt Sobel-Outlines).
@@ -56,38 +54,37 @@ zurückführen und mehr auf die Natur von Single-Pass-Architekturen~\cite[Abschn
 Diese Einschränkung trifft also ebenfalls auf die untersuchte Deferred-Uber-Pipeline zu.
 In der Deferred-Uber-Pipeline ist durch den Singe-Pass Umstand zudem der Zwang zu \textit{Pre-Lit}-Verwahren, wie in
 Kapitel~\ref{subsec:040202_deferred_uber_pipeline} aufgezeigt, festgestellt worden.
-Soll ein bestimmter \ac{NPR}-Effekt also unbedingt selektiv als reiner Post-Lit-Effekt verarbeitet werden, um die
-integrität eines Post-Processing Effektes zu gewährleisten (vgl.\ ~\ref{fig:040202_pre-post-lit_comparison}) muss auch
+Soll ein bestimmter \ac{NPR}-Effekt also selektiv als reiner Post-Lit-Effekt verarbeitet werden, um die
+Integrität eines Post-Processing Effektes zu gewährleisten (vgl.\ ~\ref{fig:040202_pre-post-lit_comparison}), muss auch
 innerhalb der Deferred-Paradigmen auf Multi-Pass-Verfahren zurückgegriffen werden.
 
 % Deferred Vorteil.
-Deferred Rendering in seinen zwei ausgeführten Formen verspricht, wie in Kapitel~\ref{ch:03_acedemic_and_industry_state}
-erörtert, diverse Vorteile gegenüber klassischem Forward-Rendering und für beide untersuchte Pipelines konnte die
-Grundannahme der effizienteren Verarbeitung hoher Anzahlen von Lichtquellen bestätigt werden
-(vgl.\ ~Kapitel~\ref{fig:5_4_1_light_count_means}).
+Wie in Kapitel~\ref{ch:03_acedemic_and_industry_state} erörtert, bietet Deferred Rendering in beiden untersuchten
+Ausprägungen diverse Vorteile gegenüber klassischem Forward-Rendering.
+Für beide Deferred-Pipelines konnte die Grundannahme einer effizienteren Verarbeitung hoher Lichtanzahlen empirisch
+bestätigt werden (vgl.\ Kap.~\ref{fig:5_4_1_light_count_means}).
 
 % Deferred Drawbacks.
-In Bezug auf selektive Stilisierung in Deferred Pipelines und Effizient bei hoher Szeneentropie konnte zudem auf
-Performanceebene die Hypothese der Warp-Divergence
-(vgl.\ ~Kapitel~\ref{subsec:020303_warp_divergence_and_register_pressure}) für die Deferred-Uber-Pipeline in
-Versuch~\ref{subsec:050501_entropy_eval} bestätigt werden, auch wenn eine eindeutige
-Zuweisung des Phänomens auf Hardwareebene durch den empirischen Aufbau der Versuche nicht endgültig verifiziert werden
-kann (etwa welchen anteiligen Einfluss Registerdruck hier hat).
+Hinsichtlich der selektiven Stilisierung und der Effizienz bei hoher Stil-Mischung bestätigten die Ergebnisse aus
+Versuch~\ref{subsec:050501_entropy_eval} die Hypothese der Warp Divergence für die Deferred-Uber-Pipeline
+(vgl.\ Kap.~\ref{subsec:020303_warp_divergence_and_register_pressure}).
+Aufgrund des empirischen Versuchsaufbaus lässt sich der exakte Hardware-Mechanismus jedoch nicht isoliert verifizieren.
+Der genaue Anteil von Effekten wie dem Registerdruck bleibt somit unklar.
 Obwohl der Deferred-Multi-Pass-Ansatz der Deferred-Volume-Pipeline in diesem Kontext keine Schwächen gezeigt hat,
 konnten in den Versuchen~\ref{subsec:050302_bandwidth_eval} und~\ref{subsec:050402_light_intensity_and_overlap_eval} die
-durch Blending in die Höhe getriebenen \ac{RMW}-Zyklen eindeutig identifiziert werden
-(vgl.\ Kapitel~\ref{subsec:020302_memory_bandwidth}).
+durch Blending induzierten \ac{RMW}-Zyklen empirisch identifiziert werden
+(vgl.\ Kap.~\ref{subsec:020302_memory_bandwidth}).
 Die Deferred-Multi-Pass-Ansätze zeigen zudem, wie in Kapitel~\ref{subsec:040203_deferred_volume_pipeline} dargelegt, den
 weiteren Nachteil der erhöhten \ac{VRAM}-Belastung durch größere G-Buffer-Formate, um Artefakte wie Banding (siehe
 Abbildung~\ref{fig:hydra_banding_comparison}) zu vermeiden.
 
 % Kapitel 3 Vergleich.
-Es ist anzumerken, das viele der Benannten Bottlenecks und Drawbacks der einzelnen Paradigmen, wie in
+Es ist anzumerken, das viele der benannten Bottlenecks und Drawbacks der einzelnen Paradigmen, wie in
 Kapitel~\ref{sec:0302_industry_state} und~\ref{sec:0301_academic_state} dargelegt, zumindest teilweise durch moderne
 Verfahren und hybride Ansätze kompensiert werden können.
 Verfahren wie beispielsweise \textit{Clustered Forward}~\cite{olssonClusteredDeferredForward2012} oder
 \textit{Forward+}~\cite{haradaForwardBringingDeferred2012} erweitern die
-Basisparadigmen hierfür Grundlegend.
+Basisparadigmen hierfür grundlegend.
 Moderne Entwicklungen aus der Spieleindustrie zeigen hingegen die Idee auf, hybride Verfahren mit einer Kombination aus
 Forward und Deferred Ansätzen für den Ausgleich der jeweiligen Schwächen einer Rendering-Architektur zu
 nutzen~\cite{muhammadPrettyFramesPRAGMATA2026, gameworksToonRenderingHiFi, valientDeferredRenderingKillzone}.
@@ -101,10 +98,10 @@ in einem heuristischen Entscheidungsmodell.
 Wie in Kapitel~\ref{ch:03_acedemic_and_industry_state} dargelegt, ist die Wahl einer Rendering-Architektur in der Praxis
 stark vom angestrebten Zielbild und dessen spezifischen Anforderungen
 abhängig.
-Die nachfolgende Auswertung differenziert zwischen deterministischen Ausschlusskriterien (\textbf{Hard Limits}), welche
+Die nachfolgende Auswertung differenziert zwischen deterministischen Ausschlusskriterien (\textbf{Hard Limits}), die
 durch architektonische oder \ac{API}-bedingte Restriktionen definiert sind
-(vgl.\ Kapitel~\ref{ch:04_konzeption_realisierung}), und empirischen Skalierungsheuristiken (\textbf{Soft Limits}), die
-Restriktionen und Kipppunkte auf Hardwareebene beschreiben (vgl.\ Kapitel~\ref{ch:05_evaluation}).
+(vgl.\ Kap.~\ref{ch:04_konzeption_realisierung}), und empirischen Skalierungsheuristiken (\textbf{Soft Limits}), die
+Restriktionen und Kipppunkte auf Hardwareebene beschreiben (vgl.\ Kap.~\ref{ch:05_evaluation}).
 Die Synthese dieser Ergebnisse wird in Abbildung~\ref{fig:heuristic_decision_model} visualisiert.
 
 \paragraph{Deterministische Ausschlusskriterien (Hard Limits)}
@@ -112,29 +109,30 @@ Im Folgenden werden die architektonischen und Grafik-\ac{API}-bedingten Restrikt
 deterministisch ausschließen:
 
 \begin{description}
-    \item[Selektive Stilisierung von Bildraum-Effekten] ~\\
-    Durch die inhärente Limitierung von Forward-Rendering-Paradigmen Geometrien ausschließlich auf Objekten
-    (Object-Space), ist Forward-Rendering in seiner Grundform ungeeignet, um Bildraumeffekte (Screen-Space)
-    wie Kuwahara-Filter oder Sobel-Outlines selektiv darzustellen (vgl.\ ~\ref{subsec:040201_forward_pipeline}).
+    \item[Selektive Stilisierung von Bildraumeffekten] ~\\
+    Durch die inhärente Limitierung von Forward-Rendering-Paradigmen, Geometrien ausschließlich
+    auf Objektebene (Object Space) zu verarbeiten, ist Forward-Rendering in seiner Grundform ungeeignet, um
+    Bildraumeffekte (Screen Space) wie Kuwahara-Filter oder Sobel-Outlines selektiv darzustellen
+    (vgl.\ Kap.~\ref{subsec:040201_forward_pipeline}).
     Es muss auf Deferred-Paradigmen oder visuell äquivalente Effekte (vgl.\ Abb.~\ref{fig:040201_outline_comparison})
     zurückgegriffen werden.
 
     \item[Licht-Quantität (1)] ~\\
     Wird die Anzahl der aktiven Lichtquellen in einer Szene erwartet größer als das von der Grafik-\ac{API} zugrunde
-    gelegte Limit für Uniform-Buffer (etwa 512 in OpenGL), so ist der Einsatz einer Multi-Pass-Pipeline mit aufgeteilten
-    Lichtberechnungspässen erforderlich (vgl.\ ~\ref{subsec:040201_forward_pipeline}).
+    gelegte Limit für Uniform-Buffer (512 in OpenGL), so ist der Einsatz einer Multi-Pass-Pipeline mit aufgeteilten
+    Lichtberechnungspässen erforderlich (vgl.\ Kap.~\ref{subsec:040201_forward_pipeline}).
     Simple Single-Pass Architekturen wie eine naive Forward-Rendering-Pipeline oder Deferred-Pipelines mit einem
-    einzigen monolithischen Uber-Shader zur Lichtberechnung, sind hier nicht hinreichend
+    einzigen monolithischen Uber-Shader zur Lichtberechnung, sind in diesem Kontext nicht hinreichend
     (vgl.\ Abb.~\ref{fig:5_4_1_light_count_means}).
 
     \item[NPR-Integrität (Pre-Lit vs Post-Lit)] ~\\
-    Bei der Anwendung von kernelbasierten Effekten, wie beispielsweise dem Kuwahara-Filter, in selektiven
+    Bei der Anwendung von kernelbasierten Effekten (bspw.\ Kuwahara-Filter) in selektiven
     Deferred-Pipelines erweisen sich Single-Pass-Deferred-Pipelines als unzureichend, sofern die vollständige Integrität
-    des resultierenden Effekts gewahrt werden muss (vgl.\ ~\ref{subsec:040202_deferred_uber_pipeline}).
+    des resultierenden Effekts gewahrt werden muss (vgl.\ Kap.~\ref{subsec:040202_deferred_uber_pipeline}).
     Aufgrund der signifikanten Zunahme des algorithmischen Aufwands, die Beleuchtungsberechnungen
     der notwendigen Umgebungspixel für jeden bearbeiteten Bildpunkt durchzuführen, ist es erforderlich die
-    Lichteinwirkung bereits vor der Anwendung des eigentlichen \ac{NPR}-Effekts ine einem vorgelagerten Pass zu
-    berechnen (vgl.\ ~\ref{subsec:040203_deferred_volume_pipeline}).
+    Lichteinwirkung bereits vor der Anwendung des eigentlichen \ac{NPR}-Effekts in einem vorgelagerten Pass zu
+    berechnen (vgl.\ Kap.~\ref{subsec:040203_deferred_volume_pipeline}).
 \end{description}
 
 \paragraph{Empirische Skalierungsheuristiken (Soft Limits)}
@@ -146,37 +144,36 @@ zunehmender Szenenkomplexität unverhältnismäßig stark sinkt.
     Forward-Rendering ist hinreichend geeignet Szenen mit einer niedrigen Anzahl an Lichtquellen darzustellen, in
     Umgebungen mit einer signifikanten Anzahl von Lichtquellen ist von der Verwendung von Forward-Paradigmen zur
     Lichtauswertung allerdings abzusehen (vgl.\ Abb.~\ref{fig:5_4_1_light_count_means}).
-    Der Forward-inhärente quadratische Aufwand von $\mathcal{O}(N_{\text{obj}} \cdot N_{\text{light}})$ ist dem linearen Aufwand von
-    $\mathcal{O}(N_{\text{obj}} + N_{\text{light}})$ in Deferred signifikant unterlegen
-    (vgl.\ ~\ref{subsec:020201_forward_rendering} u.~\ref{subsec:020202_deferred_rendering}).
+    Der inhärente quadratische Aufwand von Forward-Paradigmen von $\mathcal{O}(N_{\text{obj}} \cdot N_{\text{light}})$ ist dem linearen Aufwand von
+    $\mathcal{O}(N_{\text{obj}} + N_{\text{light}})$ in Deferred-Paradigmen signifikant unterlegen
+    (vgl.\ Kap.~\ref{subsec:020201_forward_rendering} u.~\ref{subsec:020202_deferred_rendering}).
 
     \item[Monolithische Shader-Strukturen] ~\\
-    Wenn Szenen mit einer extrem hohen Stil- oder Material-Entropie vorliegen, ist bei der Verwendung von monolithischen
-    Shader-Strukturen mit einer großen Anzahl von \texttt{if/else}- oder \texttt{switch}-Bedingungen, die sich auf nicht
-    triviale Shading-Operationen beziehen, in der selektiven Stilisierung mit Einschränkungen zu rechnen
-    (vgl.\ ~\ref{subsec:050501_entropy_eval}).
+    Bei Szenen mit hoher Stil- oder Material-Entropie führt der Einsatz monolithischer Shader-Strukturen, die
+    zahlreiche \texttt{if/else}- oder \texttt{switch}-Verzweigungen für nicht-triviale Shading-Operationen enthalten, zu
+    Leistungseinschränkungen bei der selektiven Stilisierung (vgl.\ Kap.~\ref{subsec:050501_entropy_eval}).
     Dies gilt insbesondere für Deferred-Rendering-Paradigmen, die eine höhere Tendenz zu solchen monolithischen
-    Shader-Strukturen durch vereinheitlichte Shading-Pässe aufweisen (vgl.\ ~\ref{subsec:020202_deferred_rendering}).
+    Shader-Strukturen durch vereinheitlichte Shading-Pässe aufweisen (vgl.\ Kap.~\ref{subsec:020202_deferred_rendering}).
 
     \item[Light-Volumes] ~\\
     Bei der Verwendung von Light-Volumes zur Lichtberechnung, die im Deferred Rendering weit verbreitet sind, ist in
     komplexen Szenen mit einer hohen Lichtdichte und der daraus resultierenden großen Menge an Überlappungen der
     Lichteinflüsse mit Performanceeinbußen zu rechnen
-    (vgl.\ ~\ref{subsec:050302_bandwidth_eval} u.~\ref{subsec:050402_light_intensity_and_overlap_eval}).
+    (vgl.\ Kap.~\ref{subsec:050302_bandwidth_eval} u.~\ref{subsec:050402_light_intensity_and_overlap_eval}).
     Die durch Additives Blending der Lichteinflüsse erhöhten \ac{RMW}-Zyklen auf der \ac{GPU} können sich als
-    signifikanter Performance-Engpass herausstellen (vgl.\ ~\ref{subsec:020302_memory_bandwidth}).
-    In diesem Zusammenhang muss weiterhin beachtet werden, dass das Deferred Rendering grundlegend höhere
-    Speicherbelastungen aufweist, um Artefaktbildungen zu vermeiden und damit eine höhere Grundlast auf der \ac{GPU}
-    verursacht (vgl.\ ~\ref{subsec:040203_deferred_volume_pipeline}).
-    Dies könnte bei kleinen und sehr speichertechnisch begrenzten Systemen einen signifikanten Faktor darstellen
-    (vgl.\ ~\ref{subsec:050302_bandwidth_eval} u. ~\ref{sec:0506_macro_eval}).
+    signifikanter Performance-Engpass herausstellen (vgl.\ Kap.~\ref{subsec:020302_memory_bandwidth}).
+    In diesem Zusammenhang muss weiterhin beachtet werden, dass Deferred Rendering grundlegend eine höhere Speicherbelastung
+    aufweist, um Artefaktbildungen zu vermeiden, was eine höhere Grundlast auf der \ac{GPU} verursacht
+    (vgl.\ Kap.~\ref{subsec:040203_deferred_volume_pipeline}).
+    Dies könnte bei Systemen mit begrenzter Speicherbandbreite einen kapazitäts- und leistungskritischen Faktor
+    darstellen (vgl.\ Kap.~\ref{subsec:050302_bandwidth_eval} u.\ ~\ref{sec:0506_macro_eval}).
 
     \item[Objekt-Quantität] ~\\
     In komplexen Szenen mit einer hohen Anzahl individueller Objekte weisen klassische Forward-Rendering-Pipelines eine
     erhöhte Last auf der Host-Seite (\ac{CPU}) durch insgesamt höhere Dispatch-Zeiten auf
-    (vgl.\ ~\ref{subsec:050202_obejct_count_eval}).
-    In Umgebungen mit wenig Rechenkapazität auf \ac{CPU}-Seite sind Deferred-Architekturen somit möglicherweise
-    vorzuziehen, auch wenn dieser Effekt im Gesamtsystem eher marginal auffällt
+    (vgl.\ Kap.~\ref{subsec:050202_obejct_count_eval}).
+    In Umgebungen mit wenig \ac{CPU}-Rechenkapazitäten sind Deferred-Architekturen somit möglicherweise
+    vorzuziehen, auch wenn dieser Effekt im bezug auf die Leistung des Gesamtsystems eher marginal auffällt
     (vgl.\ Abb.~\ref{fig:5_2_2_cpu_scaling_logic_vs_render}).
 \end{description}
 
@@ -297,21 +294,21 @@ Eine Einschränkung des erstellten Frameworks ist im grundlegenden Umfang der im
 verzeichnen.
 Die Beschränkung der Umgebung auf die gewählten drei Rendering-Architekturen ist im Sinne einer Evaluation der
 Basisparadigmen zwar vertretbar, in der Praxis sind jedoch, wie in Kapitel ~\ref{sec:0302_industry_state} aufgezeigt,
-wesentlich fragmentiertere Umgebungen vorhanden und die entsprechenden Basisparadigmen kommen kaum in ihrer Reinform
+wesentlich fragmentiertere Umgebungen vorhanden und die entsprechenden Basisparadigmen kommen selten in ihrer Reinform
 vor.
 Was in der Praxis als \textquote{Standard} oder \textquote{Basis} moderner Rendering-Architekturen gilt, ist
 entsprechend nur schwer einzugrenzen und zu evaluieren.
 Dies zeigen mittlerweile weit verbreitete Ansätze wie \textit{Forward+}~\cite{haradaForwardBringingDeferred2012},
 \textit{Clustered}-Ansätze~\cite{olssonClusteredDeferredForward2012},
-\textit{Tiled Shading}~\cite{olssonTiledClusteredForward2012} oder die nutzung von
+\textit{Tiled Shading}~\cite{olssonTiledClusteredForward2012} oder die Nutzung von
 \textit{Visibility-Buffern} in Deferred-Architekturen~\cite{burnsVisibilityBufferCacheFriendly2013}
 als Erweiterungen der Basisparadigmen.
-Insbesondere im Hinblick auf die Forward-Rendering-Baseline besteht eine signifikante Lücke bezüglich der
-Multi-Pass-Variante des Renderingverfahrens.
+Insbesondere bezüglich der Multi-Pass-Variante des Forward-Renderings weist die entwickelte Software dieser Arbeit eine
+methodische Lücke in der Implementierung und der daraus resultierenden Evaluation auf.
 
 % Materiallimits.
 Bestimmte grundlegende Materialeigenschaften, wie etwa Transluzenzen oder Spiegelungen, stellen ebenfalls gängige und
-grundlegende Anforderungen an Echtzeiterendering-Systeme
+Anforderungen an Echtzeiterendering-Systeme
 dar~\cites[Abschn.~\textit{Deferred G-buffer}]{muhammadPrettyFramesPRAGMATA2026}
 [Abschn.~\textit{G-Buffer : Our approach}]{valientDeferredRenderingKillzone}
 [S.~887]{akenine-mollerRealtimeRendering2019}.
@@ -320,26 +317,26 @@ Dies erschwert eine ganzheitliche Evaluation und Ableitung für diverse Praxisf�
 
 % Lichtevaluationen.
 In der Industriepraxis gehören darüber hinaus verschiedene Typen von Lichtquellen, wie Richtungs- (Directional) oder
-Flächenlichter (Area Lights), und die damit verbundenen Anforderungen, insbesondere das \textit{Shadow Mapping}, zum
+Flächenlichter (Area Lights), und die damit verbundenen Anforderungen, wie etwa \textit{Shadow Mapping}, zum
 Standardrepertoire einer Szene in der
 Spieleentwicklung~\cites[Abschn.~2.4.1]{fonsecaDeferredShadingTutorial}
 [Kap.~11.1.3.3]{gregoryGameEngineArchitecture2018}.
-Das \ac{HyDra}-Framework weist hier ebenfalls Lücken durch die reine Verwendung von dynamisch generierten
+Das \ac{HyDra}-Framework weist hier ebenfalls Lücken durch die Verwendung von ausschließlich dynamisch generierten
 Punktlichtquellen auf.
 
 % Empirie.
 Innerhalb der angewandten Evaluationsmetriken und des grundlegenden Ansatzes der empirischen Untersuchung können
-ebenfalls signifikante Limitationen der implementierten Software sowie der daraus resultierenden Untersuchungen
+ebenfalls Limitationen der implementierten Software sowie der daraus resultierenden Untersuchungen
 festgestellt werden.
-Im Rahmen der Analyse spezifischer, hardwareinterner Phänomene und Flaschenhälse erweisen sich empirische
+Im Rahmen der Analyse spezifischer, Hardware-interner Phänomene und Flaschenhälse erweisen sich empirische
 Vorgehensweisen, die sich ausschließlich auf die Messung von Verarbeitungszeiten konzentrieren, häufig als unzureichend.
 Ein umfassendes Bild über die Ursachen und Limitierungen der betreffenden Phänomene und Hardware-Kipppunkte ist so nur
 schwer zu gewinnen.
 Dies zeigen vor allem die Versuche ~\ref{subsec:050302_bandwidth_eval} und ~\ref{subsec:050501_entropy_eval}.
-Zwar ermöglichen rein empirische Messungen eine Untersuchung des grundlegenden Verhaltens einer Rendering-Pipeline, sie
+Zwar ermöglichen rein empirische Messungen eine Untersuchung des grundlegenden Verhaltens einer Rendering-Pipeline,
 sind jedoch nicht dazu geeignet, entsprechende detaillierte Handlungsempfehlungen bezüglich Hardwareoptimierungen
 abzuleiten.
-Das detaillierte Auslesen von hardwarinternen Daten müsste durch die zusätzliche Integration von spezifischen
+Das detaillierte Auslesen von Hardware-internen Daten müsste durch die zusätzliche Integration von spezifischen
 Hardware-Profilern wie \textit{NVIDIA Nsight} oder der \textit{Radeon Developer Tool Suite (RDTS)}
 erfolgen~\cite[Kap.~18.1]{akenine-mollerRealtimeRendering2019}.
 
@@ -369,10 +366,10 @@ Zukünftige Erweiterungen und Anpassungen der Software sollten daher streng modu
 Codestrukturen, vor allem hinsichtlich der Grafik-\ac{API}-Instruktionen und damit assoziierten C++-Code, zu vermeiden.
 
 % Szenenaufbau & Tooling.
-Im Rahmen diverser Implementationsschritte war, durch diesen granularen Ansatz und die daraus resultierende
-Code-Komplexität, teilweise eine vollständige Neuentwicklung großer Teile des Codes erforderlich.
-Der Wechsel von einer statischen, hardcodierten Umgebung der Rendering-Pipelines zu einem für die Hardware-Benchmarks
-notwendigen Input-getriebenen Design stellte einen extremen Paradigmenwechsel dar.
+Die hohe Code-Komplexität dieses granularen Ansatzes machte im Rahmen mehrerer Implementierungsschritte die teilweise
+Neuentwicklung wesentlicher Systemkomponenten erforderlich.
+Der Übergang von einer statischen, hartcodierten Pipeline-Konfiguration zu einem für die Hardware-Benchmarks
+erforderlichen Input-getriebenen Design stellte dabei eine grundlegende architektonische Umstellung dar.
 Für alle potenziellen zukünftigen Untersuchungsvektoren muss demnach im Voraus eine Mindestflexibilität des Frameworks
 eingehalten werden.
 
@@ -397,10 +394,10 @@ Rendering-Architekturen kann daher weitestgehend als methodischer Trugschluss be
 % Telemetrie und Benchmark-Overhead.
 Die entwickelten Benchmark- und Telemetrie-Module sind besonders bezüglich ihres resultierenden Aufwands hervorzuheben.
 Der Entwicklungsaufwand eines deterministischen und belastbaren Messsystems
-(vgl.\ ~\ref{sec:0404_telemetry_and_benchmark_orchestrator}) mit sauberen Hardwareschleifen (Ring-Buffer-Verfahren) hat
+(vgl.\ Kap.~\ref{sec:0404_telemetry_and_benchmark_orchestrator}) mit sauberen Hardwareschleifen (Ring-Buffer-Verfahren) hat
 sich, neben der Implementation der Rendering- und Shading-Verfahren, als eine der größten Herausforderungen
 herausgestellt.
-In Zukunft ist von einer Entwicklung der Messgrundlagen im Nachgang der Kernentwicklungen abzusehen.
+In Zukunft ist von einer Entwicklung der Messgrundlagen im Anschluss and die Kernentwicklungen abzusehen.
 Telemetrie und Benchmark-Module sollten als integraler Bestandteil der Basisarchitektur konzipiert werden, nicht als
 nachgelagerte Evaluationsebene.
 
@@ -411,6 +408,6 @@ Aufgrund des Umfangs der untersuchten Thematik erweist sich die Entwicklung eine
 Testszenarien und -variablen als anspruchsvoll.
 Die darauffolgende Interpretation der Ergebnisse auf rein empirischer Basis erforderte zudem eine weitreichende und
 zeitintensive Deduktion anhand der vorliegenden Literatur.
-Ohne tiefgreifende Profiler (bspw.\ \textit{NVIDIA Nsight}) bleibt die Interpretation von Frame-Times und Bandbreiten
-stark deduktiv und spekulativ.
+Ohne den Einsatz tiefgreifender Profiling-Werkzeuge (wie etwa \textit{NVIDIA Nsight}) basiert die Interpretation von
+Frame-Times und Speicherbandbreiten im Wesentlichen auf abgeleiteten Indikatoren und theoretischen Modellen.
 Dies sollte in zukünftigen Erweiterungen der Software durch die Integration jener Profiler vermieden werden.
