@@ -5,7 +5,7 @@ Die selektive stilisierte Darstellung mittels \ac{NPR} in komplexen Echtzeit-Sze
 spezifische Herausforderungen, für deren praktische Leistungsgrenzen bisher empirische Messsysteme fehlen.
 Diese Arbeit quantifiziert die Flaschenhälse von Basis-Rendering-Paradigmen mittels des entwickelten
 Evaluationsframeworks \textit{\acs{HyDra}}.
-Untersucht wurden Single-Pass-Forward, Single-Pass-Deferred und Multi-Pass-Deferred unter kontrollierter Skalierung von
+Untersucht werden Single-Pass-Forward, Single-Pass-Deferred und Multi-Pass-Deferred unter kontrollierter Skalierung von
 Geometrie, Beleuchtung und Stil-Entropie.
 Die Ergebnisse belegen, dass keine universell überlegene Architektur existiert:
 Forward bricht bei hoher Lichtkomplexität durch multiplikative Rechenlast ein und unterstützt keine selektiven
@@ -13,7 +13,7 @@ Bildraumeffekte.
 Single-Pass-Deferred skaliert bei vielen Lichtern effizient, erleidet bei hoher Stil-Entropie
 (verteilte \ac{NPR}-Effekte) jedoch Einbrüche durch Warp-Divergenz und Registerdruck.
 Multi-Pass-Deferred limitiert bei überlappenden Lichtern durch \ac{RMW}-Zyklen die Speicherbandbreite der Grafikhardware.
-Aus den Erkenntnissen wurde ein heuristisches Entscheidungsmodell abgeleitet.
+Aus den Erkenntnissen wird ein heuristisches Entscheidungsmodell abgeleitet.
 Zusammen mit der Evaluations-Software als Kern und den Messdaten bietet es eine objektive Grundlage zur
 szenenspezifischen Architekturauswahl bei selektiver Stilisierung.
 
@@ -26,7 +26,7 @@ Selective stylized rendering via \ac{NPR} in complex real-time scenes presents s
 for which empirical measurement systems targeting practical performance limits are currently lacking.
 This paper quantifies the bottlenecks of basic rendering paradigms using the custom evaluation framework
 \textit{\acs{HyDra}}.
-Single-pass forward, single-pass deferred, and multi-pass deferred were analyzed under controlled scaling of
+Single-pass forward, single-pass deferred, and multi-pass deferred are analyzed under controlled scaling of
 geometry, lighting, and style entropy.
 The results confirm that no universally superior architecture exists:
 Forward collapses under high lighting complexity due to multiplicative shading load and lacks support for selective
@@ -34,7 +34,7 @@ image-space effects.
 Single-pass deferred scales efficiently with high light counts, but suffers performance drops under high style
 entropy (distributed \ac{NPR} effects) due to warp divergence and register pressure.
 Multi-pass deferred limits graphics hardware memory bandwidth under overlapping lights due to intensive \ac{RMW} cycles.
-From these findings, a heuristic decision-making model was derived.
+From these findings, a heuristic decision-making model is derived.
 Together with the evaluation-software as the core and the benchmark dataset, it offers an objective basis for
 scene-specific architecture selection in selective stylization.
 

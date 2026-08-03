@@ -30,8 +30,8 @@ Hierzu zählen etwa die globale Statusverwaltung, Animationsberechnungen und rä
 werden~\parencites(vgl.)()[Kap.3.1]{akenine-mollerRealtimeRendering2019}
 [Kap.~11.2.7.1, Abschn.~\textit{Frustum-Culling}]{gregoryGameEngineArchitecture2018}.
 Die resultierenden, sichtbaren Geometrien sendet die \ac{CPU} schließlich in Form von Render-Instruktionen
-(\textit{Draw Calls}) an die
-Grafik-\ac{API}~\parencite[vgl.][Abschn.~\textit{The logical pipeline}]{pixeljetstreamPixelJetStream2015}.
+(\textit{Draw Calls}) an die Grafik-Programmierschnittstelle
+(\ac{API})~\parencite[vgl.][Abschn.~\textit{The logical pipeline}]{pixeljetstreamPixelJetStream2015}.
 
 Die \ac{GPU} empfängt diese Instruktionen und übernimmt die eigentliche Bilderstellung.
 Im Gegensatz zur \ac{CPU} ist die Architektur der Grafikkarte auf massiv parallele Datenverarbeitung ausgelegt.
@@ -343,7 +343,7 @@ In einem finalen \textit{Resolve}-Pass werden schließlich die Basis-Materialeig
 aus dem \ac{G-Buffer} mit der akkumulierten Beleuchtung kombiniert und um finale Shading- oder Post-Processing-Effekte
 ergänzt~\parencite[vgl.][Abschn.~2.3]{Thaler2011DeferredRendering} (siehe Abb.~\ref{fig:deferred_light_volumes_flow}).
 
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.95\textwidth]{abbildungen/deferred_light_volume_rendered}
     \caption[Visualisierung gerenderter Light-Volumes]{Visualisierung gerenderter Light-Volumes zur Rekonstruktion von
@@ -351,7 +351,7 @@ ergänzt~\parencite[vgl.][Abschn.~2.3]{Thaler2011DeferredRendering} (siehe Abb.~
     \label{fig:light-volumes-example}
 \end{figure}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
     \resizebox{0.95\textwidth}{!}{%
         \begin{tikzpicture}[
