@@ -181,6 +181,7 @@ zunehmender Szenenkomplexität unverhältnismäßig stark sinkt.
     \centering
     \resizebox{\textwidth}{!}{%
         \begin{tikzpicture}[
+            y=0.8cm, % <--- Added this to gently reduce all vertical spacing
             >=Latex,
             font=\sffamily\small,
             base/.style={draw, align=center, minimum height=0.7cm, minimum width=4.5cm},
@@ -195,6 +196,7 @@ zunehmender Szenenkomplexität unverhältnismäßig stark sinkt.
         ]
 
             % --- Legende ---
+            
             \node[draw, fill=white, align=left, font=\sffamily\footnotesize, rounded corners, anchor=north west] at
             (-9.0, 1.0) {
                 \textbf{Entscheidungspfade:} \\
